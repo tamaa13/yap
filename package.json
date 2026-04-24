@@ -1,0 +1,19 @@
+{
+  "name": "yap",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Yap — verifiable AI combat arena. Built on 0G.",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "pnpm -F web dev",
+    "build": "pnpm -F web build",
+    "contracts:build": "cd contracts && forge build",
+    "contracts:test": "cd contracts && forge test -vvv",
+    "contracts:deploy:testnet": "cd contracts && forge script script/Deploy.s.sol --rpc-url $ZG_TESTNET_RPC --broadcast --private-key $PRIVATE_KEY",
+    "contracts:deploy:mainnet": "cd contracts && forge script script/Deploy.s.sol --rpc-url $ZG_MAINNET_RPC --broadcast --private-key $PRIVATE_KEY",
+    "contracts:sync-abi": "scripts/sync-abi.sh"
+  },
+  "packageManager": "pnpm@9.0.0"
+}

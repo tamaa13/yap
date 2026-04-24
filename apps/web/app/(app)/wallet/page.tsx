@@ -1,0 +1,97 @@
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Icon } from "@/components/ui/icon";
+import { StatCard } from "@/components/ui/stat-card";
+import { PageContainer } from "@/components/shell/page-container";
+import { GateScreen } from "@/components/wallet/gate-screen";
+import { useBalance } from "@/hooks/use-balance";
+import { useMyBets } from "@/hooks/use-my-bets";
+import { useWallet } from "@/hooks/use-wallet";
+import { fmtAddr } from "@/lib/format";
+
+export default function WalletPage() {
+  const { ready, connected, addr } = useWallet();
+  const balance = useBalance();
+  const { data: bets } = useMyBets();
+
+  if (ready && !connected) {
+    return <GateScreen action="your wallet" icon="wallet" />;
+  }
+
+  const locked = bets
+    .filter((b) => b.status === "active")
+    .reduce((s, b) => s + b.amount, 0);
+  const pnl = bets
+    .filter((b) => b.status !== "active")
+    .reduce((s, b) => s + (b.pnl ?? 0), 0);
+  const displayBalance = balance ?? 0;
+
+  return (
+    <PageContainer>
+      <h1 style={{ fontSize: 24, marginBottom: 4 }}>Wallet</h1>
+      <div style={{ fontSize: 13, color: "var(--tx-secondary)", marginBottom: 20 }}>
+        0G balance, earnings, and transaction history.
+      </div>
+
+      <div
+        className="al-stats-grid-4"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: 12,
+          marginBottom: 20,
+        }}
+      >
+        <StatCard label="Balance" value={displayBalance.toFixed(2)} sub="0G liquid" />
+        <StatCard label="Locked in bets" value={locked.toFixed(2)} sub="0G escrowed" />
+        <StatCard label="Pending payouts" value="—" sub="0G settling" />
+        <StatCard
+          label="Lifetime P/L"
+          value={`${pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}`}
+          sub="0G"
+        />
+      </div>
+
+      <Card style={{ padding: 20, marginBottom: 20 }}>
+        <div className="label" style={{ marginBottom: 12 }}>
+          Balance
+        </div>
+        <div
+          className="num"
+          style={{ fontSize: 40, fontWeight: 600, letterSpacing: "-0.02em" }}
+        >
+          {displayBalance.toFixed(2)}
+        </div>
+        <div
+          className="mono"
+          style={{ fontSize: 12, color: "var(--tx-tertiary)", marginBottom: 16 }}
+        >
+          0G · {fmtAddr(addr)}
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Button variant="primary" leading={<Icon name="download" size={14} />}>
+            Deposit
+          </Button>
+          <Button leading={<Icon name="send" size={14} />}>Withdraw</Button>
+          <Button
+            leading={<Icon name="copy" size={14} />}
+            onClick={() => addr && navigator.clipboard?.writeText(addr)}
+          >
+            Copy address
+          </Button>
+        </div>
+      </Card>
+
+      <div className="label" style={{ marginBottom: 12 }}>
+        Transaction history
+      </div>
+      <EmptyState
+        title="No on-chain activity yet"
+        body="Mint, bet, or claim to see transactions here. Full indexed history lands in Phase D."
+      />
+    </PageContainer>
+  );
+}

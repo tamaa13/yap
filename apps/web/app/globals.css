@@ -1,0 +1,215 @@
+@import "tailwindcss";
+
+/* ──────────────────────────────
+   Yap — Design tokens
+   Inspired by Bloomberg Terminal + Polymarket + Linear dark.
+   Single accent (amber). Geist + Geist Mono. No neon. No gradients. No glass.
+   ────────────────────────────── */
+
+:root {
+  --bg-canvas: #0A0B0F;
+  --bg-surface: #12131A;
+  --bg-raised: #1A1B23;
+  --bg-sunken: #06070A;
+  --bd-subtle: rgba(255, 255, 255, 0.06);
+  --bd-default: rgba(255, 255, 255, 0.10);
+  --bd-strong: rgba(255, 255, 255, 0.18);
+  --tx-primary: #E8E9ED;
+  --tx-secondary: #A0A2AB;
+  --tx-tertiary: #6B6D76;
+  --tx-disabled: #3F4048;
+  --accent: #FFB800;
+  --accent-hover: #FFC933;
+  --accent-muted: rgba(255, 184, 0, 0.12);
+  --accent-border: rgba(255, 184, 0, 0.40);
+  --fighter-a: #6B9AE8;
+  --fighter-b: #E89A6B;
+  --fighter-a-bg: rgba(107, 154, 232, 0.08);
+  --fighter-b-bg: rgba(232, 154, 107, 0.08);
+  --fighter-a-bd: rgba(107, 154, 232, 0.28);
+  --fighter-b-bd: rgba(232, 154, 107, 0.28);
+  --success: #6BCB77;
+  --warning: #E8A96B;
+  --danger: #E86B6B;
+  --info: #6B9AE8;
+  --live: #E86B6B;
+  --sans: var(--font-geist-sans), Inter, system-ui, -apple-system, sans-serif;
+  --mono: var(--font-geist-mono), 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-canvas: var(--bg-canvas);
+  --color-surface: var(--bg-surface);
+  --color-raised: var(--bg-raised);
+  --color-sunken: var(--bg-sunken);
+  --color-accent: var(--accent);
+  --color-primary: var(--tx-primary);
+  --color-secondary: var(--tx-secondary);
+  --color-tertiary: var(--tx-tertiary);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg-canvas);
+  color: var(--tx-primary);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+p { margin: 0; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; padding: 0; }
+input, select, textarea { font-family: inherit; color: inherit; }
+a { color: inherit; text-decoration: none; }
+::selection { background: var(--accent-muted); color: var(--accent); }
+
+.mono { font-family: var(--mono); font-feature-settings: 'zero', 'ss01'; }
+.label { font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tx-tertiary); }
+.num { font-family: var(--mono); font-feature-settings: 'zero', 'tnum'; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.06); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.12); }
+
+*:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; border-radius: 2px; }
+
+@keyframes al-shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+.al-skel {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.03) 100%);
+  background-size: 200px 100%;
+  background-repeat: no-repeat;
+  animation: al-shimmer 1.4s linear infinite;
+  border-radius: 4px;
+}
+
+@keyframes al-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.al-blink { animation: al-blink 1.6s ease-in-out infinite; }
+
+@keyframes al-spin { to { transform: rotate(360deg); } }
+@keyframes al-loader {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+@keyframes al-caret {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+.al-caret::after {
+  content: '▍';
+  color: var(--accent);
+  animation: al-caret 1s steps(1) infinite;
+  margin-left: 2px;
+}
+
+.sigil-bg {
+  background: var(--bg-sunken);
+  border: 1px solid var(--bd-subtle);
+  border-radius: 4px;
+}
+
+/* Responsive layout overrides */
+.al-hide-below-md { }
+.al-hide-below-lg { }
+.al-show-below-md { display: none !important; }
+.al-show-below-lg { display: none !important; }
+.al-mobile-drawer-root { display: none; }
+.al-table-scroll { width: 100%; }
+
+@media (max-width: 1200px) {
+  .al-arena-3col { grid-template-columns: 260px 1fr 260px !important; }
+}
+
+@media (max-width: 1024px) {
+  .al-arena-3col { grid-template-columns: 1fr 1fr !important; grid-template-areas: 'a b' 'center center' !important; }
+  .al-arena-3col > .al-arena-left { grid-area: a; }
+  .al-arena-3col > .al-arena-right { grid-area: b; }
+  .al-arena-3col > .al-arena-center { grid-area: center; min-height: 420px !important; }
+  .al-arena-3col > .al-arena-left,
+  .al-arena-3col > .al-arena-center,
+  .al-arena-3col > .al-arena-right { overflow-y: visible !important; max-height: none !important; }
+  .al-betbar-grid { grid-template-columns: 1fr 1fr !important; }
+  .al-detail-2col { grid-template-columns: 1fr !important; }
+  .al-stats-grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
+  .al-wizard-2col { grid-template-columns: 1fr !important; }
+  .al-market-row { flex-direction: column !important; gap: 12px !important; }
+  .al-market-filter { width: 100% !important; }
+  .al-hide-below-lg { display: none !important; }
+  .al-show-below-lg { display: initial !important; }
+}
+
+@media (max-width: 900px) {
+  .al-wallet-2col { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 720px) {
+  .al-page { padding: 16px !important; }
+  .al-stats-grid-4, .al-stats-grid-3, .al-stats-grid-2 { grid-template-columns: 1fr !important; }
+  .al-wizard-2col, .al-detail-2col { grid-template-columns: 1fr !important; }
+  .al-topnav-primary { display: none !important; }
+  .al-topnav-hamburger { display: flex !important; }
+  .al-hide-below-md { display: none !important; }
+  .al-show-below-md { display: initial !important; }
+  .al-topnav { padding: 0 12px !important; gap: 10px !important; }
+  .al-card table { display: block; overflow-x: auto; white-space: nowrap; }
+  .al-card table thead, .al-card table tbody { display: table; width: max-content; min-width: 100%; }
+  .al-topnav-logo-text { display: none !important; }
+  h1 { font-size: 22px !important; }
+  .al-landing-hero-grid { grid-template-columns: 1fr !important; gap: 24px !important; }
+  .al-landing-hero-title { font-size: 44px !important; line-height: 1.02 !important; }
+  .al-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .al-table-scroll > table { min-width: 680px; }
+  .al-arena-3col { grid-template-columns: 1fr !important; grid-template-areas: none !important; }
+  .al-arena-3col > .al-arena-left,
+  .al-arena-3col > .al-arena-right,
+  .al-arena-3col > .al-arena-center { grid-area: auto !important; }
+  .al-betbar-grid { grid-template-columns: 1fr !important; }
+  .al-betbar-rail { padding: 10px 12px !important; }
+}
+
+@media (max-width: 480px) {
+  h1 { font-size: 20px !important; }
+  .al-card-pad-md { padding: 12px !important; }
+  .al-landing-hero-title { font-size: 36px !important; }
+  .al-topnav-balance-label { display: none !important; }
+}
+
+/* Hamburger drawer */
+.al-topnav-hamburger { display: none; }
+.al-drawer-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);
+}
+.al-drawer {
+  position: fixed; top: 0; left: 0; bottom: 0; z-index: 201;
+  width: 280px; max-width: 85vw;
+  background: var(--bg-raised);
+  border-right: 1px solid var(--bd-default);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 4px;
+  animation: al-drawer-in 180ms ease-out;
+}
+@keyframes al-drawer-in {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+.al-drawer-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 4px;
+  font-size: 14px; color: var(--tx-primary); text-align: left;
+  width: 100%;
+}
+.al-drawer-item:hover { background: var(--bg-surface); }
