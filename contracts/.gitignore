@@ -1,0 +1,12 @@
+# Compiler files
+cache/
+out/
+
+# Ignore all broadcast logs (contains deployer tx history)
+broadcast/
+
+# Docs
+docs/
+
+# Dotenv file
+.env

@@ -1,0 +1,62 @@
+# Deps
+node_modules/
+**/node_modules/
+
+# Env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Next
+apps/web/.next/
+apps/web/out/
+apps/web/.vercel/
+
+# Foundry
+/contracts/out/
+/contracts/cache/
+/contracts/broadcast/
+/contracts/foundry.lock
+
+# Build
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Temp
+tmp/
+.tmp/
+
+# Keys (paranoid)
+*.pem
+*.key
+keystore/
+secrets/
+
+# App-level server state (fighter meta, battle state, runtime artifacts)
+apps/web/.data/
+.data/
+
+# Editor / AI assistants
+.claude/
+.cursor/
+
+# Temp scripts
+apps/web/scripts/tmp-*
+

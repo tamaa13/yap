@@ -1,0 +1,769 @@
+[
+  {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "admin",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "escrow",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "ADMIN_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "DEFAULT_ADMIN_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "DEFAULT_ELO",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "ESCROW_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "K_FACTOR",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "battleHistory",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "offset",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "limit",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "out",
+        "type": "tuple[]",
+        "internalType": "struct BattleRegistry.Battle[]",
+        "components": [
+          {
+            "name": "battleId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "fighterA",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "fighterB",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "topic",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "startTime",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "endTime",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "winner",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "finalized",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "rounds",
+            "type": "tuple[]",
+            "internalType": "struct BattleRegistry.RoundRecord[]",
+            "components": [
+              {
+                "name": "round",
+                "type": "uint8",
+                "internalType": "uint8"
+              },
+              {
+                "name": "scoreA",
+                "type": "uint16",
+                "internalType": "uint16"
+              },
+              {
+                "name": "scoreB",
+                "type": "uint16",
+                "internalType": "uint16"
+              },
+              {
+                "name": "verdictSig",
+                "type": "bytes",
+                "internalType": "bytes"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "battleOf",
+    "inputs": [
+      {
+        "name": "battleId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct BattleRegistry.Battle",
+        "components": [
+          {
+            "name": "battleId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "fighterA",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "fighterB",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "topic",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "startTime",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "endTime",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "winner",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "finalized",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "rounds",
+            "type": "tuple[]",
+            "internalType": "struct BattleRegistry.RoundRecord[]",
+            "components": [
+              {
+                "name": "round",
+                "type": "uint8",
+                "internalType": "uint8"
+              },
+              {
+                "name": "scoreA",
+                "type": "uint16",
+                "internalType": "uint16"
+              },
+              {
+                "name": "scoreB",
+                "type": "uint16",
+                "internalType": "uint16"
+              },
+              {
+                "name": "verdictSig",
+                "type": "bytes",
+                "internalType": "bytes"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "fighterDraws",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "fighterStats",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "elo",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "wins",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "losses",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "earnings",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "finalizeBattle",
+    "inputs": [
+      {
+        "name": "battleId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "winner",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getRoleAdmin",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "grantRole",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "hasRole",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "historyLength",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "recordRound",
+    "inputs": [
+      {
+        "name": "battleId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "round",
+        "type": "uint8",
+        "internalType": "uint8"
+      },
+      {
+        "name": "scoreA",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "scoreB",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "verdictSig",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "registerBattle",
+    "inputs": [
+      {
+        "name": "battleId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "fighterA",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "fighterB",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "topic",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "renounceRole",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "callerConfirmation",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "revokeRole",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setEscrow",
+    "inputs": [
+      {
+        "name": "escrow",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "supportsInterface",
+    "inputs": [
+      {
+        "name": "interfaceId",
+        "type": "bytes4",
+        "internalType": "bytes4"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "BattleFinalized",
+    "inputs": [
+      {
+        "name": "battleId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "winner",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "uint8"
+      },
+      {
+        "name": "eloA",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
+      },
+      {
+        "name": "eloB",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "BattleRegistered",
+    "inputs": [
+      {
+        "name": "battleId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "fighterA",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "fighterB",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "topic",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RoleAdminChanged",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "previousAdminRole",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "newAdminRole",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RoleGranted",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "sender",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RoleRevoked",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "sender",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RoundRecorded",
+    "inputs": [
+      {
+        "name": "battleId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "round",
+        "type": "uint8",
+        "indexed": true,
+        "internalType": "uint8"
+      },
+      {
+        "name": "scoreA",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      },
+      {
+        "name": "scoreB",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      },
+      {
+        "name": "verdictSig",
+        "type": "bytes",
+        "indexed": false,
+        "internalType": "bytes"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "AccessControlBadConfirmation",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AccessControlUnauthorizedAccount",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "neededRole",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "AlreadyFinalized",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AlreadyRegistered",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidWinner",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "UnknownBattle",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroAddress",
+    "inputs": []
+  }
+]

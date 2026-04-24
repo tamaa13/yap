@@ -1,0 +1,608 @@
+"use client";
+
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Icon } from "@/components/ui/icon";
+import { Sigil } from "@/components/ui/sigil";
+import { StatCard } from "@/components/ui/stat-card";
+import { Tabs } from "@/components/ui/tabs";
+import { PageContainer } from "@/components/shell/page-container";
+import { GateScreen } from "@/components/wallet/gate-screen";
+import { useFighters } from "@/hooks/use-fighters";
+import { useMyBets } from "@/hooks/use-my-bets";
+import { useDeclineBattle } from "@/hooks/use-accept-battle";
+import { usePendingChallenges } from "@/hooks/use-pending-challenges";
+import { useToast } from "@/components/ui/toast";
+import { Hash } from "@/components/ui/hash";
+import { fmtRemaining } from "@/lib/format";
+import { useWallet } from "@/hooks/use-wallet";
+
+type VaultTab =
+  | "owned"
+  | "rentedOut"
+  | "rentedIn"
+  | "challenges"
+  | "bets"
+  | "history";
+
+const VALID_TABS: ReadonlySet<VaultTab> = new Set([
+  "owned",
+  "rentedOut",
+  "rentedIn",
+  "challenges",
+  "bets",
+  "history",
+]);
+
+export default function VaultPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { ready, connected, addr } = useWallet();
+  const [tab, setTab] = useState<VaultTab>("owned");
+
+  // Deep-link support: e.g. /vault?tab=challenges from the post-create-
+  // battle redirect so challengers land directly on their outgoing list.
+  useEffect(() => {
+    const q = searchParams.get("tab");
+    if (q && VALID_TABS.has(q as VaultTab)) {
+      setTab(q as VaultTab);
+    }
+  }, [searchParams]);
+
+  const { data: mine } = useFighters({ owner: addr });
+  const { data: myBets } = useMyBets();
+  const { incoming: incomingChallenges, outgoing: outgoingChallenges } =
+    usePendingChallenges(addr);
+  const decline = useDeclineBattle();
+  const { push } = useToast();
+
+  if (ready && !connected) {
+    return <GateScreen action="the vault" icon="vault" />;
+  }
+
+  // mine = everything this wallet owns on-chain AND everything it has in
+  // rental escrow (use-fighters overlays the effective owner from the
+  // rental listing when a fighter sits in custody) AND every fighter this
+  // wallet is currently renting.
+  const meLower = addr?.toLowerCase();
+  const rentedIn = mine.filter(
+    (f) => f.rentedBy && meLower && f.rentedBy.toLowerCase() === meLower,
+  );
+  const rentedOut = mine.filter(
+    (f) => f.forRent && (!f.rentedBy || f.rentedBy.toLowerCase() !== meLower),
+  );
+  const owned = mine.filter(
+    (f) =>
+      !f.forRent &&
+      !(f.rentedBy && meLower && f.rentedBy.toLowerCase() === meLower),
+  );
+
+  const activeBets = myBets.filter((b) => b.status === "active");
+  const settledBets = myBets.filter((b) => b.status !== "active");
+  const pnl = settledBets.reduce((s, b) => s + (b.pnl ?? 0), 0);
+
+  return (
+    <PageContainer>
+      <h1 style={{ fontSize: 24, marginBottom: 4 }}>Vault</h1>
+      <div style={{ fontSize: 13, color: "var(--tx-secondary)", marginBottom: 20 }}>
+        Your fighters, rentals, bets, and on-chain history.
+      </div>
+
+      <div
+        className="al-stats-grid-4"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: 12,
+          marginBottom: 20,
+        }}
+      >
+        <StatCard label="Owned fighters" value={owned.length} mono={false} />
+        <StatCard
+          label="Active bets"
+          value={activeBets.length}
+          sub={`${activeBets.reduce((s, b) => s + b.amount, 0).toFixed(2)} 0G locked`}
+          mono={false}
+        />
+        <StatCard
+          label="Lifetime P/L"
+          value={`${pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}`}
+          sub="0G"
+          mono={false}
+        />
+        <StatCard label="Active rentals in" value={rentedIn.length} mono={false} />
+      </div>
+
+      <Tabs
+        value={tab}
+        onChange={(v) => setTab(v as VaultTab)}
+        tabs={[
+          { value: "owned", label: "Owned", count: owned.length },
+          { value: "rentedOut", label: "Rented out", count: rentedOut.length },
+          { value: "rentedIn", label: "Rented in", count: rentedIn.length },
+          {
+            value: "challenges",
+            label: "Challenges",
+            count: incomingChallenges.length + outgoingChallenges.length,
+          },
+          { value: "bets", label: "Bets", count: activeBets.length },
+          { value: "history", label: "History", count: settledBets.length },
+        ]}
+        style={{ marginBottom: 20 }}
+      />
+
+      {tab === "owned" &&
+        (owned.length === 0 ? (
+          <EmptyState
+            title="No fighters yet"
+            body="Mint your first AI fighter to enter combat."
+            cta={
+              <Button variant="primary" onClick={() => router.push("/mint")}>
+                Mint fighter
+              </Button>
+            }
+          />
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+              gap: 12,
+            }}
+          >
+            {owned.map((f) => (
+              <Card key={f.id} style={{ padding: 16 }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                  <Sigil seed={f.name} size={56} color={f.color} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 600 }}>{f.name}</div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "var(--tx-tertiary)",
+                        textTransform: "capitalize",
+                      }}
+                    >
+                      {f.arch}
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 10,
+                        marginTop: 8,
+                        fontFamily: "var(--mono)",
+                        fontSize: 11,
+                        color: "var(--tx-secondary)",
+                      }}
+                    >
+                      <span>ELO {f.elo}</span>
+                      <span>
+                        {f.w}–{f.l}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 6, marginTop: 14 }}>
+                  <Button
+                    size="sm"
+                    onClick={() => router.push(`/battle/new?fighter=${f.id}`)}
+                    style={{ flex: 1 }}
+                  >
+                    Battle
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => router.push(`/fighters/${f.id}`)}
+                    style={{ flex: 1 }}
+                  >
+                    View
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ))}
+
+      {tab === "rentedOut" &&
+        (rentedOut.length === 0 ? (
+          <EmptyState
+            title="Nothing rented out"
+            body="List a fighter for rent to earn passive 0G while the fighter trains under someone else's prompts."
+          />
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+              gap: 12,
+            }}
+          >
+            {rentedOut.map((f) => (
+              <Card key={f.id} style={{ padding: 16 }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                  <Sigil seed={f.name} size={56} color={f.color} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 600 }}>{f.name}</div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "var(--tx-tertiary)",
+                        textTransform: "capitalize",
+                      }}
+                    >
+                      {f.arch}
+                    </div>
+                    <div
+                      style={{
+                        marginTop: 8,
+                        fontSize: 12,
+                        color: "var(--accent)",
+                      }}
+                    >
+                      {(f.rentPrice ?? 0).toFixed(3)} 0G/day
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 6, marginTop: 14 }}>
+                  <Button
+                    size="sm"
+                    onClick={() => router.push(`/fighters/${f.id}`)}
+                    style={{ flex: 1 }}
+                  >
+                    Manage
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ))}
+
+      {tab === "rentedIn" &&
+        (rentedIn.length === 0 ? (
+          <EmptyState
+            title="Nothing rented in"
+            body="Rent a fighter from the marketplace to battle without owning outright. Earnings during the rental flow to your wallet."
+          />
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+              gap: 12,
+            }}
+          >
+            {rentedIn.map((f) => {
+              const expiresIn = f.rentExpiresAt
+                ? Math.max(0, f.rentExpiresAt - Date.now())
+                : 0;
+              const days = Math.floor(expiresIn / (24 * 3600 * 1000));
+              const hours = Math.floor(
+                (expiresIn % (24 * 3600 * 1000)) / (3600 * 1000),
+              );
+              return (
+                <Card key={f.id} style={{ padding: 16 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                    <Sigil seed={f.name} size={56} color={f.color} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 600 }}>{f.name}</div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: "var(--tx-tertiary)",
+                          textTransform: "capitalize",
+                        }}
+                      >
+                        {f.arch}
+                      </div>
+                      <div
+                        style={{
+                          marginTop: 8,
+                          fontSize: 12,
+                          color: "var(--accent)",
+                        }}
+                      >
+                        Expires in {days}d {hours}h
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, marginTop: 14 }}>
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      onClick={() => router.push(`/battle/new?fighter=${f.id}`)}
+                      style={{ flex: 1 }}
+                    >
+                      Battle
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => router.push(`/fighters/${f.id}`)}
+                      style={{ flex: 1 }}
+                    >
+                      View
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        ))}
+
+      {tab === "challenges" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <div>
+            <div className="label" style={{ marginBottom: 10 }}>
+              Incoming challenges — {incomingChallenges.length}
+            </div>
+            {incomingChallenges.length === 0 ? (
+              <EmptyState
+                title="No incoming challenges"
+                body="When someone challenges a fighter you own or rent, it appears here for you to accept or decline."
+              />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {incomingChallenges.map((c) => (
+                  <Card key={c.battleId} style={{ padding: 14 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 12,
+                      }}
+                    >
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            marginBottom: 4,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <strong>Fighter #{c.fighterA}</strong> vs{" "}
+                          <strong>#{c.fighterB}</strong> · {c.topic}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: "var(--tx-tertiary)",
+                            display: "flex",
+                            gap: 8,
+                            alignItems: "center",
+                          }}
+                        >
+                          <span>
+                            from <Hash value={c.challenger} />
+                          </span>
+                          <span>·</span>
+                          <span>expires {fmtRemaining(c.expiresAt)}</span>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                        <Button
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              const tx = await decline.write(c.battleId);
+                              push({
+                                kind: "default",
+                                text: `Declined · tx ${tx.slice(0, 10)}…`,
+                              });
+                            } catch (e) {
+                              push({
+                                kind: "error",
+                                text:
+                                  e instanceof Error ? e.message : "Decline failed",
+                              });
+                            }
+                          }}
+                          disabled={decline.isPending || decline.isConfirming}
+                        >
+                          Decline
+                        </Button>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() =>
+                            router.push(
+                              `/arenas/b-${c.battleId
+                                .toString(16)
+                                .padStart(4, "0")}`,
+                            )
+                          }
+                        >
+                          Review &amp; accept
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <div className="label" style={{ marginBottom: 10 }}>
+              Outgoing challenges — {outgoingChallenges.length}
+            </div>
+            {outgoingChallenges.length === 0 ? (
+              <EmptyState
+                title="No outgoing challenges"
+                body="Challenges you've sent to other fighters will appear here while waiting for the defender."
+              />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {outgoingChallenges.map((c) => (
+                  <Card key={c.battleId} style={{ padding: 14 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: 13, marginBottom: 4 }}>
+                          <strong>#{c.fighterA}</strong> vs{" "}
+                          <strong>#{c.fighterB}</strong> · {c.topic}
+                        </div>
+                        <div
+                          style={{ fontSize: 11, color: "var(--tx-tertiary)" }}
+                        >
+                          <Badge tone="warning">Waiting</Badge> · expires{" "}
+                          {fmtRemaining(c.expiresAt)}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {tab === "bets" &&
+        (activeBets.length === 0 ? (
+          <EmptyState
+            title="No active bets"
+            body="Place a bet in the arena to see it here."
+          />
+        ) : (
+          <Card>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: "var(--bg-sunken)" }}>
+                  {["Battle", "Side", "Amount", "Odds", "Status", "Potential"].map((h) => (
+                    <th
+                      key={h}
+                      style={{
+                        textAlign: "left",
+                        padding: "10px 14px",
+                        fontSize: 11,
+                        fontFamily: "var(--mono)",
+                        fontWeight: 500,
+                        letterSpacing: 0.08,
+                        textTransform: "uppercase",
+                        color: "var(--tx-tertiary)",
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {activeBets.map((b) => (
+                  <tr
+                    key={b.id}
+                    onClick={() => router.push(`/arenas/${b.battleId}`)}
+                    style={{
+                      borderTop: "1px solid var(--bd-subtle)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <td style={{ padding: "10px 14px" }}>
+                      <div className="mono" style={{ fontSize: 12 }}>
+                        {b.battleId}
+                      </div>
+                    </td>
+                    <td style={{ padding: "10px 14px" }}>
+                      <Badge tone={b.side}>{b.side === "a" ? "Corner A" : "Corner B"}</Badge>
+                    </td>
+                    <td style={{ padding: "10px 14px" }} className="num">
+                      {b.amount.toFixed(2)} 0G
+                    </td>
+                    <td style={{ padding: "10px 14px" }} className="num">
+                      {b.odds}x
+                    </td>
+                    <td style={{ padding: "10px 14px" }}>
+                      <Badge tone="warning">Active</Badge>
+                    </td>
+                    <td
+                      style={{ padding: "10px 14px", color: "var(--accent)" }}
+                      className="num"
+                    >
+                      {b.potential?.toFixed(2)} 0G
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        ))}
+
+      {tab === "history" &&
+        (settledBets.length === 0 ? (
+          <EmptyState
+            title="No settled bets"
+            body="Once battles settle, results land here."
+          />
+        ) : (
+          <Card>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: "var(--bg-sunken)" }}>
+                  {["Battle", "Side", "Amount", "Result", "P/L"].map((h) => (
+                    <th
+                      key={h}
+                      style={{
+                        textAlign: "left",
+                        padding: "10px 14px",
+                        fontSize: 11,
+                        fontFamily: "var(--mono)",
+                        fontWeight: 500,
+                        letterSpacing: 0.08,
+                        textTransform: "uppercase",
+                        color: "var(--tx-tertiary)",
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {settledBets.map((b) => (
+                  <tr key={b.id} style={{ borderTop: "1px solid var(--bd-subtle)" }}>
+                    <td style={{ padding: "10px 14px" }}>
+                      <div className="mono" style={{ fontSize: 12 }}>
+                        {b.battleId}
+                      </div>
+                    </td>
+                    <td style={{ padding: "10px 14px" }}>
+                      <Badge tone={b.side}>{b.side === "a" ? "Corner A" : "Corner B"}</Badge>
+                    </td>
+                    <td style={{ padding: "10px 14px" }} className="num">
+                      {b.amount.toFixed(2)} 0G
+                    </td>
+                    <td style={{ padding: "10px 14px" }}>
+                      <Badge tone={b.status === "won" ? "success" : "danger"}>
+                        {b.status === "won" ? "Won" : "Lost"}
+                      </Badge>
+                    </td>
+                    <td
+                      className="num"
+                      style={{
+                        padding: "10px 14px",
+                        color: (b.pnl ?? 0) >= 0 ? "var(--success)" : "var(--danger)",
+                      }}
+                    >
+                      {(b.pnl ?? 0) >= 0 ? "+" : ""}
+                      {(b.pnl ?? 0).toFixed(2)} 0G
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        ))}
+    </PageContainer>
+  );
+}
