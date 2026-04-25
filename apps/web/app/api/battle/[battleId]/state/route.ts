@@ -17,7 +17,9 @@ export async function GET(
     return NextResponse.json({ error: "invalid battleId" }, { status: 400 });
   }
   const store = getBattleStore();
-  const state = await store.get(battleId);
-  const spectators = store.subscriberCount(battleId);
+  const [state, spectators] = await Promise.all([
+    store.get(battleId),
+    Promise.resolve(store.subscriberCount(battleId)),
+  ]);
   return NextResponse.json({ state, spectators });
 }

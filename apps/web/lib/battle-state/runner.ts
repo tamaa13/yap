@@ -16,6 +16,7 @@
 // returns existing state without triggering duplicate work.
 
 import "server-only";
+import { after } from "next/server";
 import {
   Contract,
   JsonRpcProvider,
@@ -72,7 +73,7 @@ export async function startBattleRunner(args: RunnerArgs): Promise<BattleState> 
   if (existing?.phase === "failed" && !args.restart) return existing;
 
   // Acquire runner lock. If someone else got it first, bail and return snapshot.
-  if (!store.tryAcquireRunner(battleId)) {
+  if (!(await store.tryAcquireRunner(battleId))) {
     return (await store.get(battleId))!;
   }
 
@@ -81,13 +82,22 @@ export async function startBattleRunner(args: RunnerArgs): Promise<BattleState> 
   try {
     initial = await buildInitialState(battleId);
   } catch (e) {
-    store.releaseRunner(battleId);
+    await store.releaseRunner(battleId);
     throw e;
   }
   const state = await store.set(battleId, initial);
 
-  // Fire-and-forget runner loop. Errors captured + persisted as `failed`.
-  void runLoop(battleId).finally(() => store.releaseRunner(battleId));
+  // Schedule the runner via Next.js `after()` so it keeps running after the
+  // route response ships. On Vercel this prevents the function from being
+  // recycled mid-battle; on local `next dev` the callback fires immediately
+  // after the response and runs to completion in the same Node process.
+  after(async () => {
+    try {
+      await runLoop(battleId);
+    } finally {
+      await store.releaseRunner(battleId);
+    }
+  });
 
   return state;
 }

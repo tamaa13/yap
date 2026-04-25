@@ -57,9 +57,10 @@ export async function GET(
 
       // 3. After subscribing, publish a spectator-count event so every
       //    client (including this new one) sees the updated tally.
+      const initialCount = await Promise.resolve(store.subscriberCount(battleId));
       store.publish(battleId, {
         type: "spectators",
-        count: store.subscriberCount(battleId),
+        count: initialCount,
       });
 
       // 4. Keep-alive pings. SSE comments (lines starting with `:`) are
@@ -74,14 +75,12 @@ export async function GET(
 
       // 5. Clean up on client disconnect. Also publish an updated
       //    spectator-count event so remaining clients see the drop.
-      const onAbort = () => {
+      const onAbort = async () => {
         clearInterval(pingTimer);
         unsubscribe();
         // Publish AFTER unsubscribe so count reflects the departure.
-        store.publish(battleId, {
-          type: "spectators",
-          count: store.subscriberCount(battleId),
-        });
+        const count = await Promise.resolve(store.subscriberCount(battleId));
+        store.publish(battleId, { type: "spectators", count });
         try {
           controller.close();
         } catch {}
