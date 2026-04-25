@@ -9,9 +9,17 @@
 // Anyone can trigger a run (the defender accepting the challenge, the
 // challenger, a spectator who wants to watch). Once started, all viewers
 // share the same state via SSE.
+//
+// Rate-limited: starting a new battle triggers paid 0G Compute inference,
+// so unrestricted POSTing would let an attacker drain the broker ledger.
+// Two layers:
+//   - per-IP: 10 starts/min (caps naive curl loops)
+//   - per-battleId: 1 start/30s (de-dupes legitimate concurrent triggers
+//     from challenger + defender + first spectator)
 
 import { NextResponse } from "next/server";
 import { startBattleRunner } from "@/lib/battle-state/runner";
+import { consume, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -29,6 +37,21 @@ export async function POST(
   if (!Number.isFinite(battleId) || battleId <= 0) {
     return NextResponse.json({ error: "invalid battleId" }, { status: 400 });
   }
+
+  const ip = clientIp(req);
+  if (!consume("start", `ip:${ip}`, { tokens: 10, windowMs: 60_000 })) {
+    return NextResponse.json(
+      { error: "rate limited — try again shortly" },
+      { status: 429 },
+    );
+  }
+  if (!consume("start", `battle:${battleId}`, { tokens: 1, windowMs: 30_000 })) {
+    return NextResponse.json(
+      { error: "battle already starting — subscribe to /stream" },
+      { status: 429 },
+    );
+  }
+
   const body = (await req.json().catch(() => ({}))) as Body;
 
   try {
