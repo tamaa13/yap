@@ -67,11 +67,18 @@ interface IERC7857 {
         bytes memory sealedKey
     ) external payable returns (uint256);
 
+    /// @notice Transfer with re-encryption. The implementation MUST rotate
+    ///         encryptedURI to the new ciphertext location so the prior
+    ///         owner's blob is no longer the canonical pointer post-transfer.
+    /// @dev Yap-extended ERC-7857 signature: adds `newEncryptedURI`. The
+    ///      verifier must attest both the new dataHash AND the new URI
+    ///      together as part of the OwnershipProof.
     function iTransferFrom(
         address from,
         address to,
         uint256 tokenId,
-        TransferValidityProof[] calldata proofs
+        TransferValidityProof[] calldata proofs,
+        string calldata newEncryptedURI
     ) external;
 
     function iCloneFrom(

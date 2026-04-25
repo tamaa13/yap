@@ -31,11 +31,6 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
 
-    /// @dev Deprecated: kept for historical ABI compatibility. Verdict
-    ///      submission is now gated by ECDSA signature verification against
-    ///      {oracleKey}, not by role — so any relayer can submit a valid
-    ///      oracle verdict. See {submitVerdict}.
-    bytes32 public constant TEE_ORACLE_ROLE = keccak256("TEE_ORACLE_ROLE");
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     /// @notice Default dispute window. Admin can override per-deployment via
@@ -44,6 +39,22 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
     uint256 public constant DEFAULT_DISPUTE_WINDOW = 24 hours;
     uint256 public constant MAX_DISPUTE_WINDOW = 7 days;
     uint256 public disputeWindow;
+
+    /// @notice One-shot per-battle dispute window extension. Admin can call
+    ///         {pauseSettlement} once per battle to extend the dispute window
+    ///         by {DISPUTE_EXTENSION} additional seconds (effective until the
+    ///         existing window expires + extension).
+    uint256 public constant DISPUTE_EXTENSION = 24 hours;
+    mapping(uint256 => bool) public disputeExtended;
+    /// @dev Per-battle dispute deadline override. Set when {pauseSettlement}
+    ///      runs; settlement compares against this if set, else the standard
+    ///      verdictTime + disputeWindow.
+    mapping(uint256 => uint64) public disputeDeadline;
+
+    /// @notice Stuck-Verdict deadman switch. After this many seconds in
+    ///         Verdict status with no settle() call, anyone can force a
+    ///         refund-cancel via {refundStuckVerdict}.
+    uint256 public constant STUCK_VERDICT_TIMEOUT = 30 days;
 
     /// @dev Deprecated alias of {disputeWindow}. Kept for off-chain tooling
     ///      that reads the constant by name. New integrations should read
@@ -100,7 +111,24 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
         uint256 feeCollected;
         string topic;
         bytes verdictSig;
+        /// @notice Commitment to the off-chain transcript + reasoning blob
+        ///         (typically a 0G Storage root hash). Bound into the
+        ///         oracle's signed digest so a compromised oracle cannot
+        ///         sign a winner without producing a matching transcript
+        ///         that spectators can audit.
+        bytes32 verdictHash;
+        /// @notice Sum of all payouts already claimed for this battle.
+        ///         Used by {sweepDust} to compute residual dust + abandoned
+        ///         stakes after the settlement cooldown elapses.
+        uint256 totalClaimed;
+        /// @notice Block timestamp when {settle} ran. Used to enforce the
+        ///         {DUST_SWEEP_COOLDOWN} before residual sweeps.
+        uint64 settledAt;
     }
+
+    /// @notice Time after settlement before residual dust + abandoned stakes
+    ///         can be swept to treasury via {sweepDust}.
+    uint256 public constant DUST_SWEEP_COOLDOWN = 90 days;
 
     struct BetOf {
         uint128 amount;
@@ -134,8 +162,21 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
     event BattleAccepted(uint256 indexed battleId, address indexed defender);
     event BattleDeclined(uint256 indexed battleId, address indexed defender);
     event BetPlaced(uint256 indexed battleId, address indexed bettor, uint8 side, uint256 amount);
-    event VerdictSubmitted(uint256 indexed battleId, uint8 winner, bytes teeSignature);
+    event VerdictSubmitted(
+        uint256 indexed battleId,
+        uint8 winner,
+        bytes32 verdictHash,
+        bytes teeSignature
+    );
     event BattleSettled(uint256 indexed battleId, uint8 winner, uint256 fee);
+    event SettlementPaused(uint256 indexed battleId, uint64 newDeadline);
+    event DisputeFiled(
+        uint256 indexed battleId,
+        address indexed by,
+        bytes32 indexed reasonHash
+    );
+    event StuckVerdictRefunded(uint256 indexed battleId, address indexed caller);
+    event DustSwept(uint256 indexed battleId, uint256 amount);
     event BattleCancelled(uint256 indexed battleId);
     event PayoutClaimed(uint256 indexed battleId, address indexed bettor, uint256 amount);
     event RegistryUpdated(address indexed registry);
@@ -156,6 +197,10 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
     error InvalidOracleSignature();
     error OracleKeyNotSet();
     error DefenderStakeTooLow();
+    error DisputeAlreadyExtended();
+    error VerdictNotStuck();
+    error InvalidVerdictHash();
+    error NoDust();
 
     constructor(
         address admin,
@@ -173,10 +218,6 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
         }
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(ADMIN_ROLE, admin);
-        // Retain role on the oracle address for backward-compat with any
-        // external tooling that still reads it; verdict authorization is
-        // now purely signature-based (see submitVerdict).
-        _grantRole(TEE_ORACLE_ROLE, oracleKey_);
         treasury = treasury_;
         fighter = IFighter(fighter_);
         oracleKey = oracleKey_;
@@ -349,20 +390,28 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
     ///         authorization is cryptographic — the signature must recover to
     ///         {oracleKey}. This decouples verdict authorship (TEE oracle)
     ///         from submission (any relayer, including the battle parties).
-    /// @dev Signed payload = `keccak256(abi.encode(address(this), chainid, battleId, winner))`
+    /// @param verdictHash Commitment to the off-chain transcript + reasoning
+    ///        blob (e.g. 0G Storage root). Bound into the signed digest so
+    ///        spectators can verify the verdict reflects an audit-able
+    ///        transcript, not just an integer winner pick.
+    /// @dev Signed payload = `keccak256(abi.encode(address(this), chainid, battleId, winner, verdictHash))`
     ///      wrapped in the EIP-191 personal-sign prefix via {MessageHashUtils.toEthSignedMessageHash}.
     ///      Including the contract address + chain id prevents cross-contract /
     ///      cross-chain replay.
-    function submitVerdict(uint256 battleId, uint8 winner, bytes calldata teeSignature)
-        external
-    {
+    function submitVerdict(
+        uint256 battleId,
+        uint8 winner,
+        bytes32 verdictHash,
+        bytes calldata teeSignature
+    ) external {
         if (winner > DRAW) revert InvalidSide();
+        if (verdictHash == bytes32(0)) revert InvalidVerdictHash();
         if (oracleKey == address(0)) revert OracleKeyNotSet();
         Battle storage b = battles[battleId];
         if (b.status != Status.Live) revert InvalidState();
 
         bytes32 digest = keccak256(
-            abi.encode(address(this), block.chainid, battleId, winner)
+            abi.encode(address(this), block.chainid, battleId, winner, verdictHash)
         ).toEthSignedMessageHash();
         address signer = digest.recover(teeSignature);
         if (signer != oracleKey) revert InvalidOracleSignature();
@@ -371,22 +420,77 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
         b.winner = winner;
         b.verdictTime = uint64(block.timestamp);
         b.verdictSig = teeSignature;
+        b.verdictHash = verdictHash;
 
-        emit VerdictSubmitted(battleId, winner, teeSignature);
+        emit VerdictSubmitted(battleId, winner, verdictHash, teeSignature);
     }
 
     /// @notice View helper — returns the digest that must be signed by the
-    ///         oracle's TEE for a given (battleId, winner). Off-chain signers
-    ///         produce the ECDSA signature over this digest.
-    function verdictDigest(uint256 battleId, uint8 winner) external view returns (bytes32) {
-        return keccak256(abi.encode(address(this), block.chainid, battleId, winner))
-            .toEthSignedMessageHash();
+    ///         oracle's TEE for a given (battleId, winner, verdictHash). Off-chain
+    ///         signers produce the ECDSA signature over this digest.
+    function verdictDigest(
+        uint256 battleId,
+        uint8 winner,
+        bytes32 verdictHash
+    ) external view returns (bytes32) {
+        return keccak256(
+            abi.encode(address(this), block.chainid, battleId, winner, verdictHash)
+        ).toEthSignedMessageHash();
+    }
+
+    /// @notice Admin extends the dispute window for a single battle by
+    ///         {DISPUTE_EXTENSION}. One-shot — second call reverts. Used when
+    ///         a credible off-chain dispute arrives within the standard window
+    ///         and the team needs more time to investigate before settlement.
+    function pauseSettlement(uint256 battleId) external onlyRole(ADMIN_ROLE) {
+        Battle storage b = battles[battleId];
+        if (b.status != Status.Verdict) revert InvalidState();
+        if (disputeExtended[battleId]) revert DisputeAlreadyExtended();
+
+        uint64 baseDeadline = b.verdictTime + uint64(disputeWindow);
+        uint64 newDeadline = baseDeadline + uint64(DISPUTE_EXTENSION);
+        disputeDeadline[battleId] = newDeadline;
+        disputeExtended[battleId] = true;
+        emit SettlementPaused(battleId, newDeadline);
+    }
+
+    /// @notice Anyone with skin in the game (a non-zero bet on the battle)
+    ///         can record a dispute against a submitted verdict. The
+    ///         {reasonHash} is a commitment (e.g. 0G Storage root) to the
+    ///         off-chain dispute artifact (signed message + evidence). The
+    ///         contract only logs the event for off-chain indexers; admin
+    ///         decides whether to call {pauseSettlement} based on the dispute
+    ///         content. Callable while in Verdict status.
+    function fileDispute(uint256 battleId, bytes32 reasonHash) external {
+        if (reasonHash == bytes32(0)) revert InvalidVerdictHash();
+        Battle storage b = battles[battleId];
+        if (b.status != Status.Verdict) revert InvalidState();
+        if (betsOf[battleId][msg.sender].amount == 0) revert NotFighterUser();
+        emit DisputeFiled(battleId, msg.sender, reasonHash);
+    }
+
+    /// @notice Deadman switch. If a battle has been in Verdict status for
+    ///         {STUCK_VERDICT_TIMEOUT} (30 days) without {settle}, anyone can
+    ///         force the battle into Cancelled status so participants can
+    ///         claim full refunds. Protects against operator inaction.
+    function refundStuckVerdict(uint256 battleId) external {
+        Battle storage b = battles[battleId];
+        if (b.status != Status.Verdict) revert InvalidState();
+        if (block.timestamp < uint256(b.verdictTime) + STUCK_VERDICT_TIMEOUT) {
+            revert VerdictNotStuck();
+        }
+        b.status = Status.Cancelled;
+        emit StuckVerdictRefunded(battleId, msg.sender);
+        emit BattleCancelled(battleId);
     }
 
     function settle(uint256 battleId) external nonReentrant {
         Battle storage b = battles[battleId];
         if (b.status != Status.Verdict) revert InvalidState();
-        if (block.timestamp < uint256(b.verdictTime) + disputeWindow) {
+        uint256 deadline = disputeDeadline[battleId] != 0
+            ? uint256(disputeDeadline[battleId])
+            : uint256(b.verdictTime) + disputeWindow;
+        if (block.timestamp < deadline) {
             revert DisputeWindowActive();
         }
 
@@ -402,6 +506,7 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
         }
 
         b.status = Status.Settled;
+        b.settledAt = uint64(block.timestamp);
 
         if (address(registry) != address(0)) {
             registry.finalizeBattle(battleId, b.winner);
@@ -411,6 +516,37 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
         }
 
         emit BattleSettled(battleId, b.winner, fee);
+    }
+
+    /// @notice Sweep residual dust + abandoned stakes for a fully-cooled-down
+    ///         settled battle. Computes residual = poolA + poolB - fee -
+    ///         totalClaimed; any positive remainder is forwarded to treasury.
+    ///         Callable by admin after {DUST_SWEEP_COOLDOWN} (90d) post-settle.
+    ///         Idempotent — second call reverts with NoDust because zeroes
+    ///         out totalClaimed bookkeeping.
+    function sweepDust(uint256 battleId)
+        external
+        onlyRole(ADMIN_ROLE)
+        nonReentrant
+    {
+        Battle storage b = battles[battleId];
+        if (b.status != Status.Settled) revert InvalidState();
+        if (
+            block.timestamp <
+            uint256(b.settledAt) + DUST_SWEEP_COOLDOWN
+        ) {
+            revert TimeoutNotReached();
+        }
+        uint256 escrowed = b.poolA + b.poolB - b.feeCollected;
+        uint256 dust = escrowed > b.totalClaimed
+            ? escrowed - b.totalClaimed
+            : 0;
+        if (dust == 0) revert NoDust();
+
+        // Mark all funds claimed so re-entry / re-call cannot drain again.
+        b.totalClaimed = escrowed;
+        Address.sendValue(payable(treasury), dust);
+        emit DustSwept(battleId, dust);
     }
 
     /// @notice Cancel a battle. Permitted when:
@@ -482,8 +618,8 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
         }
 
         bet.claimed = true;
-
         if (payout > 0) {
+            b.totalClaimed += payout;
             Address.sendValue(payable(msg.sender), payout);
         }
 

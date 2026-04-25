@@ -14,16 +14,12 @@ contract YapFighterTest is Test {
     address internal treasury = makeAddr("treasury");
     address internal alice = makeAddr("alice");
     address internal bob = makeAddr("bob");
-    address internal operator = makeAddr("operator");
 
     uint256 internal constant MINT_FEE = 0.01 ether;
+    string internal constant NEW_URI = "ipfs://enc/new";
 
     function setUp() public {
         fighter = new YapFighter(admin, verifier, treasury, MINT_FEE);
-        vm.startPrank(admin);
-        fighter.grantRole(fighter.MINTER_ROLE(), admin);
-        fighter.grantRole(fighter.OPERATOR_ROLE(), operator);
-        vm.stopPrank();
         vm.deal(admin, 100 ether);
         vm.deal(alice, 100 ether);
     }
@@ -35,7 +31,12 @@ contract YapFighterTest is Test {
         id = fighter.mint{value: MINT_FEE}(to, "ipfs://enc/1", hash_, hex"01");
     }
 
-    function _buildProof(bytes32 newHash, bytes memory sealedKey)
+    function _buildProof(
+        bytes32 newHash,
+        bytes memory sealedKey,
+        uint256 tokenId,
+        address recipient
+    )
         internal
         returns (IERC7857.TransferValidityProof memory tvp, bytes32 proofId)
     {
@@ -57,7 +58,7 @@ contract YapFighterTest is Test {
         tvp = IERC7857.TransferValidityProof({accessProof: ap, ownershipProof: op});
         proofId = keccak256(abi.encode(op.oracleType, op.dataHash, op.nonce, op.proof));
         vm.prank(verifier);
-        fighter.attestProof(proofId);
+        fighter.attestProof(proofId, tokenId, recipient);
     }
 
     // ---------------- mint ----------------
@@ -95,16 +96,17 @@ contract YapFighterTest is Test {
 
     function test_ITransferFrom_TransfersAndUpdatesMetadata() public {
         uint256 id = _mintTo(alice, keccak256("m"));
-        (IERC7857.TransferValidityProof memory tvp,) = _buildProof(keccak256("m2"), hex"02");
+        (IERC7857.TransferValidityProof memory tvp,) = _buildProof(keccak256("m2"), hex"02", id, bob);
 
         IERC7857.TransferValidityProof[] memory proofs = new IERC7857.TransferValidityProof[](1);
         proofs[0] = tvp;
 
         vm.prank(alice);
-        fighter.iTransferFrom(alice, bob, id, proofs);
+        fighter.iTransferFrom(alice, bob, id, proofs, NEW_URI);
 
         assertEq(fighter.ownerOf(id), bob);
         assertEq(fighter.metadataHash(id), keccak256("m2"));
+        assertEq(fighter.encryptedURI(id), NEW_URI);
     }
 
     function test_ITransferFrom_RevertsWhenProofUnattested() public {
@@ -127,12 +129,12 @@ contract YapFighterTest is Test {
 
         vm.prank(alice);
         vm.expectRevert(YapFighter.InvalidProof.selector);
-        fighter.iTransferFrom(alice, bob, id, proofs);
+        fighter.iTransferFrom(alice, bob, id, proofs, NEW_URI);
     }
 
     function test_ITransferFrom_RevertsWhenProofExpired() public {
         uint256 id = _mintTo(alice, keccak256("m"));
-        (IERC7857.TransferValidityProof memory tvp,) = _buildProof(keccak256("m2"), hex"02");
+        (IERC7857.TransferValidityProof memory tvp,) = _buildProof(keccak256("m2"), hex"02", id, bob);
 
         IERC7857.TransferValidityProof[] memory proofs = new IERC7857.TransferValidityProof[](1);
         proofs[0] = tvp;
@@ -141,7 +143,38 @@ contract YapFighterTest is Test {
 
         vm.prank(alice);
         vm.expectRevert(YapFighter.ProofExpired.selector);
-        fighter.iTransferFrom(alice, bob, id, proofs);
+        fighter.iTransferFrom(alice, bob, id, proofs, NEW_URI);
+    }
+
+    function test_ITransferFrom_RevertsWhenURIEmpty() public {
+        uint256 id = _mintTo(alice, keccak256("m"));
+        (IERC7857.TransferValidityProof memory tvp,) = _buildProof(keccak256("m2"), hex"02", id, bob);
+        IERC7857.TransferValidityProof[] memory proofs = new IERC7857.TransferValidityProof[](1);
+        proofs[0] = tvp;
+
+        vm.prank(alice);
+        vm.expectRevert(YapFighter.InvalidProof.selector);
+        fighter.iTransferFrom(alice, bob, id, proofs, "");
+    }
+
+    function test_ITransferFrom_ProofIsBoundToTokenAndRecipient() public {
+        // Two tokens, alice owns both. Verifier attests a proof scoped to
+        // token1+bob but caller tries to use it on token2+bob — must reject.
+        uint256 id1 = _mintTo(alice, keccak256("m1"));
+        uint256 id2 = _mintTo(alice, keccak256("m2"));
+        (IERC7857.TransferValidityProof memory tvp,) =
+            _buildProof(keccak256("new"), hex"02", id1, bob);
+        IERC7857.TransferValidityProof[] memory proofs = new IERC7857.TransferValidityProof[](1);
+        proofs[0] = tvp;
+
+        vm.prank(alice);
+        vm.expectRevert(YapFighter.InvalidProof.selector);
+        fighter.iTransferFrom(alice, bob, id2, proofs, NEW_URI);
+
+        // Same proof against the correct token must succeed.
+        vm.prank(alice);
+        fighter.iTransferFrom(alice, bob, id1, proofs, NEW_URI);
+        assertEq(fighter.ownerOf(id1), bob);
     }
 
     function test_ITransferFrom_ClearsAuthorizations() public {
@@ -151,33 +184,36 @@ contract YapFighterTest is Test {
         fighter.authorizeUsage(id, exec, hex"ff");
         assertTrue(fighter.isExecutor(id, exec));
 
-        (IERC7857.TransferValidityProof memory tvp,) = _buildProof(keccak256("m2"), hex"02");
+        (IERC7857.TransferValidityProof memory tvp,) = _buildProof(keccak256("m2"), hex"02", id, bob);
         IERC7857.TransferValidityProof[] memory proofs = new IERC7857.TransferValidityProof[](1);
         proofs[0] = tvp;
 
         vm.prank(alice);
-        fighter.iTransferFrom(alice, bob, id, proofs);
+        fighter.iTransferFrom(alice, bob, id, proofs, NEW_URI);
 
         assertFalse(fighter.isExecutor(id, exec));
         assertEq(fighter.executorCount(id), 0);
     }
 
-    function test_ITransferFrom_OperatorCanCallOnBehalfOfOwner() public {
+    function test_ITransferFrom_RevertsForNonOwnerCaller() public {
+        // Brief: self-custodial. Only the token owner can iTransferFrom — no
+        // operator superuser path. Even an attested proof can't be used by a
+        // third party to move someone else's token.
         uint256 id = _mintTo(alice, keccak256("m"));
-        (IERC7857.TransferValidityProof memory tvp,) = _buildProof(keccak256("m2"), hex"02");
+        (IERC7857.TransferValidityProof memory tvp,) = _buildProof(keccak256("m2"), hex"02", id, bob);
         IERC7857.TransferValidityProof[] memory proofs = new IERC7857.TransferValidityProof[](1);
         proofs[0] = tvp;
 
-        vm.prank(operator);
-        fighter.iTransferFrom(alice, bob, id, proofs);
-        assertEq(fighter.ownerOf(id), bob);
+        vm.prank(bob);
+        vm.expectRevert(YapFighter.NotAuthorized.selector);
+        fighter.iTransferFrom(alice, bob, id, proofs, NEW_URI);
     }
 
     // ---------------- clone ----------------
 
     function test_ICloneFrom_CreatesNewToken() public {
         uint256 id = _mintTo(alice, keccak256("m"));
-        (IERC7857.TransferValidityProof memory tvp,) = _buildProof(keccak256("mCloned"), hex"03");
+        (IERC7857.TransferValidityProof memory tvp,) = _buildProof(keccak256("mCloned"), hex"03", id, bob);
 
         vm.prank(alice);
         uint256 newId = fighter.iCloneFrom(bob, id, tvp);
@@ -190,7 +226,7 @@ contract YapFighterTest is Test {
 
     function test_ICloneFrom_RevertsForNonOwner() public {
         uint256 id = _mintTo(alice, keccak256("m"));
-        (IERC7857.TransferValidityProof memory tvp,) = _buildProof(keccak256("mCloned"), hex"03");
+        (IERC7857.TransferValidityProof memory tvp,) = _buildProof(keccak256("mCloned"), hex"03", id, bob);
 
         vm.prank(bob);
         vm.expectRevert(YapFighter.NotAuthorized.selector);
@@ -269,7 +305,7 @@ contract YapFighterTest is Test {
     function test_AttestProof_OnlyVerifier() public {
         vm.prank(alice);
         vm.expectRevert(YapFighter.NotAuthorized.selector);
-        fighter.attestProof(keccak256("x"));
+        fighter.attestProof(keccak256("x"), 1, bob);
     }
 
     function test_SupportsInterface_IncludesERC7857() public view {
