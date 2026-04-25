@@ -17,11 +17,9 @@
 
 import "server-only";
 import {
-  AbiCoder,
   Contract,
   JsonRpcProvider,
   Wallet,
-  getBytes,
   keccak256,
   toUtf8Bytes,
 } from "ethers";
@@ -32,6 +30,7 @@ import {
 import { activeChain } from "@/lib/chains";
 import { getFighterMeta } from "@/lib/fighter-meta";
 import { runChat, streamChat } from "@/lib/0g/inference";
+import { signVerdict } from "@/lib/0g/oracle-signer";
 import { RPC } from "@/lib/0g/storage";
 import { getBattleStore } from "./store";
 import type {
@@ -592,25 +591,30 @@ Respond on the first line with exactly "${firstLabel}" or "${secondLabel}" to pi
     toUtf8Bytes(`${transcript}\n---\n${text}\n---\n${chat.chatID ?? ""}`),
   ) as `0x${string}`;
 
-  // Sign verdict digest matching BattleEscrow.verdictDigest semantics.
-  const pk = process.env.ZG_ORACLE_PRIVATE_KEY;
-  if (!pk) throw new Error("ZG_ORACLE_PRIVATE_KEY not configured");
+  // Sign via the TEE-attested signer service (Phala dstack). Falls back
+  // to local-key signing only when the service URL+secret is unset
+  // (testnet dev). Mainnet path always points at the dstack signer; the
+  // contract's oracleKey == enclave-derived address.
+  const sig = await signVerdict({
+    battleId: BigInt(state.battleId),
+    winner,
+    verdictHash,
+    escrowAddress: BATTLE_ESCROW_ADDRESS as `0x${string}`,
+    chainId: BigInt(activeChain.id),
+  });
 
-  const coder = AbiCoder.defaultAbiCoder();
-  const encoded = coder.encode(
-    ["address", "uint256", "uint256", "uint8", "bytes32"],
-    [BATTLE_ESCROW_ADDRESS, activeChain.id, state.battleId, winner, verdictHash],
-  );
-  const innerHash = keccak256(encoded);
-  const wallet = new Wallet(pk);
-  const signature = (await wallet.signMessage(getBytes(innerHash))) as `0x${string}`;
+  if (sig.source === "local-fallback") {
+    console.warn(
+      `[battle-runner] battle=${state.battleId} signed via local fallback (testnet dev path). Set ZG_ORACLE_SIGNER_URL for TEE-attested signing.`,
+    );
+  }
 
   return {
     winner,
     reasoning: text.slice(0, 500),
     zgAttestation: chat.chatID,
     verdictHash,
-    signature,
+    signature: sig.signature,
   };
 }
 

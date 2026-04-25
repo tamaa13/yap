@@ -1,0 +1,29 @@
+# Yap oracle signer — Phala dstack deployment manifest.
+#
+# Reference this file from the Phala Cloud dashboard (or `phala deploy`)
+# to launch the signer inside a TDX-attested enclave. The image hash that
+# dstack measures at boot becomes the public commitment — spectators can
+# verify the running enclave matches what was audited.
+#
+# IMPORTANT: replace the image tag with a real published image
+# (registry/yap-oracle-signer:vN). Do NOT use a `:latest` floating tag —
+# the whole point of attestation is that the image is content-addressed.
+
+services:
+  oracle-signer:
+    image: ghcr.io/tamaa13/yap-oracle-signer:v1
+    restart: unless-stopped
+    environment:
+      - PORT=3030
+      # Shared secret with the Yap relayer. dstack injects this from the
+      # encrypted env feature so it never touches the host filesystem.
+      - ORACLE_SIGNER_SECRET=${ORACLE_SIGNER_SECRET}
+    ports:
+      # dstack publishes 3030 via the content-addressed domain
+      # (e.g. https://0xabcd.dstack.host/sign). RA-HTTPS is automatic.
+      - "3030:3030"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3030/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

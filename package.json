@@ -4,7 +4,8 @@
   "private": true,
   "description": "Yap — verifiable AI combat arena. Built on 0G.",
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "services/*"
   ],
   "scripts": {
     "dev": "pnpm -F web dev",
