@@ -100,11 +100,11 @@ pnpm dev
 
 | Contract | Address | Explorer |
 |---|---|---|
-| YapFighter | `0x21440e9a371101b4e756ccdbd8e716ad3cf30646` | [chainscan](https://chainscan-galileo.0g.ai/address/0x21440e9a371101b4e756ccdbd8e716ad3cf30646) |
-| BattleEscrow | `0x95bf020826e9fabfa5ab0c0d2805d14dc1b91e01` | [chainscan](https://chainscan-galileo.0g.ai/address/0x95bf020826e9fabfa5ab0c0d2805d14dc1b91e01) |
-| BattleRegistry | `0x2404e4a63a169ff9c48c65e2e7fc7a5ea85455c6` | [chainscan](https://chainscan-galileo.0g.ai/address/0x2404e4a63a169ff9c48c65e2e7fc7a5ea85455c6) |
-| YapMarketplace | `0x6bb7a168b989e6c78962aed1e4f7fa380793f15c` | [chainscan](https://chainscan-galileo.0g.ai/address/0x6bb7a168b989e6c78962aed1e4f7fa380793f15c) |
-| RentalEscrow | `0xca09f64160f25dd13e91ef9dfe0aa87c05a73fb4` | [chainscan](https://chainscan-galileo.0g.ai/address/0xca09f64160f25dd13e91ef9dfe0aa87c05a73fb4) |
+| YapFighter | `0xaa03422386caf17c04cce117b62bcc1045f2f93b` | [chainscan](https://chainscan-galileo.0g.ai/address/0xaa03422386caf17c04cce117b62bcc1045f2f93b) |
+| BattleEscrow | `0x89f1dc8b020ec628b48e0dc005e5314c0fd00809` | [chainscan](https://chainscan-galileo.0g.ai/address/0x89f1dc8b020ec628b48e0dc005e5314c0fd00809) |
+| BattleRegistry | `0xd5e50bad6e1732c671307ee74837eb00fae7ce9f` | [chainscan](https://chainscan-galileo.0g.ai/address/0xd5e50bad6e1732c671307ee74837eb00fae7ce9f) |
+| YapMarketplace | `0x3df20c444c678949e1e90a2b25750b305fa318a1` | [chainscan](https://chainscan-galileo.0g.ai/address/0x3df20c444c678949e1e90a2b25750b305fa318a1) |
+| RentalEscrow | `0x9b61ea1bae9ba686facadd3392d49f73f7fce2bb` | [chainscan](https://chainscan-galileo.0g.ai/address/0x9b61ea1bae9ba686facadd3392d49f73f7fce2bb) |
 
 ## 0G Modules Used
 
