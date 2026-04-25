@@ -22,7 +22,11 @@ import { startBattleRunner } from "@/lib/battle-state/runner";
 import { consume, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
-export const maxDuration = 30;
+// Battle runner scheduled via after() can run up to maxDuration seconds.
+// Vercel Pro/Fluid Compute caps at 800–900s; multi-round battle of 5
+// rounds × ~60s/round + judging fits inside that envelope. Hobby tier
+// (60s) is too low — deploy to Pro or use Fluid Compute.
+export const maxDuration = 800;
 
 interface Body {
   restart?: boolean;
