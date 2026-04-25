@@ -82,6 +82,19 @@
   },
   {
     "type": "function",
+    "name": "MIN_ELO",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "battleHistory",
     "inputs": [
       {
@@ -145,33 +158,6 @@
             "name": "finalized",
             "type": "bool",
             "internalType": "bool"
-          },
-          {
-            "name": "rounds",
-            "type": "tuple[]",
-            "internalType": "struct BattleRegistry.RoundRecord[]",
-            "components": [
-              {
-                "name": "round",
-                "type": "uint8",
-                "internalType": "uint8"
-              },
-              {
-                "name": "scoreA",
-                "type": "uint16",
-                "internalType": "uint16"
-              },
-              {
-                "name": "scoreB",
-                "type": "uint16",
-                "internalType": "uint16"
-              },
-              {
-                "name": "verdictSig",
-                "type": "bytes",
-                "internalType": "bytes"
-              }
-            ]
           }
         ]
       }
@@ -233,33 +219,6 @@
             "name": "finalized",
             "type": "bool",
             "internalType": "bool"
-          },
-          {
-            "name": "rounds",
-            "type": "tuple[]",
-            "internalType": "struct BattleRegistry.RoundRecord[]",
-            "components": [
-              {
-                "name": "round",
-                "type": "uint8",
-                "internalType": "uint8"
-              },
-              {
-                "name": "scoreA",
-                "type": "uint16",
-                "internalType": "uint16"
-              },
-              {
-                "name": "scoreB",
-                "type": "uint16",
-                "internalType": "uint16"
-              },
-              {
-                "name": "verdictSig",
-                "type": "bytes",
-                "internalType": "bytes"
-              }
-            ]
           }
         ]
       }
@@ -416,39 +375,6 @@
       }
     ],
     "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "recordRound",
-    "inputs": [
-      {
-        "name": "battleId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "round",
-        "type": "uint8",
-        "internalType": "uint8"
-      },
-      {
-        "name": "scoreA",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
-        "name": "scoreB",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
-        "name": "verdictSig",
-        "type": "bytes",
-        "internalType": "bytes"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -679,43 +605,6 @@
         "type": "address",
         "indexed": true,
         "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "RoundRecorded",
-    "inputs": [
-      {
-        "name": "battleId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "round",
-        "type": "uint8",
-        "indexed": true,
-        "internalType": "uint8"
-      },
-      {
-        "name": "scoreA",
-        "type": "uint16",
-        "indexed": false,
-        "internalType": "uint16"
-      },
-      {
-        "name": "scoreB",
-        "type": "uint16",
-        "indexed": false,
-        "internalType": "uint16"
-      },
-      {
-        "name": "verdictSig",
-        "type": "bytes",
-        "indexed": false,
-        "internalType": "bytes"
       }
     ],
     "anonymous": false

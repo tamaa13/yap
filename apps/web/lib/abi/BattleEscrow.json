@@ -105,6 +105,19 @@
   },
   {
     "type": "function",
+    "name": "DISPUTE_EXTENSION",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "DISPUTE_WINDOW",
     "inputs": [],
     "outputs": [
@@ -125,6 +138,19 @@
         "name": "",
         "type": "uint8",
         "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "DUST_SWEEP_COOLDOWN",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -209,13 +235,13 @@
   },
   {
     "type": "function",
-    "name": "TEE_ORACLE_ROLE",
+    "name": "STUCK_VERDICT_TIMEOUT",
     "inputs": [],
     "outputs": [
       {
         "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -308,6 +334,21 @@
         "name": "verdictSig",
         "type": "bytes",
         "internalType": "bytes"
+      },
+      {
+        "name": "verdictHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "totalClaimed",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "settledAt",
+        "type": "uint64",
+        "internalType": "uint64"
       }
     ],
     "stateMutability": "view"
@@ -421,6 +462,44 @@
   },
   {
     "type": "function",
+    "name": "disputeDeadline",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "disputeExtended",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "disputeWindow",
     "inputs": [],
     "outputs": [
@@ -444,6 +523,24 @@
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "fileDispute",
+    "inputs": [
+      {
+        "name": "battleId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "reasonHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -525,6 +622,21 @@
             "name": "verdictSig",
             "type": "bytes",
             "internalType": "bytes"
+          },
+          {
+            "name": "verdictHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "totalClaimed",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "settledAt",
+            "type": "uint64",
+            "internalType": "uint64"
           }
         ]
       }
@@ -661,6 +773,19 @@
   },
   {
     "type": "function",
+    "name": "pauseSettlement",
+    "inputs": [
+      {
+        "name": "battleId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "placeBet",
     "inputs": [
       {
@@ -681,6 +806,19 @@
     ],
     "outputs": [],
     "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "refundStuckVerdict",
+    "inputs": [
+      {
+        "name": "battleId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -811,6 +949,11 @@
         "internalType": "uint8"
       },
       {
+        "name": "verdictHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
         "name": "teeSignature",
         "type": "bytes",
         "internalType": "bytes"
@@ -840,6 +983,19 @@
   },
   {
     "type": "function",
+    "name": "sweepDust",
+    "inputs": [
+      {
+        "name": "battleId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "treasury",
     "inputs": [],
     "outputs": [
@@ -864,6 +1020,11 @@
         "name": "winner",
         "type": "uint8",
         "internalType": "uint8"
+      },
+      {
+        "name": "verdictHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "outputs": [
@@ -1027,6 +1188,31 @@
   },
   {
     "type": "event",
+    "name": "DisputeFiled",
+    "inputs": [
+      {
+        "name": "battleId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "by",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "reasonHash",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "DisputeWindowUpdated",
     "inputs": [
       {
@@ -1037,6 +1223,25 @@
       },
       {
         "name": "newWindow",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "DustSwept",
+    "inputs": [
+      {
+        "name": "battleId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -1178,6 +1383,44 @@
   },
   {
     "type": "event",
+    "name": "SettlementPaused",
+    "inputs": [
+      {
+        "name": "battleId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "newDeadline",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "StuckVerdictRefunded",
+    "inputs": [
+      {
+        "name": "battleId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "caller",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "TreasuryUpdated",
     "inputs": [
       {
@@ -1204,6 +1447,12 @@
         "type": "uint8",
         "indexed": false,
         "internalType": "uint8"
+      },
+      {
+        "name": "verdictHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
       },
       {
         "name": "teeSignature",
@@ -1243,6 +1492,11 @@
   {
     "type": "error",
     "name": "DefenderStakeTooLow",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DisputeAlreadyExtended",
     "inputs": []
   },
   {
@@ -1315,6 +1569,16 @@
   },
   {
     "type": "error",
+    "name": "InvalidVerdictHash",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoDust",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "NotFighterUser",
     "inputs": []
   },
@@ -1341,6 +1605,11 @@
   {
     "type": "error",
     "name": "TimeoutNotReached",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "VerdictNotStuck",
     "inputs": []
   },
   {
