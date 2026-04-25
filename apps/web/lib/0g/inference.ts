@@ -118,13 +118,24 @@ export async function runChat(args: RunChatArgs): Promise<RunChatResult> {
   const content = data.choices?.[0]?.message?.content ?? "";
   const chatID = data.id;
 
-  // TEE signature verification. `processResponse` returns true/false for
-  // verifiable services, null when the service isn't verifiable. We treat
-  // null as "valid" since Phala-hosted providers may not emit sig envelopes.
-  const sigCheck = await broker.inference
-    .processResponse(providerAddress, chatID, content)
-    .catch(() => null);
-  const signatureValid = sigCheck === null ? true : sigCheck;
+  // TEE signature verification. `processResponse` returns:
+  //   true  → service is verifiable AND signature valid
+  //   false → service is verifiable BUT signature invalid
+  //   null  → service is non-verifiable (no attestation envelope)
+  // Brief: "verifiable AI" requires actual cryptographic verification, so this
+  // is fail-CLOSED: only treat as valid when explicitly verified true. Both
+  // `null` (no envelope) and SDK/network errors collapse to invalid.
+  let signatureValid = false;
+  try {
+    const sigCheck = await broker.inference.processResponse(
+      providerAddress,
+      chatID,
+      content,
+    );
+    signatureValid = sigCheck === true;
+  } catch {
+    signatureValid = false;
+  }
 
   return {
     content,
@@ -243,10 +254,18 @@ export async function streamChat(args: StreamChatArgs): Promise<RunChatResult> {
   }
 
   // Verify TEE signature using accumulated content + chat ID.
-  const sigCheck = await broker.inference
-    .processResponse(providerAddress, chatID, content)
-    .catch(() => null);
-  const signatureValid = sigCheck === null ? true : sigCheck;
+  // Fail-CLOSED: only true when explicitly verified. See runChat() for rationale.
+  let signatureValid = false;
+  try {
+    const sigCheck = await broker.inference.processResponse(
+      providerAddress,
+      chatID,
+      content,
+    );
+    signatureValid = sigCheck === true;
+  } catch {
+    signatureValid = false;
+  }
 
   return {
     content,

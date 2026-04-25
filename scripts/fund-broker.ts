@@ -2,7 +2,7 @@
 // Seeds the 0G Compute broker ledger for the server wallet.
 // Usage: pnpm -F web tsx ../../scripts/fund-broker.ts [amount 0G]
 //
-// Reads ZG_SERVER_PRIVATE_KEY from env. Creates the ledger if missing, then
+// Reads ZG_BROKER_KEY from env. Creates the ledger if missing, then
 // tops it up. Idempotent — re-running increases the deposit by `amount` 0G.
 
 import { createZGComputeNetworkBroker } from "@0glabs/0g-serving-broker";
@@ -14,9 +14,9 @@ const RPC =
     : "https://evmrpc-testnet.0g.ai";
 
 async function main() {
-  const key = process.env.ZG_SERVER_PRIVATE_KEY;
+  const key = process.env.ZG_BROKER_KEY;
   if (!key) {
-    console.error("ZG_SERVER_PRIVATE_KEY not set");
+    console.error("ZG_BROKER_KEY not set");
     process.exit(1);
   }
   const amount = Number(process.argv[2] ?? 3);

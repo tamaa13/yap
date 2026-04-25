@@ -247,7 +247,22 @@ async function runLoop(battleId: number): Promise<void> {
       store.publish(battleId, { type: "round-complete", round: roundNo });
     }
 
-    // All rounds done — enter judging phase.
+    // All rounds done. Brief: "verifiable AI" requires every TEE-attested
+    // step to actually verify before settlement. Refuse to enter judging if
+    // any round argument failed signature verification (fail-closed).
+    const preJudgeSnapshot = (await store.get(battleId))!;
+    const failed = preJudgeSnapshot.rounds.flatMap((r) => {
+      const flags: string[] = [];
+      if (r.argumentA.sigValid === false) flags.push(`R${r.number}/A`);
+      if (r.argumentB.sigValid === false) flags.push(`R${r.number}/B`);
+      return flags;
+    });
+    if (failed.length > 0) {
+      throw new Error(
+        `TEE signature verification failed for ${failed.join(", ")} — refusing to settle`,
+      );
+    }
+
     await store.update(battleId, (s) => ({ ...s, phase: "judging" }));
     store.publish(battleId, {
       type: "phase",
@@ -484,6 +499,14 @@ Respond on the first line with exactly "${firstLabel}" or "${secondLabel}" to pi
     maxTokens: 200,
   });
 
+  // Brief: judge inference must itself be TEE-verified before its decision is
+  // signed and submitted on-chain. Fail-closed if attestation didn't validate.
+  if (!chat.signatureValid) {
+    throw new Error(
+      "TEE signature verification failed for judge inference — refusing to sign verdict",
+    );
+  }
+
   const text = chat.content.trim();
   const firstLine = text.split("\n")[0]?.trim().toUpperCase() ?? "";
   const pickedLabel = firstLine.startsWith("A")
@@ -523,8 +546,12 @@ async function submitVerdictOnChain(
   winner: 0 | 1 | 2,
   signature: `0x${string}`,
 ): Promise<string> {
-  const pk = process.env.ZG_SERVER_PRIVATE_KEY;
-  if (!pk) throw new Error("ZG_SERVER_PRIVATE_KEY not configured for relay");
+  // Relayer key is isolated from broker spend (compute.ts) and oracle signer
+  // (TEE-attested). Holds only enough gas to submit verdicts; a leak here
+  // can't forge verdicts (signature still requires oracle key) or drain
+  // Compute ledger.
+  const pk = process.env.ZG_RELAYER_KEY;
+  if (!pk) throw new Error("ZG_RELAYER_KEY not configured for verdict relay");
   const provider = new JsonRpcProvider(RPC);
   const wallet = new Wallet(pk, provider);
   const escrow = new Contract(

@@ -1,6 +1,7 @@
 // Server-only wrappers around the 0G Storage SDK.
-// Requires `ZG_SERVER_PRIVATE_KEY` to sign the Flow-contract submissions the
-// Indexer issues on upload. Never import from a client component.
+// Requires `ZG_BROKER_KEY` to sign the Flow-contract submissions the Indexer
+// issues on upload (same key funds 0G Compute ledger). Never import from a
+// client component.
 
 import "server-only";
 import { Indexer, MemData } from "@0gfoundation/0g-ts-sdk";
@@ -21,10 +22,10 @@ const INDEXER_URL =
 const RPC = activeChain.rpcUrls.default.http[0];
 
 function getSigner() {
-  const pk = process.env.ZG_SERVER_PRIVATE_KEY;
+  const pk = process.env.ZG_BROKER_KEY;
   if (!pk) {
     throw new Error(
-      "ZG_SERVER_PRIVATE_KEY is not set. 0G Storage uploads require a funded signer.",
+      "ZG_BROKER_KEY is not set. 0G Storage uploads require a funded signer.",
     );
   }
   const provider = new JsonRpcProvider(RPC);

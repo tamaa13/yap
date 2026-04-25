@@ -19,8 +19,11 @@ let cached: ZGComputeNetworkBroker | null = null;
 
 export async function getBroker(): Promise<ZGComputeNetworkBroker> {
   if (cached) return cached;
-  const pk = process.env.ZG_SERVER_PRIVATE_KEY;
-  if (!pk) throw new Error("ZG_SERVER_PRIVATE_KEY not set");
+  // Broker funds 0G Compute (inference + fine-tune) ledger and pays Storage
+  // submission gas. Isolated from the verdict relayer key so a leak here only
+  // exposes Compute spend, not on-chain verdict submission.
+  const pk = process.env.ZG_BROKER_KEY;
+  if (!pk) throw new Error("ZG_BROKER_KEY not set");
   const provider = new JsonRpcProvider(RPC);
   const wallet = new Wallet(pk, provider);
   cached = await createZGComputeNetworkBroker(wallet);
