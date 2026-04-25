@@ -109,10 +109,23 @@ contract BattleEscrowTest is Test {
         );
     }
 
-    /// Sign a verdict for (battleId, winner) using the oracle private key.
+    /// Default transcript commitment used in tests that don't care about
+    /// verdict-content binding semantics — only that the verdictHash is
+    /// non-zero and consistent across signing + submission.
+    bytes32 internal constant MOCK_VERDICT_HASH = keccak256("yap-test-transcript");
+
+    /// Sign a verdict for (battleId, winner, MOCK_VERDICT_HASH) using the oracle private key.
     /// Matches the on-chain digest construction in {submitVerdict}.
     function _signVerdict(uint256 battleId, uint8 winner) internal view returns (bytes memory sig) {
-        bytes32 digest = escrow.verdictDigest(battleId, winner);
+        return _signVerdict(battleId, winner, MOCK_VERDICT_HASH);
+    }
+
+    function _signVerdict(uint256 battleId, uint8 winner, bytes32 verdictHash)
+        internal
+        view
+        returns (bytes memory sig)
+    {
+        bytes32 digest = escrow.verdictDigest(battleId, winner, verdictHash);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ORACLE_PRIV_KEY, digest);
         sig = abi.encodePacked(r, s, v);
     }
@@ -305,7 +318,7 @@ contract BattleEscrowTest is Test {
         uint256 id = _create();
         vm.prank(alice);
         escrow.placeBet{value: 1 ether}(id, 0, 1 ether);
-        escrow.submitVerdict(id, 0, _signVerdict(id, 0));
+        escrow.submitVerdict(id, 0, MOCK_VERDICT_HASH, _signVerdict(id, 0));
         vm.prank(bob);
         vm.expectRevert(BattleEscrow.InvalidState.selector);
         escrow.placeBet{value: 1 ether}(id, 1, 1 ether);
@@ -337,7 +350,7 @@ contract BattleEscrowTest is Test {
         vm.prank(dan);
         escrow.placeBet{value: 5 ether}(id, 1, 5 ether);
 
-        escrow.submitVerdict(id, 0, _signVerdict(id, 0));
+        escrow.submitVerdict(id, 0, MOCK_VERDICT_HASH, _signVerdict(id, 0));
 
         vm.warp(block.timestamp + 24 hours + 1);
         escrow.settle(id);
@@ -363,7 +376,7 @@ contract BattleEscrowTest is Test {
 
     function test_Settle_RevertsDuringDisputeWindow() public {
         uint256 id = _create();
-        escrow.submitVerdict(id, 0, _signVerdict(id, 0));
+        escrow.submitVerdict(id, 0, MOCK_VERDICT_HASH, _signVerdict(id, 0));
         vm.expectRevert(BattleEscrow.DisputeWindowActive.selector);
         escrow.settle(id);
     }
@@ -375,7 +388,7 @@ contract BattleEscrowTest is Test {
         vm.prank(bob);
         escrow.placeBet{value: 2 ether}(id, 1, 2 ether); // bob total 3
 
-        escrow.submitVerdict(id, 2, _signVerdict(id, 2));
+        escrow.submitVerdict(id, 2, MOCK_VERDICT_HASH, _signVerdict(id, 2));
         vm.warp(block.timestamp + 24 hours + 1);
         escrow.settle(id);
 
@@ -405,7 +418,7 @@ contract BattleEscrowTest is Test {
         vm.prank(carol);
         escrow.placeBet{value: 9 ether}(id, 0, 9 ether); // carol adds 9 on A
 
-        escrow.submitVerdict(id, 1, _signVerdict(id, 1)); // B wins
+        escrow.submitVerdict(id, 1, MOCK_VERDICT_HASH, _signVerdict(id, 1)); // B wins
         vm.warp(block.timestamp + escrow.disputeWindow() + 1);
         escrow.settle(id);
 
@@ -437,7 +450,7 @@ contract BattleEscrowTest is Test {
         // No surplus → losing side gets 0.
         uint256 id = _create(); // alice 1 A, bob 1 B (matched 100%)
 
-        escrow.submitVerdict(id, 1, _signVerdict(id, 1));
+        escrow.submitVerdict(id, 1, MOCK_VERDICT_HASH, _signVerdict(id, 1));
         vm.warp(block.timestamp + escrow.disputeWindow() + 1);
         escrow.settle(id);
 
@@ -476,7 +489,7 @@ contract BattleEscrowTest is Test {
 
     function test_ClaimPayout_DoubleClaimReverts() public {
         uint256 id = _create();
-        escrow.submitVerdict(id, 0, _signVerdict(id, 0));
+        escrow.submitVerdict(id, 0, MOCK_VERDICT_HASH, _signVerdict(id, 0));
         vm.warp(block.timestamp + 24 hours + 1);
         escrow.settle(id);
 
@@ -492,11 +505,11 @@ contract BattleEscrowTest is Test {
     function test_SubmitVerdict_RevertsOnBadSignature() public {
         uint256 id = _create();
         // Sig from a WRONG key (different from oracleKey).
-        bytes32 digest = escrow.verdictDigest(id, 0);
+        bytes32 digest = escrow.verdictDigest(id, 0, MOCK_VERDICT_HASH);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(0xBAD, digest);
         bytes memory badSig = abi.encodePacked(r, s, v);
         vm.expectRevert(BattleEscrow.InvalidOracleSignature.selector);
-        escrow.submitVerdict(id, 0, badSig);
+        escrow.submitVerdict(id, 0, MOCK_VERDICT_HASH, badSig);
     }
 
     function test_SubmitVerdict_WrongWinnerInvalidatesSignature() public {
@@ -504,7 +517,7 @@ contract BattleEscrowTest is Test {
         // Signed for winner=0, submitted with winner=1 → digest mismatch.
         bytes memory sigForA = _signVerdict(id, 0);
         vm.expectRevert(BattleEscrow.InvalidOracleSignature.selector);
-        escrow.submitVerdict(id, 1, sigForA);
+        escrow.submitVerdict(id, 1, MOCK_VERDICT_HASH, sigForA);
     }
 
     function test_SubmitVerdict_AnyoneCanRelayValidSig() public {
@@ -512,7 +525,7 @@ contract BattleEscrowTest is Test {
         bytes memory sig = _signVerdict(id, 0);
         // Carol (unrelated) submits — should succeed because the sig is valid.
         vm.prank(carol);
-        escrow.submitVerdict(id, 0, sig);
+        escrow.submitVerdict(id, 0, MOCK_VERDICT_HASH, sig);
         BattleEscrow.Battle memory b = escrow.getBattle(id);
         assertEq(uint8(b.status), uint8(BattleEscrow.Status.Verdict));
     }
@@ -530,13 +543,13 @@ contract BattleEscrowTest is Test {
         // Old oracle key can no longer sign valid verdicts.
         bytes memory oldSig = _signVerdict(id, 0);
         vm.expectRevert(BattleEscrow.InvalidOracleSignature.selector);
-        escrow.submitVerdict(id, 0, oldSig);
+        escrow.submitVerdict(id, 0, MOCK_VERDICT_HASH, oldSig);
 
         // New key signs valid.
-        bytes32 digest = escrow.verdictDigest(id, 0);
+        bytes32 digest = escrow.verdictDigest(id, 0, MOCK_VERDICT_HASH);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(newKey, digest);
         bytes memory newSig = abi.encodePacked(r, s, v);
-        escrow.submitVerdict(id, 0, newSig);
+        escrow.submitVerdict(id, 0, MOCK_VERDICT_HASH, newSig);
     }
 
     function test_ReentrancyOnClaim_Blocked() public {
@@ -548,7 +561,7 @@ contract BattleEscrowTest is Test {
         vm.prank(bob);
         escrow.placeBet{value: 1 ether}(id, 1, 1 ether);
 
-        escrow.submitVerdict(id, 0, _signVerdict(id, 0));
+        escrow.submitVerdict(id, 0, MOCK_VERDICT_HASH, _signVerdict(id, 0));
         vm.warp(block.timestamp + 24 hours + 1);
         escrow.settle(id);
 

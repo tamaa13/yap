@@ -12,13 +12,9 @@ contract BattleRegistry is AccessControl {
 
     uint32 public constant DEFAULT_ELO = 1200;
     uint32 public constant K_FACTOR = 32;
-
-    struct RoundRecord {
-        uint8 round;
-        uint16 scoreA;
-        uint16 scoreB;
-        bytes verdictSig;
-    }
+    /// @notice Minimum allowed ELO. Prevents underflow / wrap-around in
+    ///         {_eloUpdate} when a low-rated fighter loses repeatedly.
+    uint32 public constant MIN_ELO = 100;
 
     struct Battle {
         uint256 battleId;
@@ -29,7 +25,6 @@ contract BattleRegistry is AccessControl {
         uint64 endTime;
         uint8 winner; // 0=A, 1=B, 2=draw
         bool finalized;
-        RoundRecord[] rounds;
     }
 
     struct FighterStats {
@@ -49,13 +44,6 @@ contract BattleRegistry is AccessControl {
         uint256 indexed fighterA,
         uint256 indexed fighterB,
         string topic
-    );
-    event RoundRecorded(
-        uint256 indexed battleId,
-        uint8 indexed round,
-        uint16 scoreA,
-        uint16 scoreB,
-        bytes verdictSig
     );
     event BattleFinalized(
         uint256 indexed battleId,
@@ -109,25 +97,6 @@ contract BattleRegistry is AccessControl {
         if (_stats[fighterB].elo == 0) _stats[fighterB].elo = DEFAULT_ELO;
 
         emit BattleRegistered(battleId, fighterA, fighterB, topic);
-    }
-
-    function recordRound(
-        uint256 battleId,
-        uint8 round,
-        uint16 scoreA,
-        uint16 scoreB,
-        bytes calldata verdictSig
-    ) external onlyRole(ESCROW_ROLE) {
-        Battle storage b = _battles[battleId];
-        if (b.battleId == 0) revert UnknownBattle();
-        if (b.finalized) revert AlreadyFinalized();
-        b.rounds.push(RoundRecord({
-            round: round,
-            scoreA: scoreA,
-            scoreB: scoreB,
-            verdictSig: verdictSig
-        }));
-        emit RoundRecorded(battleId, round, scoreA, scoreB, verdictSig);
     }
 
     function finalizeBattle(uint256 battleId, uint8 winner) external onlyRole(ESCROW_ROLE) {
@@ -226,8 +195,16 @@ contract BattleRegistry is AccessControl {
         // newElo = elo + K * (score - exp) / 1e4
         int256 dA = (int256(uint256(K_FACTOR)) * (int256(scoreA) - int256(expA))) / 10_000;
         int256 dB = (int256(uint256(K_FACTOR)) * (int256(scoreB) - int256(expB))) / 10_000;
-        newA = uint32(uint256(int256(uint256(eloA)) + dA));
-        newB = uint32(uint256(int256(uint256(eloB)) + dB));
+        // Floor at MIN_ELO to prevent underflow / wrap-around when a low-rated
+        // fighter loses against a much higher-rated opponent (or vice versa for
+        // a chronic loser scenario where eloA + dA could underflow).
+        int256 floored;
+        floored = int256(uint256(eloA)) + dA;
+        if (floored < int256(uint256(MIN_ELO))) floored = int256(uint256(MIN_ELO));
+        newA = uint32(uint256(floored));
+        floored = int256(uint256(eloB)) + dB;
+        if (floored < int256(uint256(MIN_ELO))) floored = int256(uint256(MIN_ELO));
+        newB = uint32(uint256(floored));
     }
 
     /// @dev Expected score of A vs B, scaled by 1e4.

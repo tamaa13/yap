@@ -11,11 +11,12 @@ import {IERC7857} from "./IERC7857.sol";
 /// @notice Each token represents an AI fighter whose encrypted weights live off-chain.
 ///         Ownership transfers require a re-sealing proof (TEE/ZK) verified by {verifier}.
 contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
-    uint256 public constant PROOF_VALIDITY = 1 hours;
+    /// @notice Ownership proofs expire after this window. Tightened from 1
+    ///         hour to 10 minutes to reduce replay surface for stale proofs
+    ///         (industry standard for short-lived ownership attestations).
+    uint256 public constant PROOF_VALIDITY = 10 minutes;
     uint256 public constant MAX_EXECUTORS = 100;
 
     address public override verifier;
@@ -52,8 +53,6 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
         }
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(ADMIN_ROLE, admin);
-        _grantRole(MINTER_ROLE, admin);
-        _grantRole(OPERATOR_ROLE, admin);
         verifier = verifier_;
         treasury = treasury_;
         mintFee = mintFee_;
@@ -118,20 +117,33 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
         address from,
         address to,
         uint256 tokenId,
-        TransferValidityProof[] calldata proofs
+        TransferValidityProof[] calldata proofs,
+        string calldata newEncryptedURI
     ) external override nonReentrant {
         if (to == address(0)) revert ZeroAddress();
+        if (bytes(newEncryptedURI).length == 0) revert InvalidProof();
         if (ownerOf(tokenId) != from) revert NotAuthorized();
-        if (msg.sender != from && !hasRole(OPERATOR_ROLE, msg.sender)) revert NotAuthorized();
+        // Brief: self-custodial INFT. Only the token owner can transfer with
+        // re-encryption — no operator superuser path. Marketplaces/rental
+        // escrows use the standard ERC-721 transfer flow which goes through
+        // the _update hook (clears authorizations) without triggering
+        // re-encryption (those are off-chain custody flows, not transfers
+        // of ownership intent).
+        if (msg.sender != from) revert NotAuthorized();
         if (proofs.length == 0) revert InvalidProof();
 
         OwnershipProof calldata op = proofs[proofs.length - 1].ownershipProof;
-        _requireFreshProof(op);
+        _requireFreshProof(op, tokenId, to);
         if (op.dataHash == bytes32(0)) revert InvalidProof();
 
         _clearAuthorizations(tokenId);
 
         metadataHash[tokenId] = op.dataHash;
+        // Sealing guarantee: rotate encryptedURI to the new ciphertext
+        // location. Without this, the prior owner's blob remains the
+        // canonical pointer and any party who downloaded it (the prior
+        // owner) can still decrypt the persona post-transfer.
+        encryptedURI[tokenId] = newEncryptedURI;
         sealedKeys[tokenId] = op.sealedKey;
 
         _transfer(from, to, tokenId);
@@ -146,10 +158,11 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
         TransferValidityProof calldata proof
     ) external override nonReentrant returns (uint256 newTokenId) {
         address owner = ownerOf(tokenId);
-        if (msg.sender != owner && !hasRole(OPERATOR_ROLE, msg.sender)) revert NotAuthorized();
+        // Self-custodial: only token owner can clone — no operator superuser.
+        if (msg.sender != owner) revert NotAuthorized();
         if (to == address(0)) revert ZeroAddress();
 
-        _requireFreshProof(proof.ownershipProof);
+        _requireFreshProof(proof.ownershipProof, tokenId, to);
         if (proof.ownershipProof.dataHash == bytes32(0)) revert InvalidProof();
 
         newTokenId = ++_nextId;
@@ -191,16 +204,26 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
     // Proof helpers
     // --------------------------------------------------------------------------------------------
 
-    /// @notice Marks an ownership proof as fresh (issued now). Callable by verifier.
+    /// @notice Marks an ownership proof as fresh for a specific (tokenId,
+    ///         recipient) pair. Callable by verifier. Per-token+recipient
+    ///         binding prevents proof reuse across tokens or recipients —
+    ///         a buggy verifier issuing the same proofId twice cannot
+    ///         transfer two different tokens with one proof.
     /// @dev Timestamp used by {iTransferFrom}/{iCloneFrom} to enforce PROOF_VALIDITY.
-    function attestProof(bytes32 proofId) external {
+    function attestProof(bytes32 proofId, uint256 tokenId, address recipient) external {
         if (msg.sender != verifier) revert NotAuthorized();
-        _proofIssuedAt[proofId] = block.timestamp;
+        bytes32 boundId = keccak256(abi.encode(proofId, tokenId, recipient));
+        _proofIssuedAt[boundId] = block.timestamp;
     }
 
-    function _requireFreshProof(OwnershipProof calldata op) internal view {
+    function _requireFreshProof(
+        OwnershipProof calldata op,
+        uint256 tokenId,
+        address recipient
+    ) internal view {
         bytes32 id = keccak256(abi.encode(op.oracleType, op.dataHash, op.nonce, op.proof));
-        uint256 issued = _proofIssuedAt[id];
+        bytes32 boundId = keccak256(abi.encode(id, tokenId, recipient));
+        uint256 issued = _proofIssuedAt[boundId];
         if (issued == 0) revert InvalidProof();
         if (block.timestamp > issued + PROOF_VALIDITY) revert ProofExpired();
     }

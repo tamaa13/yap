@@ -49,20 +49,6 @@ contract BattleRegistryTest is Test {
         reg.registerBattle(1, FA, FB, "x");
     }
 
-    // ---------------- rounds ----------------
-
-    function test_RecordRound_Accumulates() public {
-        _register(1);
-        vm.prank(escrow);
-        reg.recordRound(1, 1, 50, 40, hex"aa");
-        vm.prank(escrow);
-        reg.recordRound(1, 2, 60, 55, hex"bb");
-        BattleRegistry.Battle memory b = reg.battleOf(1);
-        assertEq(b.rounds.length, 2);
-        assertEq(b.rounds[0].scoreA, 50);
-        assertEq(b.rounds[1].scoreB, 55);
-    }
-
     // ---------------- finalize / ELO ----------------
 
     function test_Finalize_AWinsUpdatesStats() public {
