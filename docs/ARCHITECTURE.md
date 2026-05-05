@@ -255,6 +255,18 @@ The 2026-04-25 audit hardening queue closed out the contract-level gaps
   Rollup flatten, blocking the artifact-download path. v1 ships persona-as-
   INFT (spec-conformant per ERC-7857 "character definitions"); fine-tune
   resumes when the SDK fix lands. Tracked at task #43.
+- **`FighterStats.earnings` wiring.** The `BattleRegistry.FighterStats`
+  struct has an `earnings` field reserved for tracking total 0G a fighter
+  has generated for its owner across battles. Currently a placeholder —
+  always reads zero. Wiring requires hook-into `BattleEscrow.PayoutClaimed`
+  with attribution from bettor → fighter (creator/defender side mapping),
+  pushed back via a registry mutator. High value for the marketplace
+  (fighters become provable revenue-generating assets, not just rating
+  numbers) but deferred since current ranking + W/L + ELO covers v1
+  collector signals. Implementation note: requires escrow-side recording
+  of (battleId → fighterA/B → wallet → claimable amount) plus an
+  `addEarnings(tokenId, amount)` registry call from the escrow during
+  settle / claim.
 - **Mainnet deploy** — Galileo testnet path live and verified; Aristotle
   (chainId 16661) gated on (1) isolated ZG_BROKER_KEY ↔ ZG_RELAYER_KEY
   blast-radius separation, (2) provider-selection ceremony if mainnet
