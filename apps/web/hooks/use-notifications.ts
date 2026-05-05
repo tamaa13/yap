@@ -107,26 +107,42 @@ export function useNotifications() {
   const { address } = useAccount();
   const enabled = Boolean(address && BATTLE_ESCROW_ADDRESS !== "");
 
-  const [state, setState] = useState<PersistedState>(() => ({
-    v: STORAGE_VERSION,
-    caredBattleIds: [],
-    notifications: [],
-  }));
+  // Initialize synchronously from storage if wagmi already has the address
+  // — useAccount in wagmi v2 returns the cached address on first render
+  // when the user is already connected. This avoids a render where state
+  // is empty before the hydration effect runs.
+  const [state, setState] = useState<PersistedState>(() => {
+    if (typeof window === "undefined" || !address) {
+      return { v: STORAGE_VERSION, caredBattleIds: [], notifications: [] };
+    }
+    return loadFromStorage(address);
+  });
 
-  // Hydrate from localStorage on address change.
+  // Hydration tracker — `address` value we've loaded persisted state for.
+  // Persistence is gated on `hydratedAddr === address` so the initial
+  // empty-render (or a render before the wagmi address resolves) can't
+  // overwrite localStorage with an empty feed.
+  const [hydratedAddr, setHydratedAddr] = useState<string | undefined>(() =>
+    typeof window !== "undefined" && address ? address.toLowerCase() : undefined,
+  );
+
+  // Re-hydrate when address changes (wallet switch).
   useEffect(() => {
     if (!address) {
+      setHydratedAddr(undefined);
       setState({ v: STORAGE_VERSION, caredBattleIds: [], notifications: [] });
       return;
     }
     setState(loadFromStorage(address));
+    setHydratedAddr(address.toLowerCase());
   }, [address]);
 
-  // Persist on every change.
+  // Persist on every change — only after hydration completed for THIS
+  // address so the empty-init render can't clobber the stored feed.
   useEffect(() => {
-    if (!address) return;
+    if (!address || hydratedAddr !== address.toLowerCase()) return;
     saveToStorage(address, state);
-  }, [address, state]);
+  }, [address, hydratedAddr, state]);
 
   const upsert = useCallback(
     (notif: Notification) => {
