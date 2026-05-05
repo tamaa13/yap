@@ -6,6 +6,7 @@ import {ReentrancyGuard} from "openzeppelin-contracts/contracts/utils/Reentrancy
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
 interface IBattleRegistry {
     function registerBattle(
@@ -25,8 +26,16 @@ interface IFighter {
 
 /// @title BattleEscrow — pool + pro-rata payout for Yap fighter battles.
 /// @notice Anyone can create a battle between two fighters and pick a side.
-///         A TEE oracle submits the signed verdict; after a dispute window, the pool is settled
+///         A 0G Compute TEE provider judges the battle and signs the verdict
+///         inside its enclave; after a dispute window, the pool is settled
 ///         and winners claim their share (pull pattern).
+///
+///         Verdict signing is performed by the 0G Compute TeeML provider
+///         itself — no separate signer service. The provider's TEE-derived
+///         ECDSA key (registered on-chain in the 0G ServingContract) signs
+///         the canonical verdict text that the LLM produces, and this
+///         contract verifies the signature recovers to {oracleKey}, which
+///         admin sets equal to the provider's teeSignerAddress.
 contract BattleEscrow is AccessControl, ReentrancyGuard {
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
@@ -141,11 +150,15 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
     IFighter public immutable fighter;
     uint256 public nextBattleId;
 
-    /// @notice Public key (EOA address) whose ECDSA signature is required on
-    ///         verdict submissions. Rotatable by admin via {setOracleKey}.
-    ///         The oracle service that holds this key must run in an isolated
-    ///         environment that has no access to pool state (see README for
-    ///         architectural guarantee).
+    /// @notice TEE signer address whose ECDSA signature is required on verdict
+    ///         submissions. Set to the 0G Compute provider's teeSignerAddress
+    ///         (registered in the 0G ServingContract for the chosen judge
+    ///         provider). Rotatable by admin via {setOracleKey} when migrating
+    ///         to a different provider or when a provider rotates its TEE key.
+    ///
+    ///         The signature must recover via EIP-191 personal_sign over the
+    ///         canonical text {verdictCanonicalText} returns — see
+    ///         {submitVerdict} for the full verification path.
     address public oracleKey;
 
     mapping(uint256 => Battle) public battles;
@@ -201,6 +214,10 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
     error VerdictNotStuck();
     error InvalidVerdictHash();
     error NoDust();
+    error InvalidSignedTextFormat();
+    error ResponseHashMismatch();
+    error CanonicalContentMissing();
+    error InvalidContentOffset();
 
     constructor(
         address admin,
@@ -386,22 +403,44 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
         emit BetPlaced(battleId, msg.sender, side, amount);
     }
 
-    /// @notice Submit a TEE verdict for a live battle. Anyone can call;
-    ///         authorization is cryptographic — the signature must recover to
-    ///         {oracleKey}. This decouples verdict authorship (TEE oracle)
-    ///         from submission (any relayer, including the battle parties).
-    /// @param verdictHash Commitment to the off-chain transcript + reasoning
-    ///        blob (e.g. 0G Storage root). Bound into the signed digest so
-    ///        spectators can verify the verdict reflects an audit-able
-    ///        transcript, not just an integer winner pick.
-    /// @dev Signed payload = `keccak256(abi.encode(address(this), chainid, battleId, winner, verdictHash))`
-    ///      wrapped in the EIP-191 personal-sign prefix via {MessageHashUtils.toEthSignedMessageHash}.
-    ///      Including the contract address + chain id prevents cross-contract /
-    ///      cross-chain replay.
+    /// @notice Submit a verdict for a live battle, verifying the 0G Compute
+    ///         provider's TEE attestation routing-proof. Anyone can call;
+    ///         authorization is cryptographic.
+    /// @dev The provider's enclave personal-signs the routing-proof text
+    ///        `<sha256(reqBody)>:<sha256(respBody)>:<providerType>:<providerIdentity>:<sha256(tlsCert)>`
+    ///      using its TEE-derived ECDSA key (registered as oracleKey). To bind
+    ///      this attestation to OUR specific verdict, the contract:
+    ///        1. Verifies ECDSA recovery on EIP-191(signedText) → oracleKey
+    ///        2. Parses the second colon-delimited field of signedText as the
+    ///           response-body sha256, and confirms sha256(responseBody) matches
+    ///        3. Reconstructs the canonical YAP_VERDICT text from on-chain inputs
+    ///           and confirms it appears verbatim at responseBody[contentOffset:]
+    ///           between JSON quote characters (i.e. it is the LLM's output)
+    ///      Together this proves: (a) the response came from this TEE provider's
+    ///      enclave, (b) the response wasn't tampered, (c) the response contains
+    ///      our exact verdict commitment for this battle/contract/chain.
+    /// @param responseBody Full HTTP response body bytes the broker hashed —
+    ///        typically the OpenAI chat-completion JSON envelope.
+    /// @param contentOffset Byte offset in responseBody where the canonical
+    ///        verdict text begins (i.e. position of the YAP_VERDICT prefix
+    ///        inside the JSON `"content":"…"` field). Pre/post bytes must be
+    ///        ASCII double-quote so the offset cannot point inside an unrelated
+    ///        substring of the JSON.
+    /// @param signedText The routing-proof text as the broker formatted it,
+    ///        of the form
+    ///        `<64 hex>:<64 hex>:<providerType>:<providerIdentity>:<64 hex>`.
+    ///        We only assert the first two fields are 64 hex chars separated
+    ///        by colons; remaining fields are opaque to the contract but bound
+    ///        into the signature.
+    /// @param teeSignature 65-byte ECDSA signature (r||s||v) from the provider
+    ///        enclave's teeSignerAddress.
     function submitVerdict(
         uint256 battleId,
         uint8 winner,
         bytes32 verdictHash,
+        bytes calldata responseBody,
+        uint256 contentOffset,
+        bytes calldata signedText,
         bytes calldata teeSignature
     ) external {
         if (winner > DRAW) revert InvalidSide();
@@ -410,11 +449,33 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
         Battle storage b = battles[battleId];
         if (b.status != Status.Live) revert InvalidState();
 
-        bytes32 digest = keccak256(
-            abi.encode(address(this), block.chainid, battleId, winner, verdictHash)
-        ).toEthSignedMessageHash();
-        address signer = digest.recover(teeSignature);
-        if (signer != oracleKey) revert InvalidOracleSignature();
+        // 1. ECDSA recovery on EIP-191 of signedText → oracleKey.
+        bytes32 digest = MessageHashUtils.toEthSignedMessageHash(signedText);
+        if (digest.recover(teeSignature) != oracleKey) {
+            revert InvalidOracleSignature();
+        }
+
+        // 2. Parse 2nd field of signedText (response sha256) and verify the
+        //    submitted responseBody hashes to it. Format expectation:
+        //      [0..63]   reqSha (64 hex)
+        //      [64]      ':'
+        //      [65..128] respSha (64 hex)
+        //      [129]     ':'
+        //      [130..]   providerType ':' providerIdentity ':' tlsCertSha
+        if (signedText.length < 130) revert InvalidSignedTextFormat();
+        if (signedText[64] != bytes1(":") || signedText[129] != bytes1(":")) {
+            revert InvalidSignedTextFormat();
+        }
+        bytes32 expectedRespSha = _hex64ToBytes32(signedText, 65);
+        if (sha256(responseBody) != expectedRespSha) {
+            revert ResponseHashMismatch();
+        }
+
+        // 3. Reconstruct canonical and confirm it lives at responseBody[contentOffset:]
+        //    between JSON quote characters (so contentOffset cannot point at
+        //    an unrelated substring elsewhere in the JSON envelope).
+        bytes memory canonical = _verdictCanonicalText(battleId, winner, verdictHash);
+        _verifyCanonicalAtOffset(responseBody, contentOffset, canonical);
 
         b.status = Status.Verdict;
         b.winner = winner;
@@ -425,17 +486,109 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
         emit VerdictSubmitted(battleId, winner, verdictHash, teeSignature);
     }
 
-    /// @notice View helper — returns the digest that must be signed by the
-    ///         oracle's TEE for a given (battleId, winner, verdictHash). Off-chain
-    ///         signers produce the ECDSA signature over this digest.
-    function verdictDigest(
+    /// @dev Converts 64 ASCII hex characters at `data[offset..offset+64]` into a
+    ///      bytes32 value. Reverts on out-of-bounds or invalid hex chars.
+    function _hex64ToBytes32(bytes calldata data, uint256 offset)
+        internal
+        pure
+        returns (bytes32)
+    {
+        if (offset + 64 > data.length) revert InvalidSignedTextFormat();
+        uint256 v = 0;
+        unchecked {
+            for (uint256 i = 0; i < 64; ++i) {
+                uint8 c = uint8(data[offset + i]);
+                uint8 nibble;
+                if (c >= 0x30 && c <= 0x39) {
+                    nibble = c - 0x30;
+                } else if (c >= 0x61 && c <= 0x66) {
+                    nibble = c - 0x61 + 10;
+                } else if (c >= 0x41 && c <= 0x46) {
+                    nibble = c - 0x41 + 10;
+                } else {
+                    revert InvalidSignedTextFormat();
+                }
+                v = (v << 4) | nibble;
+            }
+        }
+        return bytes32(v);
+    }
+
+    /// @dev Verifies that {canonical} bytes appear at responseBody[offset:offset+canonical.length]
+    ///      and that the byte immediately before {offset} and immediately after
+    ///      the canonical run are both ASCII double-quote chars. The quote
+    ///      requirement prevents an attacker from passing an offset that points
+    ///      at an unrelated substring inside the JSON envelope (e.g. inside a
+    ///      different field, or spanning two field boundaries).
+    function _verifyCanonicalAtOffset(
+        bytes calldata responseBody,
+        uint256 offset,
+        bytes memory canonical
+    ) internal pure {
+        uint256 len = canonical.length;
+        // offset must be ≥ 1 (so we can read the pre-byte) and the canonical
+        // run plus the post-byte must fit inside responseBody.
+        if (offset == 0 || offset + len + 1 > responseBody.length) {
+            revert InvalidContentOffset();
+        }
+        if (
+            responseBody[offset - 1] != bytes1('"') ||
+            responseBody[offset + len] != bytes1('"')
+        ) {
+            revert InvalidContentOffset();
+        }
+        for (uint256 i = 0; i < len; ++i) {
+            if (responseBody[offset + i] != canonical[i]) {
+                revert CanonicalContentMissing();
+            }
+        }
+    }
+
+    /// @notice View helper — returns the EIP-191 personal_sign digest of an
+    ///         arbitrary signedText payload. Useful for off-chain clients that
+    ///         want to reproduce the digest the contract verifies.
+    function teeSignedTextDigest(bytes calldata signedText)
+        external
+        pure
+        returns (bytes32)
+    {
+        return MessageHashUtils.toEthSignedMessageHash(signedText);
+    }
+
+    /// @notice View helper — returns the raw canonical text that the 0G
+    ///         Compute TEE provider signs. Used off-chain by the judge prompt
+    ///         to instruct the LLM on the exact bytes it must output, and by
+    ///         clients verifying signatures locally. Format:
+    ///         `YAP_VERDICT|<chainid>|<escrow>|<battleId>|<winner>|<verdictHash>`
+    function verdictCanonicalText(
         uint256 battleId,
         uint8 winner,
         bytes32 verdictHash
-    ) external view returns (bytes32) {
-        return keccak256(
-            abi.encode(address(this), block.chainid, battleId, winner, verdictHash)
-        ).toEthSignedMessageHash();
+    ) external view returns (string memory) {
+        return string(_verdictCanonicalText(battleId, winner, verdictHash));
+    }
+
+    /// @dev Reconstructs the canonical verdict text bytes that the TEE
+    ///      provider signs. Lowercase hex matches OpenZeppelin Strings'
+    ///      toHexString output and the prompt template that pins the LLM
+    ///      to lowercase identifiers.
+    function _verdictCanonicalText(
+        uint256 battleId,
+        uint8 winner,
+        bytes32 verdictHash
+    ) internal view returns (bytes memory) {
+        return abi.encodePacked(
+            "YAP_VERDICT|",
+            Strings.toString(block.chainid),
+            "|",
+            Strings.toHexString(uint160(address(this)), 20),
+            "|",
+            Strings.toString(battleId),
+            "|",
+            Strings.toString(uint256(winner)),
+            "|",
+            Strings.toHexString(uint256(verdictHash), 32)
+        );
     }
 
     /// @notice Admin extends the dispute window for a single battle by

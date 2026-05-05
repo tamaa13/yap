@@ -12,6 +12,234 @@ import "server-only";
 import { parseEther } from "ethers";
 import { getBroker } from "./compute";
 
+/**
+ * Routing-proof attestation pulled from the provider's response-signature
+ * endpoint. For separated-centralized providers (broker in TEE proxying to
+ * an upstream LLM), the broker's enclave personal-signs:
+ *
+ *   `<sha256(reqBody)>:<sha256(respBody)>:<providerType>:<providerIdentity>:<sha256(tlsCert)>`
+ *
+ * with its TEE-derived ECDSA key. Verifying on-chain proves the attestation
+ * came from the registered teeSignerAddress (= our oracleKey). Binding
+ * to a specific verdict requires also checking that the submitted
+ * responseBody hashes to the second field of `text` and contains our
+ * expected canonical YAP_VERDICT bytes — see {BattleEscrow.submitVerdict}.
+ */
+export interface ProviderSignature {
+  /** Routing-proof text the TEE signed — colon-delimited as documented above. */
+  text: string;
+  /** ECDSA personal_sign over `text`, recoverable via the provider's
+   *  teeSignerAddress (combined/centralized) or TargetTeeAddress (separated
+   *  decentralized). */
+  signature: `0x${string}`;
+}
+
+/** Result of {runCanonicalChat} — wraps {runChat}-equivalent execution but
+ *  also exposes the raw HTTP response body bytes (the broker hashes those
+ *  for sha256 binding) and the broker's ZG-Res-Key chat identifier (which
+ *  is what the /v1/proxy/signature endpoint matches on, NOT the OpenAI
+ *  completion id). */
+export interface CanonicalChatResult {
+  content: string;
+  /** Raw HTTP response body bytes — the exact bytes whose sha256 the
+   *  TEE-signed routing-proof references. Used on-chain by BattleEscrow
+   *  to confirm the response wasn't tampered. */
+  responseBody: Uint8Array;
+  /** ZG-Res-Key header value (chat session id used by the proxy signature
+   *  endpoint). */
+  chatID: string;
+  providerAddress: string;
+  model: string;
+  signatureValid: boolean;
+}
+
+/**
+ * Fetch the TEE provider's signature for a previously-completed chat.
+ *
+ * The 0G Compute broker exposes a `/v1/proxy/signature/{chatID}?model=...`
+ * endpoint that returns `{text, signature}`, where signature is an EIP-191
+ * personal_sign over the response text using the enclave's TEE-derived key.
+ *
+ * Used by the verdict path: the runner asks the LLM to output the canonical
+ * verdict text, then pulls the TEE signature here, then submits the
+ * signature on-chain to BattleEscrow which verifies it recovers to the
+ * registered teeSignerAddress (set as oracleKey).
+ *
+ * Mirrors the URL the SDK's internal Verifier.fetchSignatureByChatID hits.
+ */
+/**
+ * Variant of {runChat} that captures the raw HTTP response body bytes and
+ * the broker's ZG-Res-Key chat id, which together feed Path 1A-Hash on-chain
+ * verification (sha256(responseBody) must match the routing-proof's
+ * response-hash field).
+ *
+ * Otherwise behaves like {runChat}: discovers/uses the pinned provider,
+ * funds the sub-account, posts an OpenAI-compatible chat completion, and
+ * returns processResponse-validated signatureValid.
+ */
+export async function runCanonicalChat(
+  args: RunChatArgs,
+): Promise<CanonicalChatResult> {
+  const broker = await getBroker();
+  const providerAddress =
+    args.providerAddress ?? (await pickInferenceProvider());
+
+  await broker.inference
+    .acknowledgeProviderSigner(providerAddress)
+    .catch(() => {});
+  await broker.ledger.depositFund(LEDGER_DEPOSIT).catch(() => {});
+  await broker.ledger
+    .transferFund(providerAddress, "inference", TRANSFER_PER_PROVIDER)
+    .catch(() => {});
+
+  const { endpoint, model } = await broker.inference.getServiceMetadata(
+    providerAddress,
+  );
+  const body = JSON.stringify({
+    model,
+    messages: [
+      { role: "system", content: args.system },
+      { role: "user", content: args.user },
+    ],
+    temperature: args.temperature ?? 0,
+    max_tokens: args.maxTokens ?? 256,
+  });
+  const headers = (await broker.inference.getRequestHeaders(
+    providerAddress,
+    body,
+  )) as unknown as Record<string, string>;
+
+  // Force identity encoding all the way through: the broker hashes the raw
+  // upstream response body and we need byte-equality on our side for the
+  // routing-proof respSha check. Node's fetch auto-decompresses gzip
+  // otherwise, breaking sha256 reconstruction.
+  const res = await fetch(`${endpoint}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "accept-encoding": "identity",
+      ...headers,
+    },
+    body,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `0G Compute inference HTTP ${res.status}: ${text.slice(0, 200)}`,
+    );
+  }
+
+  const responseBody = new Uint8Array(await res.arrayBuffer());
+  // The broker tags each chat with a UUID via the ZG-Res-Key response header
+  // — that is what the /v1/proxy/signature endpoint indexes by. The OpenAI
+  // completion id (`data.id`) is NOT a valid lookup key for the signature.
+  const zgResKey = res.headers.get("ZG-Res-Key");
+  if (!zgResKey) {
+    throw new Error("0G Compute response missing ZG-Res-Key header");
+  }
+
+  // Parse the OpenAI-format JSON for the content (no escaping concerns for
+  // canonical YAP_VERDICT — only ASCII characters that don't need escaping).
+  const decoded = new TextDecoder().decode(responseBody);
+  const data = JSON.parse(decoded) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  const content = data.choices?.[0]?.message?.content ?? "";
+
+  // Validate signature via SDK (broker indexes the chat for ~minutes after).
+  let signatureValid = false;
+  try {
+    const sigCheck = await broker.inference.processResponse(
+      providerAddress,
+      zgResKey,
+      content,
+    );
+    signatureValid = sigCheck === true;
+  } catch {
+    signatureValid = false;
+  }
+
+  return {
+    content,
+    responseBody,
+    chatID: zgResKey,
+    providerAddress,
+    model,
+    signatureValid,
+  };
+}
+
+/**
+ * Locate the byte offset where {canonical} appears as the value of the
+ * `"content"` field in an OpenAI-format JSON response body. Verifies that
+ * the byte before the offset and the byte after the canonical run are both
+ * ASCII double-quote so the offset can be safely passed to
+ * {BattleEscrow.submitVerdict}'s {contentOffset} parameter.
+ *
+ * Throws if the canonical text isn't found at a quote-bracketed `"content"`
+ * location — e.g. the LLM mangled the format or added prose around it.
+ */
+export function findCanonicalContentOffset(
+  responseBody: Uint8Array,
+  canonical: string,
+): number {
+  const enc = new TextEncoder();
+  const needle = enc.encode('"content":"');
+  const canonicalBytes = enc.encode(canonical);
+  const upper = responseBody.length - needle.length - canonicalBytes.length - 1;
+  outer: for (let i = 0; i <= upper; i++) {
+    for (let j = 0; j < needle.length; j++) {
+      if (responseBody[i + j] !== needle[j]) continue outer;
+    }
+    const offset = i + needle.length;
+    for (let j = 0; j < canonicalBytes.length; j++) {
+      if (responseBody[offset + j] !== canonicalBytes[j]) continue outer;
+    }
+    if (responseBody[offset + canonicalBytes.length] !== 0x22 /* '"' */) {
+      continue outer;
+    }
+    return offset;
+  }
+  throw new Error("canonical text not found inside response body content");
+}
+
+export async function fetchProviderSignature(
+  providerAddress: string,
+  chatID: string,
+): Promise<ProviderSignature> {
+  const broker = await getBroker();
+  const { endpoint, model } = await broker.inference.getServiceMetadata(
+    providerAddress,
+  );
+  // SDK's Verifier.fetchSignatureByChatID hits `${svc.url}/v1/proxy/signature/${chatID}`
+  // where svc.url is the bare broker root (no path). getServiceMetadata returns
+  // endpoint as the chat-completions root which already includes `/v1/proxy`,
+  // so we strip that suffix before re-appending the signature subpath.
+  const base = endpoint
+    .replace(/\/+$/, "")
+    .replace(/\/v1\/proxy\/?$/, "")
+    .replace(/\/v1\/?$/, "");
+  const url = `${base}/v1/proxy/signature/${encodeURIComponent(chatID)}?model=${encodeURIComponent(model)}`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `0G Compute signature fetch HTTP ${res.status}: ${text.slice(0, 200)}`,
+    );
+  }
+  const data = (await res.json()) as { text?: string; signature?: string };
+  if (!data.text || !data.signature) {
+    throw new Error("0G Compute signature response missing text or signature");
+  }
+  return {
+    text: data.text,
+    signature: data.signature as `0x${string}`,
+  };
+}
+
 export interface RunChatArgs {
   providerAddress?: string;
   /** System-role persona / task framing. */

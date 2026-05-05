@@ -3,6 +3,8 @@ pragma solidity ^0.8.19;
 
 import {Test} from "forge-std/Test.sol";
 import {BattleEscrow} from "../src/BattleEscrow.sol";
+import {MessageHashUtils} from "openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
 contract ReentrantBettor {
     BattleEscrow public escrow;
@@ -114,20 +116,79 @@ contract BattleEscrowTest is Test {
     /// non-zero and consistent across signing + submission.
     bytes32 internal constant MOCK_VERDICT_HASH = keccak256("yap-test-transcript");
 
-    /// Sign a verdict for (battleId, winner, MOCK_VERDICT_HASH) using the oracle private key.
-    /// Matches the on-chain digest construction in {submitVerdict}.
-    function _signVerdict(uint256 battleId, uint8 winner) internal view returns (bytes memory sig) {
-        return _signVerdict(battleId, winner, MOCK_VERDICT_HASH);
+    /// Bundle of arguments for {BattleEscrow.submitVerdict}, mirroring the
+    /// routing-proof binding the live broker emits.
+    struct VerdictArgs {
+        bytes responseBody;
+        uint256 contentOffset;
+        bytes signedText;
+        bytes signature;
     }
 
-    function _signVerdict(uint256 battleId, uint8 winner, bytes32 verdictHash)
-        internal
-        view
-        returns (bytes memory sig)
-    {
-        bytes32 digest = escrow.verdictDigest(battleId, winner, verdictHash);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ORACLE_PRIV_KEY, digest);
-        sig = abi.encodePacked(r, s, v);
+    /// Submit a verdict for (battleId, winner, MOCK_VERDICT_HASH) signed by
+    /// the test oracle key. Wraps the new routing-proof argument shape so
+    /// individual tests stay readable.
+    function _submitVerdict(uint256 battleId, uint8 winner) internal {
+        _submitVerdict(battleId, winner, MOCK_VERDICT_HASH);
+    }
+
+    function _submitVerdict(uint256 battleId, uint8 winner, bytes32 verdictHash) internal {
+        VerdictArgs memory v = _buildVerdictArgs(battleId, winner, verdictHash, ORACLE_PRIV_KEY);
+        escrow.submitVerdict(
+            battleId,
+            winner,
+            verdictHash,
+            v.responseBody,
+            v.contentOffset,
+            v.signedText,
+            v.signature
+        );
+    }
+
+    /// Build a complete set of submitVerdict arguments — mock OpenAI response
+    /// body wrapping the canonical text inside `"content":"…"`, routing-proof
+    /// signedText `<dummyReqSha>:<respSha>:centralized:test:<dummyTlsFp>`,
+    /// and the EIP-191 signature over signedText with `signerPk`.
+    function _buildVerdictArgs(
+        uint256 battleId,
+        uint8 winner,
+        bytes32 verdictHash,
+        uint256 signerPk
+    ) internal view returns (VerdictArgs memory args) {
+        bytes memory canonical = bytes(
+            escrow.verdictCanonicalText(battleId, winner, verdictHash)
+        );
+
+        // Mock JSON envelope: {"content":"<canonical>"}. The opening prefix is
+        // 12 bytes ('{"content":"') so canonical lives at offset 12 with quote
+        // chars at offset 11 (pre) and offset 12+len (post).
+        args.responseBody = abi.encodePacked('{"content":"', canonical, '"}');
+        args.contentOffset = 12;
+
+        bytes32 respSha = sha256(args.responseBody);
+        bytes32 dummyReqSha = keccak256("yap-test-req");
+        bytes32 dummyTlsFp = keccak256("yap-test-tls");
+
+        args.signedText = abi.encodePacked(
+            _bytes32Hex(dummyReqSha),
+            ":",
+            _bytes32Hex(respSha),
+            ":centralized:test:",
+            _bytes32Hex(dummyTlsFp)
+        );
+
+        bytes32 digest = MessageHashUtils.toEthSignedMessageHash(args.signedText);
+        (uint8 vv, bytes32 r, bytes32 s) = vm.sign(signerPk, digest);
+        args.signature = abi.encodePacked(r, s, vv);
+    }
+
+    /// Strip the "0x" prefix from {Strings.toHexString} so the result lines
+    /// up with the broker's `<64 hex>` field formatting.
+    function _bytes32Hex(bytes32 b) internal pure returns (bytes memory) {
+        bytes memory withPrefix = bytes(Strings.toHexString(uint256(b), 32));
+        bytes memory out = new bytes(64);
+        for (uint256 i = 0; i < 64; ++i) out[i] = withPrefix[i + 2];
+        return out;
     }
 
     // ---------------- create ----------------
@@ -318,7 +379,7 @@ contract BattleEscrowTest is Test {
         uint256 id = _create();
         vm.prank(alice);
         escrow.placeBet{value: 1 ether}(id, 0, 1 ether);
-        escrow.submitVerdict(id, 0, MOCK_VERDICT_HASH, _signVerdict(id, 0));
+        _submitVerdict(id, 0);
         vm.prank(bob);
         vm.expectRevert(BattleEscrow.InvalidState.selector);
         escrow.placeBet{value: 1 ether}(id, 1, 1 ether);
@@ -350,7 +411,7 @@ contract BattleEscrowTest is Test {
         vm.prank(dan);
         escrow.placeBet{value: 5 ether}(id, 1, 5 ether);
 
-        escrow.submitVerdict(id, 0, MOCK_VERDICT_HASH, _signVerdict(id, 0));
+        _submitVerdict(id, 0);
 
         vm.warp(block.timestamp + 24 hours + 1);
         escrow.settle(id);
@@ -376,7 +437,7 @@ contract BattleEscrowTest is Test {
 
     function test_Settle_RevertsDuringDisputeWindow() public {
         uint256 id = _create();
-        escrow.submitVerdict(id, 0, MOCK_VERDICT_HASH, _signVerdict(id, 0));
+        _submitVerdict(id, 0);
         vm.expectRevert(BattleEscrow.DisputeWindowActive.selector);
         escrow.settle(id);
     }
@@ -388,7 +449,7 @@ contract BattleEscrowTest is Test {
         vm.prank(bob);
         escrow.placeBet{value: 2 ether}(id, 1, 2 ether); // bob total 3
 
-        escrow.submitVerdict(id, 2, MOCK_VERDICT_HASH, _signVerdict(id, 2));
+        _submitVerdict(id, 2);
         vm.warp(block.timestamp + 24 hours + 1);
         escrow.settle(id);
 
@@ -418,7 +479,7 @@ contract BattleEscrowTest is Test {
         vm.prank(carol);
         escrow.placeBet{value: 9 ether}(id, 0, 9 ether); // carol adds 9 on A
 
-        escrow.submitVerdict(id, 1, MOCK_VERDICT_HASH, _signVerdict(id, 1)); // B wins
+        _submitVerdict(id, 1); // B wins
         vm.warp(block.timestamp + escrow.disputeWindow() + 1);
         escrow.settle(id);
 
@@ -450,7 +511,7 @@ contract BattleEscrowTest is Test {
         // No surplus → losing side gets 0.
         uint256 id = _create(); // alice 1 A, bob 1 B (matched 100%)
 
-        escrow.submitVerdict(id, 1, MOCK_VERDICT_HASH, _signVerdict(id, 1));
+        _submitVerdict(id, 1);
         vm.warp(block.timestamp + escrow.disputeWindow() + 1);
         escrow.settle(id);
 
@@ -489,7 +550,7 @@ contract BattleEscrowTest is Test {
 
     function test_ClaimPayout_DoubleClaimReverts() public {
         uint256 id = _create();
-        escrow.submitVerdict(id, 0, MOCK_VERDICT_HASH, _signVerdict(id, 0));
+        _submitVerdict(id, 0);
         vm.warp(block.timestamp + 24 hours + 1);
         escrow.settle(id);
 
@@ -504,30 +565,81 @@ contract BattleEscrowTest is Test {
 
     function test_SubmitVerdict_RevertsOnBadSignature() public {
         uint256 id = _create();
-        // Sig from a WRONG key (different from oracleKey).
-        bytes32 digest = escrow.verdictDigest(id, 0, MOCK_VERDICT_HASH);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(0xBAD, digest);
-        bytes memory badSig = abi.encodePacked(r, s, v);
+        // Args signed by a wrong key (not oracleKey) — ECDSA recovery on the
+        // signedText routing proof should reject.
+        VerdictArgs memory bad = _buildVerdictArgs(id, 0, MOCK_VERDICT_HASH, 0xBAD);
         vm.expectRevert(BattleEscrow.InvalidOracleSignature.selector);
-        escrow.submitVerdict(id, 0, MOCK_VERDICT_HASH, badSig);
+        escrow.submitVerdict(
+            id,
+            0,
+            MOCK_VERDICT_HASH,
+            bad.responseBody,
+            bad.contentOffset,
+            bad.signedText,
+            bad.signature
+        );
     }
 
     function test_SubmitVerdict_WrongWinnerInvalidatesSignature() public {
         uint256 id = _create();
-        // Signed for winner=0, submitted with winner=1 → digest mismatch.
-        bytes memory sigForA = _signVerdict(id, 0);
-        vm.expectRevert(BattleEscrow.InvalidOracleSignature.selector);
-        escrow.submitVerdict(id, 1, MOCK_VERDICT_HASH, sigForA);
+        // Routing-proof envelope built for winner=0 (responseBody contains the
+        // canonical for winner=0). Submitting with winner=1 makes the contract
+        // reconstruct canonical-for-winner=1, which won't appear at the
+        // claimed offset → CanonicalContentMissing.
+        VerdictArgs memory v0 = _buildVerdictArgs(id, 0, MOCK_VERDICT_HASH, ORACLE_PRIV_KEY);
+        vm.expectRevert(BattleEscrow.CanonicalContentMissing.selector);
+        escrow.submitVerdict(
+            id,
+            1,
+            MOCK_VERDICT_HASH,
+            v0.responseBody,
+            v0.contentOffset,
+            v0.signedText,
+            v0.signature
+        );
     }
 
     function test_SubmitVerdict_AnyoneCanRelayValidSig() public {
         uint256 id = _create();
-        bytes memory sig = _signVerdict(id, 0);
         // Carol (unrelated) submits — should succeed because the sig is valid.
         vm.prank(carol);
-        escrow.submitVerdict(id, 0, MOCK_VERDICT_HASH, sig);
+        _submitVerdict(id, 0);
         BattleEscrow.Battle memory b = escrow.getBattle(id);
         assertEq(uint8(b.status), uint8(BattleEscrow.Status.Verdict));
+    }
+
+    function test_SubmitVerdict_RevertsOnTamperedResponseBody() public {
+        uint256 id = _create();
+        VerdictArgs memory v = _buildVerdictArgs(id, 0, MOCK_VERDICT_HASH, ORACLE_PRIV_KEY);
+        // Flip a byte in responseBody so its sha256 no longer matches the
+        // signed routing-proof's response hash.
+        v.responseBody[0] = bytes1(uint8(v.responseBody[0]) ^ 0x01);
+        vm.expectRevert(BattleEscrow.ResponseHashMismatch.selector);
+        escrow.submitVerdict(
+            id,
+            0,
+            MOCK_VERDICT_HASH,
+            v.responseBody,
+            v.contentOffset,
+            v.signedText,
+            v.signature
+        );
+    }
+
+    function test_SubmitVerdict_RevertsOnInvalidContentOffset() public {
+        uint256 id = _create();
+        VerdictArgs memory v = _buildVerdictArgs(id, 0, MOCK_VERDICT_HASH, ORACLE_PRIV_KEY);
+        // Offset that does not point at a quote-bracketed canonical run.
+        vm.expectRevert(BattleEscrow.InvalidContentOffset.selector);
+        escrow.submitVerdict(
+            id,
+            0,
+            MOCK_VERDICT_HASH,
+            v.responseBody,
+            v.contentOffset + 1,
+            v.signedText,
+            v.signature
+        );
     }
 
     function test_SetOracleKey_RotatesAndInvalidatesOldKey() public {
@@ -540,16 +652,31 @@ contract BattleEscrowTest is Test {
         escrow.setOracleKey(newAddr);
         assertEq(escrow.oracleKey(), newAddr);
 
-        // Old oracle key can no longer sign valid verdicts.
-        bytes memory oldSig = _signVerdict(id, 0);
+        // Old oracle key signs an attestation that no longer recovers to
+        // oracleKey post-rotation.
+        VerdictArgs memory oldArgs = _buildVerdictArgs(id, 0, MOCK_VERDICT_HASH, ORACLE_PRIV_KEY);
         vm.expectRevert(BattleEscrow.InvalidOracleSignature.selector);
-        escrow.submitVerdict(id, 0, MOCK_VERDICT_HASH, oldSig);
+        escrow.submitVerdict(
+            id,
+            0,
+            MOCK_VERDICT_HASH,
+            oldArgs.responseBody,
+            oldArgs.contentOffset,
+            oldArgs.signedText,
+            oldArgs.signature
+        );
 
         // New key signs valid.
-        bytes32 digest = escrow.verdictDigest(id, 0, MOCK_VERDICT_HASH);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(newKey, digest);
-        bytes memory newSig = abi.encodePacked(r, s, v);
-        escrow.submitVerdict(id, 0, MOCK_VERDICT_HASH, newSig);
+        VerdictArgs memory newArgs = _buildVerdictArgs(id, 0, MOCK_VERDICT_HASH, newKey);
+        escrow.submitVerdict(
+            id,
+            0,
+            MOCK_VERDICT_HASH,
+            newArgs.responseBody,
+            newArgs.contentOffset,
+            newArgs.signedText,
+            newArgs.signature
+        );
     }
 
     function test_ReentrancyOnClaim_Blocked() public {
@@ -561,7 +688,7 @@ contract BattleEscrowTest is Test {
         vm.prank(bob);
         escrow.placeBet{value: 1 ether}(id, 1, 1 ether);
 
-        escrow.submitVerdict(id, 0, MOCK_VERDICT_HASH, _signVerdict(id, 0));
+        _submitVerdict(id, 0);
         vm.warp(block.timestamp + 24 hours + 1);
         escrow.settle(id);
 
