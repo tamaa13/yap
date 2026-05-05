@@ -229,11 +229,26 @@ echo "  ↳ battle id: $BATTLE_ID"
 
 echo ""
 echo "→ acceptBattle: wallet B stakes 0.75 0G…"
-ACCEPT_TX=$($CAST send "$ESC" \
-  "acceptBattle(uint256)" "$BATTLE_ID" \
-  --value "$STAKE_B_WEI" \
-  --rpc-url "$RPC" --private-key "$PK_B" $GAS_ARGS \
-  --json | jq -r '.transactionHash')
+accept_with_retry() {
+  local tries=0
+  local out=""
+  while (( tries < 3 )); do
+    out=$($CAST send "$ESC" \
+      "acceptBattle(uint256)" "$BATTLE_ID" \
+      --value "$STAKE_B_WEI" \
+      --rpc-url "$RPC" --private-key "$PK_B" $GAS_ARGS \
+      --json 2>/dev/null) || out=""
+    if [[ -n "$out" ]]; then
+      echo "$out" | jq -r '.transactionHash'
+      return 0
+    fi
+    tries=$((tries + 1))
+    echo "  (acceptBattle retry $tries/3 after RPC flake)…" >&2
+    sleep 3
+  done
+  return 1
+}
+ACCEPT_TX=$(accept_with_retry)
 echo "  ↳ accept tx: $ACCEPT_TX"
 
 # ─── Step 5: start runner ───────────────────────────────────────────────
@@ -280,10 +295,25 @@ echo "→ Waiting dispute window ($WINDOW s) + 5s buffer…"
 sleep $((WINDOW + 5))
 
 echo "→ settle($BATTLE_ID)…"
-SETTLE_TX=$($CAST send "$ESC" \
-  "settle(uint256)" "$BATTLE_ID" \
-  --rpc-url "$RPC" --private-key "$PK_A" $GAS_ARGS \
-  --json | jq -r '.transactionHash')
+settle_with_retry() {
+  local tries=0
+  local out=""
+  while (( tries < 3 )); do
+    out=$($CAST send "$ESC" \
+      "settle(uint256)" "$BATTLE_ID" \
+      --rpc-url "$RPC" --private-key "$PK_A" $GAS_ARGS \
+      --json 2>/dev/null) || out=""
+    if [[ -n "$out" ]]; then
+      echo "$out" | jq -r '.transactionHash'
+      return 0
+    fi
+    tries=$((tries + 1))
+    echo "  (settle retry $tries/3 after RPC flake)…" >&2
+    sleep 3
+  done
+  return 1
+}
+SETTLE_TX=$(settle_with_retry)
 echo "  ↳ settle tx: $SETTLE_TX"
 
 # ─── Step 8: both wallets claim ─────────────────────────────────────────
