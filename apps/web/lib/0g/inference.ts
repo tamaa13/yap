@@ -329,6 +329,7 @@ export async function runChat(args: RunChatArgs): Promise<RunChatResult> {
     method: "POST",
     headers: {
       "content-type": "application/json",
+      "accept-encoding": "identity",
       ...headers,
     },
     body,
@@ -339,12 +340,16 @@ export async function runChat(args: RunChatArgs): Promise<RunChatResult> {
     throw new Error(`0G Compute inference HTTP ${res.status}: ${text.slice(0, 200)}`);
   }
 
+  // ZG-Res-Key is the broker's chat session id used by /v1/proxy/signature;
+  // the OpenAI completion id (`data.id`) is NOT a valid signature lookup key.
+  // Fall back to data.id only if the header is missing (older brokers).
+  const zgResKey = res.headers.get("ZG-Res-Key");
   const data = (await res.json()) as {
     id?: string;
     choices?: Array<{ message?: { content?: string } }>;
   };
   const content = data.choices?.[0]?.message?.content ?? "";
-  const chatID = data.id;
+  const chatID = zgResKey ?? data.id;
 
   // TEE signature verification. `processResponse` returns:
   //   true  → service is verifiable AND signature valid
@@ -419,6 +424,7 @@ export async function streamChat(args: StreamChatArgs): Promise<RunChatResult> {
     method: "POST",
     headers: {
       "content-type": "application/json",
+      "accept-encoding": "identity",
       accept: "text/event-stream",
       ...headers,
     },
@@ -433,11 +439,16 @@ export async function streamChat(args: StreamChatArgs): Promise<RunChatResult> {
     );
   }
 
+  // ZG-Res-Key is the broker's chat session id used by /v1/proxy/signature;
+  // the OpenAI completion id is NOT a valid signature lookup key. Capture it
+  // before reading the SSE body since headers are available immediately.
+  const zgResKey = res.headers.get("ZG-Res-Key") ?? undefined;
+
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
   let content = "";
-  let chatID: string | undefined;
+  let chatID: string | undefined = zgResKey;
 
   try {
     while (true) {
@@ -465,7 +476,10 @@ export async function streamChat(args: StreamChatArgs): Promise<RunChatResult> {
               id?: string;
               choices?: Array<{ delta?: { content?: string } }>;
             };
-            if (json.id && !chatID) chatID = json.id;
+            // Only fall back to OpenAI completion id when no ZG-Res-Key was
+            // received — keeps signature lookup keyed correctly when the
+            // broker sets the header (current 0G provider).
+            if (!chatID && json.id) chatID = json.id;
             const delta = json.choices?.[0]?.delta?.content;
             if (typeof delta === "string" && delta.length > 0) {
               content += delta;
