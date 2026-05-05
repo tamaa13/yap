@@ -59,8 +59,6 @@ export interface Battle {
   startedAt: number | null;
   oddsA: number;
   oddsB: number;
-  hpA?: number;
-  hpB?: number;
   winner?: "a" | "b";
   endedAt?: number;
   attest?: string;
