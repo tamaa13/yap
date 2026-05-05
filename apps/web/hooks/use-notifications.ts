@@ -1,426 +1,130 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAccount, useWatchContractEvent } from "wagmi";
-import {
-  BATTLE_ESCROW_ABI,
-  BATTLE_ESCROW_ADDRESS,
-} from "@/lib/contracts";
+import { useAccount } from "wagmi";
+import type { Notification } from "@/lib/notifications/types";
 
-/**
- * Lifecycle notifications for the connected user, derived from BattleEscrow
- * events.
- *
- * Approach:
- *   - Watch BattleCreated / BetPlaced where the address arg === user → keep
- *     a local "battleIds I care about" set, persisted to localStorage.
- *   - Watch BattleAccepted / BattleDeclined / VerdictSubmitted /
- *     BattleSettled / BattleCancelled / PayoutClaimed → emit a notification
- *     when the battleId matches the cared-about set.
- *   - Notifications + cared-about set are persisted under a per-address key
- *     so switching wallets doesn't leak history across accounts.
- *
- * The hook returns a small API the top-nav dropdown consumes: list of
- * notifications, unread count, and a markAllRead() / clear() pair.
- */
+export type { NotifKind } from "@/lib/notifications/types";
 
-export type NotifKind =
-  | "challenge_accepted"
-  | "challenge_declined"
-  | "challenge_cancelled"
-  | "verdict_submitted"
-  | "battle_settled"
-  | "payout_claimed";
-
-export interface Notification {
-  /** Stable id = `${kind}:${battleId}:${txHash}` so repeated events on
-   *  reconnect don't dupe entries. */
-  id: string;
-  kind: NotifKind;
-  battleId: number;
-  message: string;
-  /** Optional secondary line — winner side, payout amount, etc. */
-  detail?: string;
-  /** Path the dropdown link routes to when clicked. */
-  href?: string;
-  ts: number;
+/** Hook-level notification: server-pushed Notification plus a per-id
+ *  `read` flag tracked in memory. */
+export interface NotificationWithRead extends Notification {
   read: boolean;
 }
 
-const STORAGE_VERSION = 1;
-const MAX_STORED = 30;
+// Back-compat alias for callers that imported the previous in-memory
+// shape under the name `Notification`.
+export type { NotificationWithRead as Notification };
 
-interface PersistedState {
-  v: number;
-  caredBattleIds: number[];
-  notifications: Notification[];
+/**
+ * Subscribes to /api/notifications/stream for the connected wallet.
+ *
+ * Server pushes both an initial historical replay (last ~day of blocks)
+ * and every new lifecycle event in real time as the chain progresses. The
+ * hook keeps an in-memory list deduped by notification id, plus a per-id
+ * read flag so opening the dropdown can clear the unread badge without
+ * dropping entries from the feed.
+ *
+ * No localStorage — the server stream is authoritative. Reconnect (e.g.
+ * after a tab sleep) replays the same recent history because notification
+ * ids are stable `kind:battleId:txHash`, so dedup keeps the list correct.
+ */
+
+interface State {
+  /** Newest-first. */
+  list: Notification[];
+  /** Set of read notification ids — local-only, lost on reload (which
+   *  is fine because the server replays everything). */
+  read: Set<string>;
 }
 
-function storageKey(addr: string): string {
-  return `yap.notifications.${addr.toLowerCase()}`;
-}
-
-function loadFromStorage(addr: string): PersistedState {
-  const empty: PersistedState = {
-    v: STORAGE_VERSION,
-    caredBattleIds: [],
-    notifications: [],
-  };
-  if (typeof window === "undefined") return empty;
-  try {
-    const raw = window.localStorage.getItem(storageKey(addr));
-    if (!raw) return empty;
-    const parsed = JSON.parse(raw) as PersistedState;
-    if (parsed.v !== STORAGE_VERSION) return empty;
-    return {
-      v: STORAGE_VERSION,
-      caredBattleIds: Array.isArray(parsed.caredBattleIds)
-        ? parsed.caredBattleIds.filter((n) => typeof n === "number")
-        : [],
-      notifications: Array.isArray(parsed.notifications)
-        ? parsed.notifications.filter((n): n is Notification =>
-            Boolean(n && typeof n.id === "string" && typeof n.battleId === "number"),
-          )
-        : [],
-    };
-  } catch {
-    return empty;
-  }
-}
-
-function saveToStorage(addr: string, state: PersistedState): void {
-  if (typeof window === "undefined") return;
-  try {
-    // Cap stored notifications so a long-lived session doesn't blow past
-    // localStorage quotas.
-    const trimmed: PersistedState = {
-      ...state,
-      notifications: state.notifications.slice(0, MAX_STORED),
-    };
-    window.localStorage.setItem(storageKey(addr), JSON.stringify(trimmed));
-  } catch {
-    // localStorage may be full / disabled — silent fail, in-memory state still works.
-  }
-}
+const initial: State = { list: [], read: new Set<string>() };
 
 export function useNotifications() {
   const { address } = useAccount();
-  const enabled = Boolean(address && BATTLE_ESCROW_ADDRESS !== "");
+  const [state, setState] = useState<State>(initial);
+  const sourceRef = useRef<EventSource | null>(null);
 
-  // Initialize synchronously from storage if wagmi already has the address
-  // — useAccount in wagmi v2 returns the cached address on first render
-  // when the user is already connected. This avoids a render where state
-  // is empty before the hydration effect runs.
-  const [state, setState] = useState<PersistedState>(() => {
-    if (typeof window === "undefined" || !address) {
-      return { v: STORAGE_VERSION, caredBattleIds: [], notifications: [] };
-    }
-    return loadFromStorage(address);
-  });
-
-  // Hydration tracker — `address` value we've loaded persisted state for.
-  // Persistence is gated on `hydratedAddr === address` so the initial
-  // empty-render (or a render before the wagmi address resolves) can't
-  // overwrite localStorage with an empty feed.
-  const [hydratedAddr, setHydratedAddr] = useState<string | undefined>(() =>
-    typeof window !== "undefined" && address ? address.toLowerCase() : undefined,
-  );
-
-  // Re-hydrate when address changes (wallet switch).
+  // (Re)connect SSE whenever the address changes.
   useEffect(() => {
-    if (!address) {
-      setHydratedAddr(undefined);
-      setState({ v: STORAGE_VERSION, caredBattleIds: [], notifications: [] });
-      return;
+    // Tear down any existing source on transition / unmount.
+    if (sourceRef.current) {
+      sourceRef.current.close();
+      sourceRef.current = null;
     }
-    setState(loadFromStorage(address));
-    setHydratedAddr(address.toLowerCase());
+    // Reset state when wallet changes — we'll get a fresh replay for the
+    // new address.
+    setState(initial);
+    if (!address) return;
+
+    const url = `/api/notifications/stream?address=${address.toLowerCase()}`;
+    const src = new EventSource(url);
+    sourceRef.current = src;
+
+    src.onmessage = (ev) => {
+      try {
+        const notif = JSON.parse(ev.data) as Notification;
+        setState((prev) => {
+          // Dedup by id (server replays on reconnect; this keeps single entry).
+          if (prev.list.some((n) => n.id === notif.id)) return prev;
+          // Insert in chronological order (newest at head).
+          const list = [notif, ...prev.list].sort((a, b) => b.ts - a.ts);
+          return { list, read: prev.read };
+        });
+      } catch {
+        // Ignore malformed frames.
+      }
+    };
+
+    src.onerror = () => {
+      // EventSource auto-reconnects on transport errors. We only log here
+      // because explicit disconnect handling happens in cleanup.
+    };
+
+    return () => {
+      src.close();
+      sourceRef.current = null;
+    };
   }, [address]);
 
-  // Persist on every change — only after hydration completed for THIS
-  // address so the empty-init render can't clobber the stored feed.
-  useEffect(() => {
-    if (!address || hydratedAddr !== address.toLowerCase()) return;
-    saveToStorage(address, state);
-  }, [address, hydratedAddr, state]);
-
-  const upsert = useCallback(
-    (notif: Notification) => {
-      setState((prev) => {
-        if (prev.notifications.some((n) => n.id === notif.id)) return prev;
-        return {
-          ...prev,
-          notifications: [notif, ...prev.notifications],
-        };
-      });
-    },
-    [],
-  );
-
-  const trackBattle = useCallback((battleId: number) => {
-    setState((prev) => {
-      if (prev.caredBattleIds.includes(battleId)) return prev;
-      return {
-        ...prev,
-        caredBattleIds: [...prev.caredBattleIds, battleId],
-      };
-    });
-  }, []);
-
-  const isTrackedRef = useTrackedRef(state.caredBattleIds);
-
-  // ─── Cared-about recording ──────────────────────────────────────────
-  // BattleCreated: if I'm the creator, track this battleId.
-  useWatchContractEvent({
-    address: BATTLE_ESCROW_ADDRESS as `0x${string}`,
-    abi: BATTLE_ESCROW_ABI,
-    eventName: "BattleCreated",
-    onLogs: (logs) => {
-      if (!enabled || !address) return;
-      for (const log of logs) {
-        const args = (log as unknown as { args: Record<string, unknown> }).args;
-        const creator = String(args?.creator ?? "");
-        const battleId = Number(args?.battleId ?? 0);
-        if (!battleId) continue;
-        if (creator.toLowerCase() === address.toLowerCase()) {
-          trackBattle(battleId);
-        }
-      }
-    },
-    enabled,
-  });
-
-  // BetPlaced: if I'm the bettor, track this battleId (covers spectators
-  // who bet but didn't create).
-  useWatchContractEvent({
-    address: BATTLE_ESCROW_ADDRESS as `0x${string}`,
-    abi: BATTLE_ESCROW_ABI,
-    eventName: "BetPlaced",
-    onLogs: (logs) => {
-      if (!enabled || !address) return;
-      for (const log of logs) {
-        const args = (log as unknown as { args: Record<string, unknown> }).args;
-        const bettor = String(args?.bettor ?? "");
-        const battleId = Number(args?.battleId ?? 0);
-        if (!battleId) continue;
-        if (bettor.toLowerCase() === address.toLowerCase()) {
-          trackBattle(battleId);
-        }
-      }
-    },
-    enabled,
-  });
-
-  // ─── Notification-emitting events ───────────────────────────────────
-  useWatchContractEvent({
-    address: BATTLE_ESCROW_ADDRESS as `0x${string}`,
-    abi: BATTLE_ESCROW_ABI,
-    eventName: "BattleAccepted",
-    onLogs: (logs) => {
-      if (!enabled) return;
-      for (const log of logs) {
-        const args = (log as unknown as { args: Record<string, unknown> }).args;
-        const battleId = Number(args?.battleId ?? 0);
-        const txHash = (log as unknown as { transactionHash: string })
-          .transactionHash;
-        if (!battleId || !isTrackedRef.current(battleId)) continue;
-        upsert({
-          id: `challenge_accepted:${battleId}:${txHash}`,
-          kind: "challenge_accepted",
-          battleId,
-          message: `Battle #${battleId} accepted`,
-          detail: "Defender matched your stake — runner can start now",
-          href: `/arenas/b-${String(battleId).padStart(4, "0")}`,
-          ts: Date.now(),
-          read: false,
-        });
-      }
-    },
-    enabled,
-  });
-
-  useWatchContractEvent({
-    address: BATTLE_ESCROW_ADDRESS as `0x${string}`,
-    abi: BATTLE_ESCROW_ABI,
-    eventName: "BattleDeclined",
-    onLogs: (logs) => {
-      if (!enabled) return;
-      for (const log of logs) {
-        const args = (log as unknown as { args: Record<string, unknown> }).args;
-        const battleId = Number(args?.battleId ?? 0);
-        const txHash = (log as unknown as { transactionHash: string })
-          .transactionHash;
-        if (!battleId || !isTrackedRef.current(battleId)) continue;
-        upsert({
-          id: `challenge_declined:${battleId}:${txHash}`,
-          kind: "challenge_declined",
-          battleId,
-          message: `Battle #${battleId} declined`,
-          detail: "Defender refused — your stake will be refunded on cancel",
-          href: `/arenas/b-${String(battleId).padStart(4, "0")}`,
-          ts: Date.now(),
-          read: false,
-        });
-      }
-    },
-    enabled,
-  });
-
-  useWatchContractEvent({
-    address: BATTLE_ESCROW_ADDRESS as `0x${string}`,
-    abi: BATTLE_ESCROW_ABI,
-    eventName: "BattleCancelled",
-    onLogs: (logs) => {
-      if (!enabled) return;
-      for (const log of logs) {
-        const args = (log as unknown as { args: Record<string, unknown> }).args;
-        const battleId = Number(args?.battleId ?? 0);
-        const txHash = (log as unknown as { transactionHash: string })
-          .transactionHash;
-        if (!battleId || !isTrackedRef.current(battleId)) continue;
-        upsert({
-          id: `challenge_cancelled:${battleId}:${txHash}`,
-          kind: "challenge_cancelled",
-          battleId,
-          message: `Battle #${battleId} cancelled`,
-          detail: "Stakes refundable via claimPayout",
-          href: `/arenas/b-${String(battleId).padStart(4, "0")}`,
-          ts: Date.now(),
-          read: false,
-        });
-      }
-    },
-    enabled,
-  });
-
-  useWatchContractEvent({
-    address: BATTLE_ESCROW_ADDRESS as `0x${string}`,
-    abi: BATTLE_ESCROW_ABI,
-    eventName: "VerdictSubmitted",
-    onLogs: (logs) => {
-      if (!enabled) return;
-      for (const log of logs) {
-        const args = (log as unknown as { args: Record<string, unknown> }).args;
-        const battleId = Number(args?.battleId ?? 0);
-        const winner = Number(args?.winner ?? 0);
-        const txHash = (log as unknown as { transactionHash: string })
-          .transactionHash;
-        if (!battleId || !isTrackedRef.current(battleId)) continue;
-        const sideLabel = winner === 0 ? "A" : winner === 1 ? "B" : "Draw";
-        upsert({
-          id: `verdict_submitted:${battleId}:${txHash}`,
-          kind: "verdict_submitted",
-          battleId,
-          message: `Verdict in for battle #${battleId}`,
-          detail: `Winner: ${sideLabel} — dispute window now active`,
-          href: `/arenas/b-${String(battleId).padStart(4, "0")}/result`,
-          ts: Date.now(),
-          read: false,
-        });
-      }
-    },
-    enabled,
-  });
-
-  useWatchContractEvent({
-    address: BATTLE_ESCROW_ADDRESS as `0x${string}`,
-    abi: BATTLE_ESCROW_ABI,
-    eventName: "BattleSettled",
-    onLogs: (logs) => {
-      if (!enabled) return;
-      for (const log of logs) {
-        const args = (log as unknown as { args: Record<string, unknown> }).args;
-        const battleId = Number(args?.battleId ?? 0);
-        const winner = Number(args?.winner ?? 0);
-        const txHash = (log as unknown as { transactionHash: string })
-          .transactionHash;
-        if (!battleId || !isTrackedRef.current(battleId)) continue;
-        const sideLabel = winner === 0 ? "A" : winner === 1 ? "B" : "Draw";
-        upsert({
-          id: `battle_settled:${battleId}:${txHash}`,
-          kind: "battle_settled",
-          battleId,
-          message: `Battle #${battleId} settled (${sideLabel})`,
-          detail: "Eligible bettors can claim payout",
-          href: `/arenas/b-${String(battleId).padStart(4, "0")}/result`,
-          ts: Date.now(),
-          read: false,
-        });
-      }
-    },
-    enabled,
-  });
-
-  useWatchContractEvent({
-    address: BATTLE_ESCROW_ADDRESS as `0x${string}`,
-    abi: BATTLE_ESCROW_ABI,
-    eventName: "PayoutClaimed",
-    onLogs: (logs) => {
-      if (!enabled || !address) return;
-      for (const log of logs) {
-        const args = (log as unknown as { args: Record<string, unknown> }).args;
-        const battleId = Number(args?.battleId ?? 0);
-        const bettor = String(args?.bettor ?? "");
-        const amount = args?.amount as bigint | undefined;
-        const txHash = (log as unknown as { transactionHash: string })
-          .transactionHash;
-        if (!battleId) continue;
-        if (bettor.toLowerCase() !== address.toLowerCase()) continue;
-        const ogAmount =
-          amount != null ? (Number(amount) / 1e18).toFixed(4) : "?";
-        upsert({
-          id: `payout_claimed:${battleId}:${txHash}`,
-          kind: "payout_claimed",
-          battleId,
-          message: `Payout claimed (${ogAmount} 0G)`,
-          detail: `From battle #${battleId}`,
-          href: `/arenas/b-${String(battleId).padStart(4, "0")}/result`,
-          ts: Date.now(),
-          read: false,
-        });
-      }
-    },
-    enabled,
-  });
-
-  // ─── Public API ─────────────────────────────────────────────────────
   const unreadCount = useMemo(
-    () => state.notifications.filter((n) => !n.read).length,
-    [state.notifications],
+    () => state.list.filter((n) => !state.read.has(n.id)).length,
+    [state],
   );
 
   const markAllRead = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      notifications: prev.notifications.map((n) =>
-        n.read ? n : { ...n, read: true },
-      ),
-    }));
+    setState((prev) => {
+      if (prev.list.every((n) => prev.read.has(n.id))) return prev;
+      const read = new Set(prev.read);
+      for (const n of prev.list) read.add(n.id);
+      return { ...prev, read };
+    });
   }, []);
 
   const clear = useCallback(() => {
-    setState((prev) => ({ ...prev, notifications: [] }));
+    setState((prev) => ({ list: [], read: new Set<string>() }));
   }, []);
 
+  // Kept on the API for back-compat with the TopNav integration; the
+  // server-side scanner derives "cared battles" from on-chain logs, so
+  // the client no longer needs to register interest itself.
+  const trackBattle = useCallback((_battleId: number) => {}, []);
+
+  // Wrap each notif with its current read flag for the dropdown.
+  const notifications = useMemo(
+    () =>
+      state.list.map((n) => ({
+        ...n,
+        read: state.read.has(n.id),
+      })),
+    [state],
+  );
+
   return {
-    notifications: state.notifications,
+    notifications,
     unreadCount,
     markAllRead,
     clear,
-    /** Allow callers (e.g. mint flow) to register interest in a battle they
-     *  just created off-chain so we don't miss the BattleCreated → indexed
-     *  event race. */
     trackBattle,
   };
-}
-
-/**
- * Stable ref to the latest tracked-set predicate. Inline closures inside
- * useWatchContractEvent's onLogs would otherwise see stale state on every
- * fire.
- */
-function useTrackedRef(caredBattleIds: number[]) {
-  const ref = useRef<(id: number) => boolean>(() => false);
-  ref.current = (id: number) => caredBattleIds.includes(id);
-  return ref;
 }
