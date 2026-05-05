@@ -9,6 +9,10 @@ import { Sigil } from "@/components/ui/sigil";
 import { YapLogo } from "@/components/brand/yap-logo";
 import { openConnectPanel, useWallet } from "@/hooks/use-wallet";
 import { useBalance } from "@/hooks/use-balance";
+import {
+  useNotifications,
+  type Notification,
+} from "@/hooks/use-notifications";
 import { fmtAddr, fmtNum } from "@/lib/format";
 
 interface NavEntry {
@@ -69,6 +73,7 @@ export function TopNav() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement | null>(null);
   const userRef = useRef<HTMLDivElement | null>(null);
+  const { notifications, unreadCount, markAllRead, clear } = useNotifications();
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -175,7 +180,15 @@ export function TopNav() {
 
             <div ref={notifRef} className="al-hide-below-md" style={{ position: "relative" }}>
               <button
-                onClick={() => setNotifOpen((o) => !o)}
+                onClick={() => {
+                  setNotifOpen((o) => {
+                    const next = !o;
+                    // Mark read on open so the unread dot clears immediately
+                    // and persists across reload.
+                    if (next && unreadCount > 0) markAllRead();
+                    return next;
+                  });
+                }}
                 style={{
                   width: 32,
                   height: 32,
@@ -186,10 +199,27 @@ export function TopNav() {
                   color: "var(--tx-secondary)",
                   position: "relative",
                 }}
+                aria-label={
+                  unreadCount > 0
+                    ? `Notifications (${unreadCount} unread)`
+                    : "Notifications"
+                }
               >
                 <Icon name="bell" size={16} />
-                {/* unread dot intentionally hidden — no notifications source wired yet. */}
-                {/* When a real notifications feed lands, show this only when unread > 0. */}
+                {unreadCount > 0 && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: 7,
+                      right: 7,
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      background: "var(--accent)",
+                      boxShadow: "0 0 0 2px rgba(10,11,15,0.88)",
+                    }}
+                  />
+                )}
               </button>
               {notifOpen && (
                 <div
@@ -197,12 +227,15 @@ export function TopNav() {
                     position: "absolute",
                     top: 40,
                     right: 0,
-                    width: 340,
+                    width: 360,
+                    maxHeight: 480,
                     background: "var(--bg-raised)",
                     border: "1px solid var(--bd-default)",
                     borderRadius: 6,
                     boxShadow: "0 12px 32px rgba(0,0,0,0.6)",
                     overflow: "hidden",
+                    display: "flex",
+                    flexDirection: "column",
                   }}
                 >
                   <div
@@ -211,20 +244,50 @@ export function TopNav() {
                       borderBottom: "1px solid var(--bd-subtle)",
                       fontSize: 12,
                       fontWeight: 600,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
                     }}
                   >
-                    Notifications
+                    <span>Notifications</span>
+                    {notifications.length > 0 && (
+                      <button
+                        onClick={() => clear()}
+                        style={{
+                          fontSize: 11,
+                          color: "var(--tx-tertiary)",
+                          fontWeight: 400,
+                        }}
+                      >
+                        Clear
+                      </button>
+                    )}
                   </div>
-                  <div
-                    style={{
-                      padding: "24px 14px",
-                      fontSize: 12,
-                      color: "var(--tx-tertiary)",
-                      textAlign: "center",
-                    }}
-                  >
-                    No notifications yet.
-                  </div>
+                  {notifications.length === 0 ? (
+                    <div
+                      style={{
+                        padding: "24px 14px",
+                        fontSize: 12,
+                        color: "var(--tx-tertiary)",
+                        textAlign: "center",
+                      }}
+                    >
+                      No notifications yet.
+                    </div>
+                  ) : (
+                    <div style={{ overflowY: "auto", maxHeight: 420 }}>
+                      {notifications.map((n) => (
+                        <NotifItem
+                          key={n.id}
+                          n={n}
+                          onClick={() => {
+                            if (n.href) router.push(n.href);
+                            setNotifOpen(false);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -403,4 +466,92 @@ export function TopNav() {
       )}
     </>
   );
+}
+
+const NOTIF_ICON: Record<Notification["kind"], IconName> = {
+  challenge_accepted: "sword",
+  challenge_declined: "x",
+  challenge_cancelled: "alert",
+  verdict_submitted: "zap",
+  battle_settled: "check",
+  payout_claimed: "wallet",
+};
+
+function NotifItem({
+  n,
+  onClick,
+}: {
+  n: Notification;
+  onClick: () => void;
+}) {
+  const ago = formatRelative(n.ts);
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: "100%",
+        textAlign: "left",
+        display: "flex",
+        gap: 10,
+        padding: "10px 14px",
+        borderBottom: "1px solid var(--bd-subtle)",
+        background: n.read ? "transparent" : "rgba(255,255,255,0.02)",
+      }}
+    >
+      <Icon
+        name={NOTIF_ICON[n.kind] ?? "bell"}
+        size={14}
+        style={{ color: "var(--tx-secondary)", marginTop: 2, flexShrink: 0 }}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 500,
+            color: "var(--tx-primary)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {n.message}
+        </div>
+        {n.detail && (
+          <div
+            style={{
+              fontSize: 11,
+              color: "var(--tx-tertiary)",
+              marginTop: 2,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {n.detail}
+          </div>
+        )}
+        <div
+          style={{
+            fontSize: 10,
+            color: "var(--tx-tertiary)",
+            marginTop: 4,
+          }}
+        >
+          {ago}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function formatRelative(ts: number): string {
+  const delta = Math.max(0, Date.now() - ts);
+  const sec = Math.floor(delta / 1000);
+  if (sec < 60) return `${sec}s ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  return `${day}d ago`;
 }
