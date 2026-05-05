@@ -954,6 +954,21 @@
         "internalType": "bytes32"
       },
       {
+        "name": "responseBody",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "contentOffset",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "signedText",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
         "name": "teeSignature",
         "type": "bytes",
         "internalType": "bytes"
@@ -996,6 +1011,25 @@
   },
   {
     "type": "function",
+    "name": "teeSignedTextDigest",
+    "inputs": [
+      {
+        "name": "signedText",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
     "name": "treasury",
     "inputs": [],
     "outputs": [
@@ -1009,7 +1043,7 @@
   },
   {
     "type": "function",
-    "name": "verdictDigest",
+    "name": "verdictCanonicalText",
     "inputs": [
       {
         "name": "battleId",
@@ -1030,8 +1064,8 @@
     "outputs": [
       {
         "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "type": "string",
+        "internalType": "string"
       }
     ],
     "stateMutability": "view"
@@ -1486,6 +1520,11 @@
   },
   {
     "type": "error",
+    "name": "CanonicalContentMissing",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "ChallengeNotExpired",
     "inputs": []
   },
@@ -1554,12 +1593,22 @@
   },
   {
     "type": "error",
+    "name": "InvalidContentOffset",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidOracleSignature",
     "inputs": []
   },
   {
     "type": "error",
     "name": "InvalidSide",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidSignedTextFormat",
     "inputs": []
   },
   {
@@ -1599,8 +1648,29 @@
   },
   {
     "type": "error",
+    "name": "ResponseHashMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "SameFighter",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "StringsInsufficientHexLength",
+    "inputs": [
+      {
+        "name": "value",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "length",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",
