@@ -94,7 +94,7 @@ mint_fighter() {
   local seed="$3"
   local label="$4"
 
-  echo "→ [$label] requesting /api/mint prepare…"
+  echo "→ [$label] requesting /api/mint prepare…" >&2
   local prep
   prep=$(curl -s -X POST "$API_BASE/api/mint" \
     -H "content-type: application/json" \
@@ -111,12 +111,12 @@ mint_fighter() {
   sealedKey=$(echo "$prep" | jq -r '.mint.sealedKey')
 
   if [[ "$to" == "null" ]]; then
-    echo "  prepare failed: $prep"
+    echo "  prepare failed: $prep" >&2
     return 1
   fi
 
-  echo "  ↳ seed uploaded, metadata hash=$metadataHash"
-  echo "→ [$label] signing mint() on-chain…"
+  echo "  ↳ seed uploaded, metadata hash=$metadataHash" >&2
+  echo "→ [$label] signing mint() on-chain…" >&2
 
   local pk
   local owner_lc
@@ -127,15 +127,30 @@ mint_fighter() {
 
   local fee
   fee=$($CAST call "$FIGHTER" "mintFee()(uint256)" --rpc-url "$RPC" | awk '{print $1}')
-  local tx
-  tx=$($CAST send "$FIGHTER" \
-    "mint(address,string,bytes32,bytes)" \
-    "$to" "$encryptedURI" "$metadataHash" "$sealedKey" \
-    --value "$fee" \
-    --rpc-url "$RPC" --private-key "$pk" $GAS_ARGS \
-    --json | jq -r '.transactionHash')
+  local tx=""
+  local mint_tries=0
+  while (( mint_tries < 3 )); do
+    local mint_out
+    mint_out=$($CAST send "$FIGHTER" \
+      "mint(address,string,bytes32,bytes)" \
+      "$to" "$encryptedURI" "$metadataHash" "$sealedKey" \
+      --value "$fee" \
+      --rpc-url "$RPC" --private-key "$pk" $GAS_ARGS \
+      --json 2>/dev/null) || mint_out=""
+    if [[ -n "$mint_out" ]]; then
+      tx=$(echo "$mint_out" | jq -r '.transactionHash')
+      [[ "$tx" != "null" && -n "$tx" ]] && break
+    fi
+    mint_tries=$((mint_tries + 1))
+    echo "  (mint cast send retry $mint_tries/3 after RPC flake)…" >&2
+    sleep 3
+  done
+  if [[ -z "$tx" || "$tx" == "null" ]]; then
+    echo "  mint cast send failed after retries" >&2
+    return 1
+  fi
 
-  echo "  ↳ mint tx: $tx"
+  echo "  ↳ mint tx: $tx" >&2
 
   # Commit plaintext meta to server store so runner can build persona.
   curl -s -X POST "$API_BASE/api/fighters/commit" \
@@ -159,7 +174,7 @@ mint_fighter() {
     --rpc-url "$RPC" --json | jq -c '.[0]')
   local tokenId
   tokenId=$(echo "$log" | jq -r '.topics[1]' | $CAST --to-dec)
-  echo "  ↳ [$label] tokenId = $tokenId"
+  echo "  ↳ [$label] tokenId = $tokenId" >&2
 
   echo "$tokenId"
 }
@@ -184,12 +199,27 @@ echo ""
 TOPIC="Is decentralization worth the friction?"
 
 echo "→ createBattle: fighter #$FIGHTER_A_ID vs #$FIGHTER_B_ID, stake 0.1 0G, 3 rounds…"
-CREATE_TX=$($CAST send "$ESC" \
-  "createBattle(uint256,uint256,string,uint8)" \
-  "$FIGHTER_A_ID" "$FIGHTER_B_ID" "$TOPIC" 3 \
-  --value "$STAKE_A_WEI" \
-  --rpc-url "$RPC" --private-key "$PK_A" $GAS_ARGS \
-  --json | jq -r '.transactionHash')
+create_with_retry() {
+  local tries=0
+  local out=""
+  while (( tries < 3 )); do
+    out=$($CAST send "$ESC" \
+      "createBattle(uint256,uint256,string,uint8)" \
+      "$FIGHTER_A_ID" "$FIGHTER_B_ID" "$TOPIC" 3 \
+      --value "$STAKE_A_WEI" \
+      --rpc-url "$RPC" --private-key "$PK_A" $GAS_ARGS \
+      --json 2>/dev/null) || out=""
+    if [[ -n "$out" ]]; then
+      echo "$out" | jq -r '.transactionHash'
+      return 0
+    fi
+    tries=$((tries + 1))
+    echo "  (createBattle retry $tries/3 after RPC flake)…" >&2
+    sleep 3
+  done
+  return 1
+}
+CREATE_TX=$(create_with_retry)
 echo "  ↳ create tx: $CREATE_TX"
 
 BATTLE_ID=$($CAST call "$ESC" "nextBattleId()(uint256)" --rpc-url "$RPC" | awk '{print $1}')
