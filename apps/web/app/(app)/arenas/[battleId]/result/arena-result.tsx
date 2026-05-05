@@ -18,6 +18,7 @@ import {
   BATTLE_ESCROW_ABI,
   BATTLE_ESCROW_ADDRESS,
 } from "@/lib/contracts";
+import { activeChain } from "@/lib/chains";
 import { fmtNum } from "@/lib/format";
 import { parseBattleId } from "@/lib/on-chain";
 import type { Battle, Bet, Fighter } from "@/lib/types";
@@ -38,11 +39,13 @@ export function ArenaResult({
   fighterA,
   fighterB,
   myWonBet,
+  verdictTxHash,
 }: {
   battle: Battle;
   fighterA: Fighter;
   fighterB: Fighter;
   myWonBet: Bet | null;
+  verdictTxHash?: `0x${string}`;
 }) {
   const router = useRouter();
   const { push } = useToast();
@@ -338,7 +341,23 @@ export function ArenaResult({
             >
               Challenge winner
             </Button>
-            <Button leading={<Icon name="external" size={14} />}>0G Explorer</Button>
+            <Button
+              leading={<Icon name="external" size={14} />}
+              disabled={!verdictTxHash}
+              onClick={() => {
+                if (!verdictTxHash) return;
+                const base = activeChain.blockExplorers?.default?.url;
+                if (!base) return;
+                window.open(`${base}/tx/${verdictTxHash}`, "_blank", "noopener,noreferrer");
+              }}
+              title={
+                verdictTxHash
+                  ? "Open the on-chain submitVerdict transaction"
+                  : "Verdict tx not found — battle may not be settled yet"
+              }
+            >
+              0G Explorer
+            </Button>
           </div>
         </div>
 
