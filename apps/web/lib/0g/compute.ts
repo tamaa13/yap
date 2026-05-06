@@ -247,19 +247,30 @@ export async function fineTune(call: FineTuneCall): Promise<FineTuneResult> {
     );
   }
 
-  // 5. Download + decrypt. SDK exposes two paths:
-  //    (a) acknowledgeModel — single call, both downloads + acknowledges,
-  //        but under Node 20+ hits an ArrayBuffer/Buffer incompat from
-  //        axios response body piped to fs.writeFile.
-  //    (b) downloadModelFrom0GStorage + decryptModel — legacy two-step
-  //        that uses the same underlying pipe, same bug.
+  // 5. Download + acknowledge + decrypt.
   //
-  // To work around, we install a one-shot monkey-patch on fs.writeFile
-  // that normalizes ArrayBuffer → Buffer before delegating. Scoped to
-  // this function call so it doesn't leak globally.
+  // SDK exposes `acknowledgeModel` which does both the artifact download
+  // and the on-chain acknowledgeDeliverable call. The on-chain ack is
+  // required — without it the provider's `addDeliverable` validation
+  // refuses subsequent tasks with `previous deliverable not acknowledged:
+  // id=...`. The earlier wrapper used the legacy two-step path
+  // (downloadModelFrom0GStorage → decryptModel) which skipped the ack
+  // entirely, so successive runs blocked on each other.
+  //
+  // `downloadMethod: 'auto'` falls back to direct TEE download when the
+  // 0G Storage path fails — relevant on dev machines where the SDK's
+  // bundled `0g-storage-client` binary is the wrong arch (it ships only
+  // a Linux x86_64 ELF; macOS / arm64 hits ENOEXEC). The patches/...
+  // pnpm patch fixes the orthogonal off-by-one __dirname path bug so
+  // the binary IS reachable on Linux x86_64 (i.e. Vercel functions).
+  //
+  // The fs.writeFile monkey-patch normalizes ArrayBuffer → Uint8Array so
+  // axios response bodies (Node 20+) don't crash inside the SDK's
+  // download path.
   const stamp = Date.now().toString(36);
-  const encryptedPath = path.join(os.tmpdir(), `yap-ft-${stamp}.enc`);
+  const artifactDir = path.join(os.tmpdir(), `yap-ft-${stamp}`);
   const decryptedPath = path.join(os.tmpdir(), `yap-ft-${stamp}.bin`);
+  await fs.promises.mkdir(artifactDir, { recursive: true });
 
   const originalWriteFile = fs.promises.writeFile;
   const patchedWriteFile: typeof fs.promises.writeFile = async (
@@ -268,7 +279,6 @@ export async function fineTune(call: FineTuneCall): Promise<FineTuneResult> {
     options,
   ) => {
     let normalized = data;
-    // Node fs.writeFile rejects raw ArrayBuffer; wrap into Uint8Array view.
     if (data instanceof ArrayBuffer) {
       normalized = new Uint8Array(data);
     }
@@ -282,11 +292,26 @@ export async function fineTune(call: FineTuneCall): Promise<FineTuneResult> {
     patchedWriteFile;
 
   try {
-    await ft.downloadModelFrom0GStorage(
-      providerAddress,
-      taskId,
-      encryptedPath,
-    );
+    // Combined download + on-chain acknowledgeDeliverable. Auto mode tries
+    // 0G Storage first, falls back to TEE direct HTTP on failure.
+    await ft.acknowledgeModel(providerAddress, taskId, artifactDir, {
+      downloadMethod: "auto",
+    });
+
+    // The artifact lives in artifactDir — pick the model file the SDK
+    // dropped there. Path varies by download method (model_<taskId>.bin
+    // for 0G Storage, lora_model_<taskId>.zip / .data for TEE).
+    const items = await fs.promises.readdir(artifactDir);
+    const candidate =
+      items.find((f) => f.startsWith("model_")) ??
+      items.find((f) => f.startsWith("lora_model_")) ??
+      items.find((f) => f.endsWith(".data") || f.endsWith(".zip")) ??
+      items[0];
+    if (!candidate) {
+      throw new Error(`acknowledgeModel produced no artifact in ${artifactDir}`);
+    }
+    const encryptedPath = path.join(artifactDir, candidate);
+
     await ft.decryptModel(
       providerAddress,
       taskId,
@@ -306,7 +331,7 @@ export async function fineTune(call: FineTuneCall): Promise<FineTuneResult> {
   } finally {
     (fs.promises as unknown as { writeFile: typeof originalWriteFile }).writeFile =
       originalWriteFile;
-    await fs.promises.unlink(encryptedPath).catch(() => {});
+    await fs.promises.rm(artifactDir, { recursive: true, force: true }).catch(() => {});
     await fs.promises.unlink(decryptedPath).catch(() => {});
   }
 }
