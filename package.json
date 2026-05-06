@@ -16,5 +16,10 @@
     "contracts:deploy:mainnet": "cd contracts && forge script script/Deploy.s.sol --rpc-url $ZG_MAINNET_RPC --broadcast --private-key $PRIVATE_KEY",
     "contracts:sync-abi": "scripts/sync-abi.sh"
   },
-  "packageManager": "pnpm@9.0.0"
+  "packageManager": "pnpm@9.0.0",
+  "pnpm": {
+    "patchedDependencies": {
+      "@0glabs/0g-serving-broker@0.7.5": "patches/@0glabs__0g-serving-broker@0.7.5.patch"
+    }
+  }
 }
