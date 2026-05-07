@@ -33,7 +33,7 @@ import {
 import {
   createZGComputeNetworkBroker,
   InferenceVerifier,
-} from "@0glabs/0g-serving-broker";
+} from "@0gfoundation/0g-compute-ts-sdk";
 
 function loadEnvLocal(): void {
   const envPath = path.join(__dirname, "..", ".env.local");

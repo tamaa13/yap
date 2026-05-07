@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   // them — lets `__dirname` resolve correctly and native binaries (like
   // `0g-storage-client`) stay reachable via relative path from the package.
   serverExternalPackages: [
-    "@0glabs/0g-serving-broker",
+    "@0gfoundation/0g-compute-ts-sdk",
     "@0gfoundation/0g-ts-sdk",
   ],
 };

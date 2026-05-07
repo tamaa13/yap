@@ -24,7 +24,7 @@ import { JsonRpcProvider, Wallet, parseEther, keccak256 } from "ethers";
 import {
   createZGComputeNetworkBroker,
   type ZGComputeNetworkBroker,
-} from "@0glabs/0g-serving-broker";
+} from "@0gfoundation/0g-compute-ts-sdk";
 
 function loadEnvLocal(): void {
   const envPath = path.join(__dirname, "..", ".env.local");
