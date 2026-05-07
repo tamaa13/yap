@@ -396,15 +396,33 @@ async function decryptModelLocal(
       };
     };
   };
-  const [service, deliverable] = await Promise.all([
-    ftAny.modelProcessor.contract.getService(providerAddress),
-    ftAny.modelProcessor.contract.getDeliverable(providerAddress, taskId),
-  ]);
+  const service = await ftAny.modelProcessor.contract.getService(providerAddress);
+
+  // Provider populates `encryptedSecret` on-chain in a separate tx that
+  // can lag the user's ack by tens of seconds. Poll the deliverable until
+  // it shows up (cap at ~3 min so we surface a real failure on stalls).
+  let deliverable = await ftAny.modelProcessor.contract.getDeliverable(
+    providerAddress,
+    taskId,
+  );
+  const deadline = Date.now() + 3 * 60_000;
+  while (
+    Date.now() < deadline &&
+    (!deliverable.encryptedSecret || deliverable.encryptedSecret === "0x")
+  ) {
+    await new Promise((r) => setTimeout(r, 5000));
+    deliverable = await ftAny.modelProcessor.contract.getDeliverable(
+      providerAddress,
+      taskId,
+    );
+  }
   if (!deliverable.acknowledged) {
     throw new Error(`Deliverable for task ${taskId} is not acknowledged`);
   }
   if (!deliverable.encryptedSecret || deliverable.encryptedSecret === "0x") {
-    throw new Error("Deliverable.encryptedSecret is empty");
+    throw new Error(
+      "Deliverable.encryptedSecret is empty after 3 min — provider may not have published the session key",
+    );
   }
 
   // 1. ECIES decrypt to recover the AES-GCM key (32 bytes hex).
