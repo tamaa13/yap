@@ -6,10 +6,19 @@ import "server-only";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import {
-  createZGComputeNetworkBroker,
-  type ZGComputeNetworkBroker,
+// Force the SDK through Node's CJS loader. The ESM bundle inlines its own
+// `eciesjs` + `@noble/curves`; under bundled validation the ECIES public-key
+// extraction in `decryptModel` rejects valid ciphertext with
+// "second arg must be public key". The CJS build keeps both deps external,
+// so the ECIES path matches the version we and the rest of the runtime use.
+import type {
+  createZGComputeNetworkBroker as CreateBrokerFn,
+  ZGComputeNetworkBroker,
 } from "@0gfoundation/0g-compute-ts-sdk";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { createZGComputeNetworkBroker } = require("@0gfoundation/0g-compute-ts-sdk") as {
+  createZGComputeNetworkBroker: typeof CreateBrokerFn;
+};
 import { JsonRpcProvider, Wallet, parseEther } from "ethers";
 import { activeChain } from "@/lib/chains";
 
