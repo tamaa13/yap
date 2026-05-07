@@ -396,7 +396,10 @@ async function decryptModelLocal(
       };
     };
   };
+  console.log(`[decrypt] start taskId=${taskId}`);
+  const t0 = Date.now();
   const service = await ftAny.modelProcessor.contract.getService(providerAddress);
+  console.log(`[decrypt] +${Date.now() - t0}ms got service`);
 
   // Provider populates `encryptedSecret` on-chain in a separate tx that
   // can lag the user's ack by tens of seconds. Poll the deliverable until
@@ -406,16 +409,30 @@ async function decryptModelLocal(
     taskId,
   );
   const deadline = Date.now() + 3 * 60_000;
+  let pollCount = 0;
   while (
     Date.now() < deadline &&
     (!deliverable.encryptedSecret || deliverable.encryptedSecret === "0x")
   ) {
+    pollCount++;
     await new Promise((r) => setTimeout(r, 5000));
-    deliverable = await ftAny.modelProcessor.contract.getDeliverable(
-      providerAddress,
-      taskId,
-    );
+    try {
+      deliverable = await Promise.race([
+        ftAny.modelProcessor.contract.getDeliverable(providerAddress, taskId),
+        new Promise<never>((_, rej) =>
+          setTimeout(() => rej(new Error("getDeliverable RPC timeout")), 15_000),
+        ),
+      ]);
+    } catch (e) {
+      console.warn(
+        `[decrypt] poll #${pollCount} RPC timeout, retrying:`,
+        e instanceof Error ? e.message : e,
+      );
+    }
   }
+  console.log(
+    `[decrypt] +${Date.now() - t0}ms encryptedSecret ready (polls=${pollCount})`,
+  );
   if (!deliverable.acknowledged) {
     throw new Error(`Deliverable for task ${taskId} is not acknowledged`);
   }
@@ -459,10 +476,13 @@ async function decryptModelLocal(
     const chunkBuf = Buffer.alloc(CHUNK_LEN);
     const PIECE = 4 * 1024 * 1024;
     const tagsParts: Buffer[] = [];
+    let chunkIdx = 0;
     while (true) {
+      const tChunk = Date.now();
       r = await fd.read(chunkBuf, 0, CHUNK_LEN, offset);
       const n = r.bytesRead;
       if (n === 0) break;
+      chunkIdx++;
       const ciphertextLen = n - TAG_LEN;
       const decipher = crypto.createDecipheriv("aes-256-gcm", aesKey, ivBuf);
       let processed = 0;
@@ -476,12 +496,16 @@ async function decryptModelLocal(
       await writeFd.write(decipher.final());
       tagsParts.push(tag);
       offset += n;
+      console.log(
+        `[decrypt] +${Date.now() - t0}ms chunk #${chunkIdx} done (${(n / 1024 / 1024).toFixed(1)} MiB in ${Date.now() - tChunk}ms)`,
+      );
       // Increment IV big-endian, like the SDK.
       for (let i = ivBuf.length - 1; i >= 0; i--) {
         ivBuf[i] = (ivBuf[i] + 1) & 0xff;
         if (ivBuf[i] !== 0) break;
       }
     }
+    console.log(`[decrypt] +${Date.now() - t0}ms all chunks done`);
 
     // 3. Sanity-check TEE signer (best-effort; mismatch logged, not fatal).
     const tagsAll = Buffer.concat(tagsParts);
