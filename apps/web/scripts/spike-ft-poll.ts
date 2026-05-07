@@ -5,7 +5,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { JsonRpcProvider, Wallet } from "ethers";
-import { createZGComputeNetworkBroker } from "@0glabs/0g-serving-broker";
+import { createZGComputeNetworkBroker } from "@0gfoundation/0g-compute-ts-sdk";
 
 function loadEnvLocal(): void {
   const envPath = path.join(__dirname, "..", ".env.local");

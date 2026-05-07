@@ -16,7 +16,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { createZGComputeNetworkBroker } from "@0glabs/0g-serving-broker";
+import { createZGComputeNetworkBroker } from "@0gfoundation/0g-compute-ts-sdk";
 import { JsonRpcProvider, Wallet } from "ethers";
 
 function loadEnvLocal(): void {

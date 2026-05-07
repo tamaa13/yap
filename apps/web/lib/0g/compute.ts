@@ -9,7 +9,7 @@ import * as path from "node:path";
 import {
   createZGComputeNetworkBroker,
   type ZGComputeNetworkBroker,
-} from "@0glabs/0g-serving-broker";
+} from "@0gfoundation/0g-compute-ts-sdk";
 import { JsonRpcProvider, Wallet, parseEther } from "ethers";
 import { activeChain } from "@/lib/chains";
 
