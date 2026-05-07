@@ -25,12 +25,25 @@ jobs:
             cd apps/web
             NODE_OPTIONS="--max-old-space-size=1536" pnpm install --frozen-lockfile
             NODE_OPTIONS="--max-old-space-size=1536" pnpm build
-            pm2 reload yap-web || pm2 start ~/yap/ecosystem.config.cjs
+            # startOrReload re-reads the ecosystem file every time, so
+            # changes like max_memory_restart pick up without a manual
+            # delete/start dance. --update-env brings in any new env vars.
+            pm2 startOrReload ~/yap/ecosystem.config.cjs --update-env
             pm2 save
             echo "✓ Deploy done at $(date)"
           DEPLOY
 
       - name: Health check
         run: |
-          sleep 5
-          curl -fsS http://103.150.227.197/ -o /dev/null -w "HTTP %{http_code}\n" || exit 1
+          # Next.js needs ~7-10s to print "Ready" after pm2 reload; poll
+          # instead of sleep so we don't race the restart.
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://103.150.227.197/ || true)
+            if [ "$code" = "200" ]; then
+              echo "✓ healthy (after ${i}s)"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "✗ health check timed out (last code: $code)"
+          exit 1

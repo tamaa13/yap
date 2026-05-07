@@ -452,19 +452,29 @@ async function decryptModelLocal(
     r = await fd.read(ivBuf, 0, IV_LEN, offset);
     offset += r.bytesRead;
 
+    // Stream the chunk through `decipher.update` in 4 MiB sub-pieces so we
+    // never hold a full 64 MiB plaintext buffer in memory. Peak working
+    // set is ~64 MiB (the read buffer) + ~4 MiB (the latest update slice)
+    // — avoids OOM-restart with our 2 GB VPS + Next.js footprint.
     const chunkBuf = Buffer.alloc(CHUNK_LEN);
+    const PIECE = 4 * 1024 * 1024;
     const tagsParts: Buffer[] = [];
     while (true) {
       r = await fd.read(chunkBuf, 0, CHUNK_LEN, offset);
       const n = r.bytesRead;
       if (n === 0) break;
-      const ciphertext = chunkBuf.subarray(0, n - TAG_LEN);
-      const tag = chunkBuf.subarray(n - TAG_LEN, n);
+      const ciphertextLen = n - TAG_LEN;
       const decipher = crypto.createDecipheriv("aes-256-gcm", aesKey, ivBuf);
+      let processed = 0;
+      while (processed < ciphertextLen) {
+        const end = Math.min(processed + PIECE, ciphertextLen);
+        await writeFd.write(decipher.update(chunkBuf.subarray(processed, end)));
+        processed = end;
+      }
+      const tag = Buffer.from(chunkBuf.subarray(ciphertextLen, n));
       decipher.setAuthTag(tag);
-      const plain = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-      await writeFd.write(plain);
-      tagsParts.push(Buffer.from(tag));
+      await writeFd.write(decipher.final());
+      tagsParts.push(tag);
       offset += n;
       // Increment IV big-endian, like the SDK.
       for (let i = ivBuf.length - 1; i >= 0; i--) {
