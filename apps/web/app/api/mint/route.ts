@@ -84,9 +84,15 @@ export async function POST(req: Request) {
   const bypassFineTune = process.env.ZG_FINE_TUNE_BYPASS === "true";
 
   try {
+    const tStart = Date.now();
+    const log = (msg: string) =>
+      console.log(`[mint +${Date.now() - tStart}ms] ${msg}`);
+
     // 1. Upload raw seed (dataset for fine-tune + auditable fingerprint).
+    log("upload seed start");
     const seedBytes = new TextEncoder().encode(seed);
     const seedUpload = await uploadBuffer(seedBytes);
+    log(`upload seed done — root=${seedUpload.rootHash.slice(0, 12)}`);
 
     // 2. Produce weightsBytes — either via real fine-tune or bypass fallback.
     let weightsBytes: Uint8Array = seedBytes;
@@ -94,10 +100,12 @@ export async function POST(req: Request) {
     let fineTuneProvider: string | null = null;
     let attestationSig: string | undefined;
     if (!bypassFineTune) {
+      log("fineTune start");
       const ft = await fineTune({
         datasetHash: seedUpload.rootHash,
         baseModel,
       });
+      log(`fineTune done — task=${ft.taskId.slice(0, 8)} weights=${ft.weightsBytes.byteLength}B`);
       weightsBytes = ft.weightsBytes;
       fineTuneTaskId = ft.taskId;
       fineTuneProvider = ft.providerAddress;
@@ -105,10 +113,14 @@ export async function POST(req: Request) {
     }
 
     // 3. Encrypt final weights payload with a fresh AES-GCM key.
+    log("encrypt weights start");
     const { ciphertext, key, iv } = await encryptWithRandomKey(weightsBytes);
+    log(`encrypt weights done — ${ciphertext.byteLength}B`);
 
     // 4. Upload encrypted blob.
+    log("upload weights start");
     const weightsUpload = await uploadBuffer(ciphertext);
+    log(`upload weights done — root=${weightsUpload.rootHash.slice(0, 12)}`);
     const encryptedURI = `0g://${weightsUpload.rootHash}`;
 
     // 5. Pack iv || key as sealedKey envelope.
