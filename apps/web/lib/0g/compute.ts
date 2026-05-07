@@ -321,7 +321,13 @@ export async function fineTune(call: FineTuneCall): Promise<FineTuneResult> {
     }
     const encryptedPath = path.join(artifactDir, candidate);
 
-    await ft.decryptModel(
+    // SDK's decryptModel internally calls `eciesjs.decrypt` and the
+    // `@noble/curves` build that comes with the SDK rejects valid
+    // ciphertext under Next.js bundling ("second arg must be public key").
+    // Replicate the decrypt locally with the eciesjs the app declared as
+    // a direct dep — same algorithm, but resolves to the unbundled libs.
+    await decryptModelLocal(
+      ft,
       providerAddress,
       taskId,
       encryptedPath,
@@ -342,5 +348,127 @@ export async function fineTune(call: FineTuneCall): Promise<FineTuneResult> {
       originalWriteFile;
     await fs.promises.rm(artifactDir, { recursive: true, force: true }).catch(() => {});
     await fs.promises.unlink(decryptedPath).catch(() => {});
+  }
+}
+
+// ────────────────────────── Custom decryption ──────────────────────────
+// Reimplements broker.fineTuning.decryptModel using the local `eciesjs`
+// + node:crypto. The SDK's bundled crypto stack misbehaves under Next.js
+// (see comment near `decryptModelLocal` invocation above); the format is
+// otherwise identical:
+//   1. Read ECIES-encrypted AES key from on-chain `Deliverable.encryptedSecret`
+//      and decrypt with the broker wallet's private key.
+//   2. Encrypted artifact layout (per chunk):
+//      [ 65-byte secp256k1 sig | 12-byte iv | (chunk: ciphertext + 16-byte tag)+ ]
+//      — iv is incremented big-endian per chunk; tag covers the ciphertext;
+//      the leading sig is over keccak(concat(tags)) so we can also recover
+//      the TEE signer address as a sanity check.
+//   3. Decrypt each 64MiB+16 chunk with AES-256-GCM and stream to disk.
+async function decryptModelLocal(
+  ft: NonNullable<ZGComputeNetworkBroker["fineTuning"]>,
+  providerAddress: string,
+  taskId: string,
+  encryptedPath: string,
+  decryptedPath: string,
+): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const eciesjs = require("eciesjs") as {
+    PrivateKey: { fromHex(hex: string): { secret: Uint8Array } };
+    decrypt(privKey: Uint8Array, data: Buffer): Buffer;
+  };
+  const crypto = await import("node:crypto");
+  const { ethers } = await import("ethers");
+
+  // Reach into the SDK to grab the contract handle + signer (the SDK's
+  // broker has these as `modelProcessor.contract`; types not exported).
+  const ftAny = ft as unknown as {
+    modelProcessor: {
+      contract: {
+        signer: { privateKey: string };
+        getDeliverable(provider: string, id: string): Promise<{
+          acknowledged: boolean;
+          encryptedSecret: string;
+        }>;
+        getService(provider: string): Promise<{
+          providerSigner?: string;
+          teeSignerAddress?: string;
+        }>;
+      };
+    };
+  };
+  const [service, deliverable] = await Promise.all([
+    ftAny.modelProcessor.contract.getService(providerAddress),
+    ftAny.modelProcessor.contract.getDeliverable(providerAddress, taskId),
+  ]);
+  if (!deliverable.acknowledged) {
+    throw new Error(`Deliverable for task ${taskId} is not acknowledged`);
+  }
+  if (!deliverable.encryptedSecret || deliverable.encryptedSecret === "0x") {
+    throw new Error("Deliverable.encryptedSecret is empty");
+  }
+
+  // 1. ECIES decrypt to recover the AES-GCM key (32 bytes hex).
+  const encHex = deliverable.encryptedSecret.startsWith("0x")
+    ? deliverable.encryptedSecret.slice(2)
+    : deliverable.encryptedSecret;
+  const privKey = eciesjs.PrivateKey.fromHex(
+    ftAny.modelProcessor.contract.signer.privateKey,
+  );
+  const aesKey = eciesjs.decrypt(privKey.secret, Buffer.from(encHex, "hex"));
+
+  // 2. Stream the encrypted file in chunks, decrypting with AES-256-GCM.
+  const SIG_LEN = 65;
+  const IV_LEN = 12;
+  const TAG_LEN = 16;
+  const CHUNK_DATA_LEN = 64 * 1024 * 1024; // 64 MiB plaintext per chunk
+  const CHUNK_LEN = CHUNK_DATA_LEN + TAG_LEN;
+
+  const fd = await fs.promises.open(encryptedPath, "r");
+  const writeFd = await fs.promises.open(decryptedPath, "w");
+  try {
+    const sigBuf = Buffer.alloc(SIG_LEN);
+    const ivBuf = Buffer.alloc(IV_LEN);
+    let offset = 0;
+    let r = await fd.read(sigBuf, 0, SIG_LEN, offset);
+    offset += r.bytesRead;
+    r = await fd.read(ivBuf, 0, IV_LEN, offset);
+    offset += r.bytesRead;
+
+    const chunkBuf = Buffer.alloc(CHUNK_LEN);
+    const tagsParts: Buffer[] = [];
+    while (true) {
+      r = await fd.read(chunkBuf, 0, CHUNK_LEN, offset);
+      const n = r.bytesRead;
+      if (n === 0) break;
+      const ciphertext = chunkBuf.subarray(0, n - TAG_LEN);
+      const tag = chunkBuf.subarray(n - TAG_LEN, n);
+      const decipher = crypto.createDecipheriv("aes-256-gcm", aesKey, ivBuf);
+      decipher.setAuthTag(tag);
+      const plain = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+      await writeFd.write(plain);
+      tagsParts.push(Buffer.from(tag));
+      offset += n;
+      // Increment IV big-endian, like the SDK.
+      for (let i = ivBuf.length - 1; i >= 0; i--) {
+        ivBuf[i] = (ivBuf[i] + 1) & 0xff;
+        if (ivBuf[i] !== 0) break;
+      }
+    }
+
+    // 3. Sanity-check TEE signer (best-effort; mismatch logged, not fatal).
+    const tagsAll = Buffer.concat(tagsParts);
+    const recovered = ethers.recoverAddress(
+      ethers.keccak256(tagsAll),
+      "0x" + sigBuf.toString("hex"),
+    );
+    const expected = service.teeSignerAddress ?? service.providerSigner;
+    if (expected && recovered.toLowerCase() !== expected.toLowerCase()) {
+      console.warn(
+        `[compute] TEE signer mismatch — recovered=${recovered} expected=${expected}`,
+      );
+    }
+  } finally {
+    await fd.close();
+    await writeFd.close();
   }
 }
