@@ -6,10 +6,22 @@ import "server-only";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import {
-  createZGComputeNetworkBroker,
-  type ZGComputeNetworkBroker,
+// Force the CommonJS entrypoint via createRequire. The SDK's ESM bundle
+// inlines its own copy of `ethers`, so a `signer instanceof ethers.Wallet`
+// check inside the SDK fails when the consumer imports `ethers` separately
+// — the bundled Wallet class is a different identity than ours. The CJS
+// build keeps `ethers` external, so both the SDK and our app share one
+// Wallet class identity and the `instanceof` check passes, populating
+// `broker.fineTuning`.
+import { createRequire } from "node:module";
+import type {
+  createZGComputeNetworkBroker as CreateBrokerFn,
+  ZGComputeNetworkBroker,
 } from "@0gfoundation/0g-compute-ts-sdk";
+const requireCJS = createRequire(import.meta.url);
+const { createZGComputeNetworkBroker } = requireCJS(
+  "@0gfoundation/0g-compute-ts-sdk",
+) as { createZGComputeNetworkBroker: typeof CreateBrokerFn };
 import { JsonRpcProvider, Wallet, parseEther } from "ethers";
 import { activeChain } from "@/lib/chains";
 
