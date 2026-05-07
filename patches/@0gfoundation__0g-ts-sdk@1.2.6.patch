@@ -1,0 +1,26 @@
+diff --git a/lib.commonjs/file/MemData.js b/lib.commonjs/file/MemData.js
+index 822145dd67d28a791c870f712c107deff6b6a79d..32ad70f1cb4dcc1806cfa90bf4af177284bbe260 100644
+--- a/lib.commonjs/file/MemData.js
++++ b/lib.commonjs/file/MemData.js
+@@ -25,7 +25,7 @@ class MemData extends AbstractFile_js_1.AbstractFile {
+         }
+         const sliceStart = this.offset + start;
+         const sliceEnd = this.offset + end;
+-        const sliced = new Uint8Array(this.data).slice(sliceStart, sliceEnd);
++        const src = this.data instanceof Uint8Array ? this.data : new Uint8Array(this.data); const sliced = src.subarray(sliceStart, sliceEnd);
+         return {
+             bytesRead: sliced.length,
+             buffer: sliced,
+diff --git a/lib.esm/file/MemData.js b/lib.esm/file/MemData.js
+index 9d0045c91af378eaa659ce750020267f517616fe..693a11335fced74d76408cf9dc138d947250d43a 100644
+--- a/lib.esm/file/MemData.js
++++ b/lib.esm/file/MemData.js
+@@ -22,7 +22,7 @@ export class MemData extends AbstractFile {
+         }
+         const sliceStart = this.offset + start;
+         const sliceEnd = this.offset + end;
+-        const sliced = new Uint8Array(this.data).slice(sliceStart, sliceEnd);
++        const src = this.data instanceof Uint8Array ? this.data : new Uint8Array(this.data); const sliced = src.subarray(sliceStart, sliceEnd);
+         return {
+             bytesRead: sliced.length,
+             buffer: sliced,

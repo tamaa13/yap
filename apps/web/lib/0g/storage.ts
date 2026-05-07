@@ -54,7 +54,14 @@ export async function uploadBuffer(bytes: Uint8Array): Promise<UploadResult> {
   const signer = getSigner();
   const indexer = new Indexer(INDEXER_URL);
 
-  const mem = new MemData(Array.from(bytes));
+  // Pass the Uint8Array directly. The MemData constructor stores `data` as-is
+  // and our pnpm patch on @0gfoundation/0g-ts-sdk fixes its readFromFile to
+  // `subarray` (zero-copy) when input is a typed array. The SDK's stock
+  // implementation reallocates the entire buffer on every read, which is fine
+  // for a 200-byte seed but turns a 93 MB weights upload into hours of
+  // memory churn. (The previous `Array.from(bytes)` made it even worse:
+  // a 93-million-element JS Array.)
+  const mem = new MemData(bytes);
   const [tree, treeErr] = await mem.merkleTree();
   if (treeErr !== null || tree === null) {
     throw treeErr ?? new Error("merkleTree failed");
