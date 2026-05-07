@@ -6,21 +6,10 @@ import "server-only";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-// Pull the SDK in via Node's CJS loader so it shares the same `ethers`
-// module instance as the rest of this file. The SDK's ESM bundle inlines
-// its own copy of `ethers`, while createRequire bridges from ESM still
-// keep a separate CJS module cache — both result in two distinct Wallet
-// class identities, the SDK's `signer instanceof ethers.Wallet` guard
-// fails, and `broker.fineTuning` is silently dropped. A plain `require`
-// wraps the entire module graph in CJS so everything sees one ethers.
-import type {
-  createZGComputeNetworkBroker as CreateBrokerFn,
-  ZGComputeNetworkBroker,
+import {
+  createZGComputeNetworkBroker,
+  type ZGComputeNetworkBroker,
 } from "@0gfoundation/0g-compute-ts-sdk";
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { createZGComputeNetworkBroker } = require("@0gfoundation/0g-compute-ts-sdk") as {
-  createZGComputeNetworkBroker: typeof CreateBrokerFn;
-};
 import { JsonRpcProvider, Wallet, parseEther } from "ethers";
 import { activeChain } from "@/lib/chains";
 
