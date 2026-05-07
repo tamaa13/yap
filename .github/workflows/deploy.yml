@@ -14,11 +14,11 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H 103.150.227.197 >> ~/.ssh/known_hosts
+          ssh-keyscan -p 22987 -H 103.150.227.197 >> ~/.ssh/known_hosts
 
       - name: Deploy to VPS
         run: |
-          ssh -i ~/.ssh/deploy_key yap-service@103.150.227.197 << 'DEPLOY'
+          ssh -i ~/.ssh/deploy_key -p 22987 yap-service@103.150.227.197 << 'DEPLOY'
             set -e
             cd ~/yap
             git pull origin main
