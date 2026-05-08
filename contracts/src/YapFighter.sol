@@ -34,9 +34,18 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
     mapping(uint256 => mapping(address => uint256)) private _executorIndex; // 1-based
 
     mapping(bytes32 => uint256) private _proofIssuedAt;
+    /// @notice Whether a (proofId, tokenId, recipient) triple has already
+    ///         been consumed by iTransferFrom / iCloneFrom. Belt-and-
+    ///         suspenders against proof reuse within the validity window
+    ///         — iTransferFrom is structurally protected by ownership
+    ///         atomicity, but iCloneFrom would otherwise let an owner
+    ///         mint N clones from one attestation. (Anima pattern,
+    ///         AnimaAgentNFT.sol.)
+    mapping(bytes32 => bool) private _proofConsumed;
 
     error InvalidProof();
     error ProofExpired();
+    error ProofAlreadyConsumed();
     error ExecutorCapReached();
     error ZeroAddress();
     error NotAuthorized();
@@ -135,6 +144,7 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
         OwnershipProof calldata op = proofs[proofs.length - 1].ownershipProof;
         _requireFreshProof(op, tokenId, to);
         if (op.dataHash == bytes32(0)) revert InvalidProof();
+        _consumeProof(op, tokenId, to);
 
         _clearAuthorizations(tokenId);
 
@@ -164,6 +174,7 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
 
         _requireFreshProof(proof.ownershipProof, tokenId, to);
         if (proof.ownershipProof.dataHash == bytes32(0)) revert InvalidProof();
+        _consumeProof(proof.ownershipProof, tokenId, to);
 
         newTokenId = ++_nextId;
         _safeMint(to, newTokenId);
@@ -221,11 +232,28 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
         uint256 tokenId,
         address recipient
     ) internal view {
-        bytes32 id = keccak256(abi.encode(op.oracleType, op.dataHash, op.nonce, op.proof));
-        bytes32 boundId = keccak256(abi.encode(id, tokenId, recipient));
+        bytes32 boundId = _boundProofId(op, tokenId, recipient);
         uint256 issued = _proofIssuedAt[boundId];
         if (issued == 0) revert InvalidProof();
         if (block.timestamp > issued + PROOF_VALIDITY) revert ProofExpired();
+        if (_proofConsumed[boundId]) revert ProofAlreadyConsumed();
+    }
+
+    function _consumeProof(
+        OwnershipProof calldata op,
+        uint256 tokenId,
+        address recipient
+    ) internal {
+        _proofConsumed[_boundProofId(op, tokenId, recipient)] = true;
+    }
+
+    function _boundProofId(
+        OwnershipProof calldata op,
+        uint256 tokenId,
+        address recipient
+    ) internal pure returns (bytes32) {
+        bytes32 id = keccak256(abi.encode(op.oracleType, op.dataHash, op.nonce, op.proof));
+        return keccak256(abi.encode(id, tokenId, recipient));
     }
 
     function isExecutor(uint256 tokenId, address executor) external view returns (bool) {

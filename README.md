@@ -140,6 +140,7 @@ pnpm dev
 | BattleRegistry | `0x755ef230d456b6cc991ccfff38ec5c6b0133d37b` | [chainscan](https://chainscan-galileo.0g.ai/address/0x755ef230d456b6cc991ccfff38ec5c6b0133d37b) |
 | YapMarketplace | `0x076e42a64e4ba43700ebb0830086138468dfa275` | [chainscan](https://chainscan-galileo.0g.ai/address/0x076e42a64e4ba43700ebb0830086138468dfa275) |
 | RentalEscrow | `0xe5Df2d51ef75A268daAd122038D94cEA9c3111EA` | [chainscan](https://chainscan-galileo.0g.ai/address/0xe5Df2d51ef75A268daAd122038D94cEA9c3111EA) |
+| YapInbox (CREATE2) | `0xe92dB21A770c32a19795556C46D5c6a274955DBD` | [chainscan](https://chainscan-galileo.0g.ai/address/0xe92dB21A770c32a19795556C46D5c6a274955DBD) |
 
 `oracleKey` = `0x83df4B8EbA7c0B3B740019b8c9a77ffF77D508cF` — the TEE-derived signing address registered by 0G Compute provider `0xa48f01287233509FD694a22Bf840225062E67836`.
 
