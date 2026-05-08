@@ -130,6 +130,44 @@ function applyEvent(
       if (!prev) return prev;
       return { ...prev, currentRound: event.round, updatedAt: Date.now() };
 
+    case "commentator-token": {
+      if (!prev) return prev;
+      const rounds = ensureRound(prev.rounds, event.round);
+      return {
+        ...prev,
+        rounds: rounds.map((r) => {
+          if (r.number !== event.round) return r;
+          const existing = r.commentary ?? {
+            content: "",
+            tokenCount: 0,
+            startedAt: Date.now(),
+          };
+          return {
+            ...r,
+            commentary: {
+              ...existing,
+              content: (existing.content ?? "") + event.delta,
+              tokenCount: event.tokenCount,
+              startedAt: existing.startedAt ?? Date.now(),
+            },
+          };
+        }),
+        updatedAt: Date.now(),
+      };
+    }
+
+    case "commentator-done": {
+      if (!prev) return prev;
+      const rounds = ensureRound(prev.rounds, event.round);
+      return {
+        ...prev,
+        rounds: rounds.map((r) =>
+          r.number === event.round ? { ...r, commentary: event.commentary } : r,
+        ),
+        updatedAt: Date.now(),
+      };
+    }
+
     case "verdict":
       if (!prev) return prev;
       return {

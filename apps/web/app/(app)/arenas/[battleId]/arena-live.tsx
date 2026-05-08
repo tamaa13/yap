@@ -217,6 +217,9 @@ export function ArenaLive({
           />
         </div>
         <div style={{ flexShrink: 0 }}>
+          <CommentatorTtsToggle />
+        </div>
+        <div style={{ flexShrink: 0 }}>
           <Badge mono tone="success">
             <Icon name="shield" size={10} />
             &nbsp;TEE
@@ -322,6 +325,8 @@ export function ArenaLive({
           <FighterPanel fighter={fighterB} corner="b" />
         </div>
       </div>
+
+      <CommentatorTicker state={liveState} />
 
       <BetBar battle={battle} fighterA={fighterA} fighterB={fighterB} onLock={handleLock} />
 
@@ -930,5 +935,221 @@ function ReactionsBar({
         ),
       )}
     </div>
+  );
+}
+
+// ─── Commentator (decorative color commentary) ──────────────────────────
+
+const TTS_STORAGE_KEY = "yap.commentator.tts";
+
+/**
+ * Bottom-of-arena ticker showing the latest streaming commentary token.
+ * Surfaces the most recent round's commentary, auto-fades when no
+ * commentary is in flight, and clearly marks itself "Color commentary —
+ * entertainment" so spectators don't confuse it with the TEE-attested
+ * judge verdict.
+ *
+ * Speaks the finished commentary aloud via SpeechSynthesis when the
+ * user has toggled TTS on (off by default, settings persist in
+ * localStorage). No-ops gracefully on browsers without speech support.
+ */
+function CommentatorTicker({
+  state,
+}: {
+  state: LiveBattleState | null;
+}) {
+  const [tts, setTts] = useState(false);
+
+  // Hydrate TTS pref from localStorage. State lives in CommentatorTtsToggle
+  // (top bar) but the speak side-effect happens here, so we read it again.
+  useEffect(() => {
+    try {
+      setTts(localStorage.getItem(TTS_STORAGE_KEY) === "1");
+    } catch {
+      // localStorage unavailable — TTS stays off.
+    }
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === TTS_STORAGE_KEY) setTts(e.newValue === "1");
+    };
+    const onCustom = () => {
+      try {
+        setTts(localStorage.getItem(TTS_STORAGE_KEY) === "1");
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("yap:tts-changed", onCustom);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("yap:tts-changed", onCustom);
+    };
+  }, []);
+
+  // Find the latest round that has any commentary content.
+  const latest = state?.rounds
+    ? [...state.rounds]
+        .filter((r) => r.commentary?.content)
+        .sort((a, b) => b.number - a.number)[0]
+    : undefined;
+
+  // Speak completed commentary when TTS is on. Fire once per round.done
+  // transition; track the last spoken round in a ref so re-renders during
+  // streaming don't re-trigger speech.
+  const spokenForRoundRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!tts) return;
+    if (!latest?.commentary?.done) return;
+    if (spokenForRoundRef.current === latest.number) return;
+    spokenForRoundRef.current = latest.number;
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    try {
+      const utter = new SpeechSynthesisUtterance(latest.commentary.content);
+      utter.rate = 1.05;
+      utter.pitch = 1.0;
+      utter.volume = 0.9;
+      window.speechSynthesis.speak(utter);
+    } catch {
+      // SpeechSynthesis not really supported — skip.
+    }
+  }, [tts, latest?.number, latest?.commentary?.done, latest?.commentary?.content]);
+
+  if (!latest?.commentary?.content) return null;
+
+  return (
+    <div
+      style={{
+        borderTop: "1px solid var(--bd-default)",
+        background:
+          "linear-gradient(90deg, rgba(255,184,0,0.06), rgba(255,184,0,0.02))",
+        padding: "10px 20px",
+        display: "flex",
+        alignItems: "center",
+        gap: 14,
+        flexShrink: 0,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: "var(--mono)",
+          fontSize: 10,
+          letterSpacing: 0.12,
+          textTransform: "uppercase",
+          color: "var(--accent)",
+          flexShrink: 0,
+        }}
+      >
+        R{latest.number} · color
+      </div>
+      <div
+        style={{
+          flex: 1,
+          fontSize: 13,
+          lineHeight: 1.45,
+          color: "var(--tx-primary)",
+          fontStyle: "italic",
+          minWidth: 0,
+        }}
+      >
+        {latest.commentary.content}
+        {!latest.commentary.done && (
+          <span
+            style={{
+              display: "inline-block",
+              marginLeft: 4,
+              width: 6,
+              height: 12,
+              background: "var(--accent)",
+              verticalAlign: "text-bottom",
+              animation: "al-caret 0.8s steps(2) infinite",
+            }}
+          />
+        )}
+      </div>
+      <div
+        style={{
+          fontFamily: "var(--mono)",
+          fontSize: 10,
+          color: "var(--tx-tertiary)",
+          flexShrink: 0,
+        }}
+      >
+        entertainment · not part of verdict
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Top-bar toggle for commentator text-to-speech. Persists to localStorage
+ * and broadcasts a custom event so the ticker (in the same tree) can
+ * pick up the change without prop-drilling.
+ */
+function CommentatorTtsToggle() {
+  const [on, setOn] = useState(false);
+  const [supported, setSupported] = useState(true);
+
+  useEffect(() => {
+    setSupported(
+      typeof window !== "undefined" && "speechSynthesis" in window,
+    );
+    try {
+      setOn(localStorage.getItem(TTS_STORAGE_KEY) === "1");
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  if (!supported) return null;
+
+  const toggle = () => {
+    const next = !on;
+    setOn(next);
+    try {
+      localStorage.setItem(TTS_STORAGE_KEY, next ? "1" : "0");
+    } catch {
+      // ignore
+    }
+    window.dispatchEvent(new Event("yap:tts-changed"));
+    if (!next && typeof window !== "undefined" && "speechSynthesis" in window) {
+      // Cancel any in-flight utterance the moment the user turns it off.
+      try {
+        window.speechSynthesis.cancel();
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      title={on ? "Mute the commentator" : "Voice the commentator"}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "4px 9px",
+        fontFamily: "var(--mono)",
+        fontSize: 11,
+        letterSpacing: 0.06,
+        background: on ? "var(--accent-muted)" : "transparent",
+        color: on ? "var(--accent)" : "var(--tx-tertiary)",
+        border: `1px solid ${on ? "var(--accent-border)" : "var(--bd-default)"}`,
+        borderRadius: 3,
+        cursor: "pointer",
+      }}
+    >
+      <span
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: 99,
+          background: on ? "var(--accent)" : "var(--tx-disabled)",
+        }}
+      />
+      {on ? "VOICE ON" : "VOICE OFF"}
+    </button>
   );
 }
