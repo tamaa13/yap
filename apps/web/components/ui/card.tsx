@@ -11,19 +11,26 @@ export interface CardProps {
 }
 
 export function Card({ children, style, interactive = false, onClick, className }: CardProps) {
+  // Hover state stays JS-driven for non-interactive cards that may
+  // still want a subtle border-color shift. Interactive cards lean on
+  // the global `al-card-lift` class — CSS owns the lift+tilt+shadow
+  // hover micro-state per MOTION.md (combat micro-state, not motion-lib
+  // sequence).
   const [hover, setHover] = useState(false);
   return (
     <div
       onClick={onClick}
-      className={["al-card", className].filter(Boolean).join(" ")}
-      onMouseEnter={() => interactive && setHover(true)}
-      onMouseLeave={() => interactive && setHover(false)}
+      className={["al-card", interactive && "al-card-lift", className]
+        .filter(Boolean)
+        .join(" ")}
+      onMouseEnter={() => !interactive && setHover(true)}
+      onMouseLeave={() => !interactive && setHover(false)}
       style={{
         background: "var(--bg-surface)",
         border: `1px solid ${hover ? "var(--bd-strong)" : "var(--bd-default)"}`,
         borderRadius: 6,
         cursor: interactive ? "pointer" : "default",
-        transition: "border-color 150ms ease-out, background 150ms ease-out",
+        transition: "background 150ms ease-out",
         ...style,
       }}
     >
