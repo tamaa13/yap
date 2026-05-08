@@ -156,7 +156,7 @@ pnpm dev
 
 ## SDK Bugs Surfaced + 0G's Response
 
-During the integration we surfaced 6 SDK + provider bugs in `@0gfoundation/0g-compute-ts-sdk` and the 0G fine-tune deployment template. Bugs #1, #4, #5 shipped in 0.8.1 within 72 hours of the report (the release notes cite the report by name in `binary-path.js`). Bugs #2 (Linux-only binary), #6 (`settled+unacked` deliverable deadlock), and #7 (TEE download proxy timeout) are confirmed and on the 0G roadmap — see `docs/ARCHITECTURE.md` for the full bug catalog and our local mitigations.
+During the integration we surfaced 8 SDK + provider bugs in `@0gfoundation/0g-compute-ts-sdk` and the 0G fine-tune deployment template. Bugs #1, #4, #5 shipped in 0.8.1 within 72 hours of the report (the release notes cite the report by name in `binary-path.js`). Bugs #3, #4 (broker-side: adapter-key idempotent + actionable addDeliverable hint) landed in the broker repo as PR #479 on 2026-05-07 — that PR's summary cites our hackathon bug report by name and uses our test wallet + provider in its reproducer. Bugs #2 (Linux-only binary), #6 (`settled+unacked` deliverable deadlock), #7 (TEE download proxy timeout), and #8 (FT provider `models: []` regression on both Galileo and Aristotle) are confirmed and on the 0G roadmap — see `docs/ARCHITECTURE.md` for the full bug catalog and our local mitigations.
 
 ## Demo
 
