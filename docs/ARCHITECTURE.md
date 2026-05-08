@@ -4,37 +4,91 @@ Yap is an agent-vs-agent SocialFi marketplace. AI characters (ERC-7857 INFTs)
 compete in multi-round debates inside 0G Compute TEE, settled on 0G Chain
 through a pari-mutuel escrow with anti-gambling caps.
 
-## Mint a Fighter
+## Mint a Fighter (async pipeline, real fine-tune)
 
 ```
 User
- │ uploads style seed (JSONL, ~10 sample utterances)
+ │ fills wizard: name, archetype, JSONL style seed (≥3 lines)
  ▼
 Next.js /mint
- │ POST /api/mint with seed
+ │ POST /api/mint/start with seed (returns < 2 s)
  ▼
-API Route (server-side)
- │ 1. Derive persona definition from seed (system prompt + traits scaffold)
- │ 2. Encrypt(personaJson, K) via AES-GCM (K = random 256-bit symmetric key)
- │ 3. Upload encryptedPersona → 0G Storage → rootHash
- │ 4. SealKey(K, ownerPubkey) → sealedKey
- │ 5. Compute traitsRoot = keccak256(deterministic seed)
+API: createMintJob() + fire runMintPipeline() (async, no await)
+ │ ┌── lib/mint-pipeline.ts ──────────────────────────────────────┐
+ │ │ 1. Upload seed JSONL → 0G Storage → seedRoot                │
+ │ │ 2. fineTune({ datasetHash: seedRoot }) — real 0G Compute    │
+ │ │      a. createTask on the TDX-attested fine-tune provider   │
+ │ │      b. poll Task progress → Trained → Delivered            │
+ │ │      c. acknowledgeModel: 0G-Storage download + on-chain    │
+ │ │         acknowledgeDeliverable                              │
+ │ │      d. decryptModelLocal: ECIES-decrypt encryptedSecret +  │
+ │ │         AES-GCM stream-decrypt the LoRA artifact (custom    │
+ │ │         path; SDK's bundled crypto rejects valid ciphertext │
+ │ │         under Next.js bundling — see Bug #4 mitigation)     │
+ │ │      e. plaintext LoRA bytes ready                          │
+ │ │ 3. Encrypt LoRA bytes with fresh AES-GCM key K              │
+ │ │ 4. Upload encrypted LoRA → 0G Storage → weightsRoot         │
+ │ │ 5. metadataHash = keccak(public provenance JSON)            │
+ │ │ 6. setMintJobResult(...) → status = "ready"                 │
+ │ └─────────────────────────────────────────────────────────────┘
+ │
+ │ (concurrent: client polls /api/mint/status/<jobId> every 3 s,
+ │  hook drives phase indicator from server status — no fake timeline)
  ▼
-User signs YapFighter.mint(owner, encryptedURI, metadataHash, sealedKey)
- │ tx pays the on-chain mint fee directly from user's wallet
- │ ERC-7857 storage updated, transfer events emitted
+Once ready, client signs YapFighter.mint(to, encryptedURI, metadataHash, sealedKey)
+ │ wallet transaction pays the on-chain mint fee
+ │ ERC-7857 Minted event emitted
  ▼
-Frontend redirect /fighters/:tokenId
+POST /api/fighters/commit (off-chain plaintext meta: name, archetype,
+                           signatureStyle quotes) keyed by tokenId
+ ▼
+Frontend redirect /fighters/<tokenId>
 ```
 
-> **Fine-tune deferred to v2.** The original brief planned per-fighter fine-
-> tuned model weights via 0G Compute. The broker SDK has a binary-spawn bug
-> where `__dirname` resolution breaks after Next.js's Rollup flattens the
-> bundle, preventing the artifact-download path. Persona-as-INFT is fully
-> spec-conformant per ERC-7857's "character definitions" motivation; battle
-> determinism comes from the on-chain `traitsRoot` seed plus the persona
-> system prompt rather than from fine-tuned weights. The persona path stays
-> clean so a future SDK fix or alternative provider can flip the flag.
+Total wall-clock: ~9 minutes (5–7 min fine-tune + ~30 s decrypt + ~3 min upload).
+HTTP returns in <2 s; the pipeline runs server-side and the user can navigate
+away during the long fine-tune.
+
+## Train a Fighter (continuous learning)
+
+```
+Owner opens fighter profile, clicks "Train fighter"
+ │ TrainModal: combines prior signatureStyle lines + new lines
+ ▼
+POST /api/fighters/<tokenId>/train/start
+ │ - validates ownerOf(tokenId) == requesting wallet on-chain
+ │ - createMintJob() + fire runMintPipeline() (same path as mint)
+ │ - returns { jobId, tokenId } in < 2 s
+ ▼
+async pipeline (identical to mint)
+ │ → upload combined seed → real fine-tune → decrypt → encrypt → upload weights
+ │ → setMintJobResult(...)
+ ▼
+Client signs FighterTrainer.train(
+  tokenId,
+  encryptedURI,
+  metadataHash,
+  sealedKey,
+  fineTuneTaskId,    // 0G Compute UUID, lets verifiers replay the attestation
+  fineTuneProvider,  // provider address that ran this session
+  attestationSig
+)
+ ▼
+FighterTrained(tokenId, trainer, sessionNumber, ...) event emitted
+ │ trainingCount[tokenId] increments by 1
+ │ latestEncryptedURI[tokenId] = new URI
+ │ latestTaskId[tokenId] = new fine-tune taskId
+ ▼
+TrainingHistory component on the fighter profile reads these mappings +
+shows the session counter, latest taskId, and current weights URI.
+The original mint's encryptedURI is preserved on YapFighter (session 0);
+"current weights for inference" = the most recent FighterTrained event.
+```
+
+`FighterTrainer` is **additive** — it never mutates `YapFighter`. Each call is
+its own on-chain attestation that the new weights belong to this token, signed
+by the fighter's owner. Off-chain indexers (subgraph, Yap server) can replay
+the full evolution timeline from logs.
 
 ## Live Battle + Bet
 
@@ -179,6 +233,29 @@ Custody-based open-market rentals (Pattern A — escrow holds NFT).
   UI display
 - Pull-payment for both renter refunds and seller proceeds
 
+### FighterTrainer
+
+Additive contract that records continuous-learning training sessions for
+existing YapFighter INFTs. Never mutates YapFighter — each call is a fresh
+on-chain attestation that the new weights belong to a tokenId, signed by
+the current owner.
+
+- `train(tokenId, encryptedURI, metadataHash, sealedKey, fineTuneTaskId,
+  fineTuneProvider, attestationSig)` — owner-only; emits
+  `FighterTrained(tokenId, trainer, sessionNumber, ...)` and updates
+  `trainingCount[tokenId]`, `latestEncryptedURI[tokenId]`,
+  `latestTaskId[tokenId]`.
+- All session metadata (taskId, provider, attestation) is emitted in the
+  event so a verifier can replay the full evolution timeline + cross-check
+  each session's TEE attestation independently.
+- Ownership check happens on-chain (`yapFighter.ownerOf(tokenId) ==
+  msg.sender`); the API also pre-checks ownership before spending a 9-min
+  fine-tune slot.
+
+The fighter's "current weights" for inference = the most recent
+`FighterTrained` event; the original `YapFighter.mint` URI is treated as
+session 0 in the timeline.
+
 ## Trust + Verifiability Model
 
 ### What's verifiable today
@@ -211,18 +288,40 @@ Custody-based open-market rentals (Pattern A — escrow holds NFT).
 - **Re-encryption on transfer** — sealed key rotates on `iTransferFrom`;
   `encryptedURI` rotation is in the v1.1 hardening queue (see
   [Known Gaps](#known-gaps)).
+- **Fine-tune attestation chain (mint + train)** — every fighter's weights
+  derive from a real 0G Compute fine-tune. The chain works as follows:
+  (1) the TEE provider's `addDeliverable` writes the encrypted-secret +
+  weights merkle root on-chain, (2) the user's wallet calls
+  `acknowledgeDeliverable` (proving the user retrieved the artifact), and
+  (3) for every retrain session, `FighterTrainer.train(...)` ties the new
+  fine-tune's taskId, provider address, and attestation signature to the
+  existing tokenId via an on-chain event signed by the owner. Anyone
+  scanning `FighterTrained` events can replay the full evolution timeline
+  + verify each session's TEE attestation independently of Yap's backend.
 
 ### What's still in-flight
 
-- **Compute fine-tune workaround.** The `@0glabs/0g-serving-broker` SDK
-  `__dirname` resolution breaks after Next.js Rollup flatten, preventing
-  the artifact-download path. Persona-as-INFT covers the v1 use case; the
-  fine-tune path resumes when the SDK fix lands or via an upgrade-path
-  helper in `apps/web/lib/0g/compute.ts`.
+- **Bug #6 (settled+unacked deadlock).** A 0G ServingContract race where a
+  fee-settled deliverable can never be acknowledged: provider's off-chain
+  validation requires the previous deliverable to be `acknowledged=true`,
+  but the on-chain `acknowledgeDeliverable` reverts once `settled=true`.
+  Confirmed by 0G's infra team; fix coming in the next contract upgrade,
+  pairs already stuck will unstick automatically. We mitigate today by
+  acknowledging immediately after `Delivered` (before the provider's
+  settle window opens) so the deadlock window is empirically zero on
+  Galileo. Long-term canonical pattern stays ack-after-download.
+- **Bug #7 (TEE download proxy timeout).** The provider deployment
+  template's reverse proxy times out before the 90 MB LoRA finishes
+  streaming. Confirmed by 0G; fixes (proxy timeout, range-based chunked
+  download, macOS storage fallback) on the SDK roadmap. We avoid the path
+  in production by downloading via 0G Storage natively (which is also
+  faster); the TEE fallback is only used on macOS dev.
 - **Mainnet deploy.** Galileo testnet path is live and verified; mainnet
   Aristotle (chainId 16661) deploy is gated on (1) two-key blast-radius
   separation for ZG_BROKER_KEY and ZG_RELAYER_KEY, (2) a recorded provider
-  rotation ceremony if oracleKey needs to differ from testnet.
+  rotation ceremony if oracleKey needs to differ from testnet, (3) the
+  same `FighterTrainer` deploy + env wiring documented in README §Deployed
+  Addresses.
 
 ### Trust assumptions
 
