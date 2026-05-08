@@ -28,16 +28,14 @@ const ARCHETYPES: Archetype[] = [
 ];
 
 const PHASE_LABELS: Record<string, string> = {
-  seed: "Uploading seed to 0G Storage",
-  training: "Fine-tuning on 0G Compute",
-  encrypting: "Encrypting + storing weights",
-  signing: "Waiting for wallet signature",
-  minting: "Confirming mint on-chain",
-  committing: "Saving fighter metadata",
+  seed: "Pinning seed to 0G Storage",
+  encrypting: "Sealing your fighter",
+  signing: "Sign in your wallet",
+  minting: "Landing on-chain",
+  committing: "Tagging metadata",
 };
 const PHASE_ORDER = [
   "seed",
-  "training",
   "encrypting",
   "signing",
   "minting",
@@ -183,7 +181,10 @@ export default function MintPage() {
         avatar,
         styleSeed: effectiveSeed,
       });
-      push({ kind: "success", text: `Fighter minted · #${result.tokenId}` });
+      push({
+        kind: "success",
+        text: `Fighter #${result.tokenId} lives on-chain. Time to test it.`,
+      });
       setTimeout(() => router.push(`/fighters/${result.tokenId}`), 1000);
     } catch (e) {
       push({
@@ -200,7 +201,7 @@ export default function MintPage() {
       <Breadcrumbs items={[{ label: "Mint fighter" }]} />
       <h1 style={{ fontSize: 24, marginBottom: 6 }}>Mint fighter</h1>
       <div style={{ fontSize: 13, color: "var(--tx-secondary)", marginBottom: 24 }}>
-        Seal a style seed into a TEE-attested INFT on 0G.
+        Seal a persona into an ERC-7857 INFT on 0G. Takes about five seconds.
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
@@ -746,9 +747,9 @@ Crypto is a slot machine with footnotes.
                       gap: 6,
                     }}
                   >
-                    <li>1. Seed uploaded to 0G Storage (encrypted)</li>
-                    <li>2. Fine-tune on 0G Compute (~2–5 min)</li>
-                    <li>3. Weights encrypted + pinned on 0G Storage</li>
+                    <li>1. Seed uploaded to 0G Storage (auditable fingerprint)</li>
+                    <li>2. Persona sealed with a fresh AES key</li>
+                    <li>3. Encrypted INFT payload pinned on 0G Storage</li>
                     <li>4. You sign the mint — fee goes to treasury, INFT to your wallet</li>
                   </ul>
                 </div>
@@ -807,10 +808,10 @@ Crypto is a slot machine with footnotes.
                   }}
                 />
                 <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
-                  Fighter #{mint.result.tokenId} · TEE verified
+                  Fighter #{mint.result.tokenId}. Locked on-chain.
                 </div>
                 <div style={{ fontSize: 13, color: "var(--tx-secondary)" }}>
-                  Redirecting to profile…
+                  Pulling up the profile…
                 </div>
                 <div style={{ marginTop: 12 }}>
                   <Hash value={mint.result.txHash} copy />
@@ -851,7 +852,7 @@ Crypto is a slot machine with footnotes.
             </Button>
           ) : (
             <Button variant="primary" onClick={runMint}>
-              {mint.phase === "error" ? "Retry mint" : "Mint fighter"}
+              {mint.phase === "error" ? "Try again" : "Sign the mint"}
             </Button>
           )}
         </div>

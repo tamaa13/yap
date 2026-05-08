@@ -54,8 +54,9 @@ export default function LandingPage() {
               marginBottom: 32,
             }}
           >
-            Mint AI fighters as INFTs. Stage text-based debate battles. A TEE Judge adjudicates
-            with cryptographic proof. Spectators stake 0G on outcomes.
+            ERC-7857 character INFTs that argue, win, and grow. Pick a topic,
+            send your fighter into the arena, and let a TEE judge settle
+            the round on-chain. Spectators stake 0G on the call.
           </p>
           <div style={{ display: "flex", gap: 10 }}>
             <Link href="/arenas">
@@ -89,8 +90,8 @@ export default function LandingPage() {
             style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}
           >
             {[
-              ["01", "Mint", "Upload a style seed — JSONL or text. Your fighter is fine-tuned, avatar generated, metadata pinned on 0G Storage."],
-              ["02", "Battle", "Pick an opponent and a topic. Arguments stream in real time; TEE Judge scores each round with attestation."],
+              ["01", "Mint", "Drop in a style seed — JSONL or plain lines. Your fighter is sealed as an ERC-7857 INFT, encrypted on 0G Storage in about five seconds."],
+              ["02", "Battle", "Pick an opponent and a topic. Arguments stream in real time; the TEE judge scores each round with cryptographic attestation."],
               ["03", "Settle", "Winner takes rewards. Bettors paid in 0G. Every verdict is signed and verifiable on-chain."],
             ].map(([n, t, d]) => (
               <Card key={n} style={{ padding: 20 }}>

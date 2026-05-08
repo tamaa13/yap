@@ -15,7 +15,6 @@ export interface TrainFighterArgs {
   owner: Address;
   /** Full new style seed (combine old + new lines client-side). */
   styleSeed: string;
-  baseModel?: string;
   /** Optional metadata refresh — defaults preserve previous values. */
   name?: string;
   archetype: string;
@@ -24,8 +23,6 @@ export interface TrainFighterArgs {
 
 export interface TrainSteps {
   seedRoot: string;
-  fineTuneTaskId: string | null;
-  fineTuneProvider: string | null;
   weightsRoot: string;
 }
 
@@ -42,11 +39,8 @@ export type TrainPhase =
   | "idle"
   | "queued"
   | "uploading-seed"
-  | "training"
-  | "retrying"
-  | "decrypting"
-  | "encrypting-weights"
-  | "uploading-weights"
+  | "encrypting"
+  | "uploading-encrypted"
   | "signing"
   | "minting"
   | "done"
@@ -62,18 +56,14 @@ interface PreparePayload {
   commit: {
     weightsRoot: string;
   };
-  steps: TrainSteps & {
-    fineTuneBypassed: boolean;
-  };
+  steps: TrainSteps;
 }
 
 type ServerStatus =
   | "queued"
   | "uploading-seed"
-  | "training"
-  | "decrypting"
-  | "encrypting-weights"
-  | "uploading-weights"
+  | "encrypting"
+  | "uploading-encrypted"
   | "ready"
   | "failed";
 
@@ -87,7 +77,10 @@ interface JobShape {
  * Continuous-learning hook. Mirrors useMintFighter's async pattern but
  * dispatches FighterTrainer.train(...) instead of YapFighter.mint(...).
  * Each call adds a new training session to the fighter's on-chain
- * history without minting a new token.
+ * history without minting a new token. Post-pivot the contract still
+ * accepts taskId/provider/attestation args (preserves event ABI); we
+ * pass empty placeholders since the persona is now a sealed-seed
+ * artifact rather than a fine-tuned LoRA.
  */
 export function useTrainFighter() {
   const [phase, setPhase] = useState<TrainPhase>("idle");
@@ -108,7 +101,7 @@ export function useTrainFighter() {
       }
 
       try {
-        // 1. Open async train job (server runs full prepare pipeline).
+        // 1. Open async train job (server runs prepare pipeline).
         setPhase("queued");
         const startRes = await fetch(
           `/api/fighters/${args.tokenId}/train/start`,
@@ -121,7 +114,6 @@ export function useTrainFighter() {
               archetype: args.archetype,
               avatar: args.avatar ?? 0,
               styleSeed: args.styleSeed,
-              baseModel: args.baseModel,
             }),
           },
         );
@@ -132,7 +124,6 @@ export function useTrainFighter() {
         const { jobId } = (await startRes.json()) as { jobId: string };
 
         const prep = await pollJob(jobId, (status) => {
-          // Map 1:1 — TrainPhase shares the server status names.
           if (status === "ready") setPhase("signing");
           else setPhase(status as TrainPhase);
         });
@@ -150,9 +141,9 @@ export function useTrainFighter() {
             prep.mint.encryptedURI,
             prep.mint.metadataHash,
             prep.mint.sealedKey as `0x${string}`,
-            prep.steps.fineTuneTaskId ?? "",
-            prep.steps.fineTuneProvider ?? "",
-            "0x" as `0x${string}`, // attestationSig — placeholder; surfaces in event for verifier
+            "",
+            "",
+            "0x" as `0x${string}`,
           ],
         });
 
@@ -215,7 +206,7 @@ async function pollJob(
   jobId: string,
   onStatus: (s: ServerStatus) => void,
 ): Promise<PreparePayload> {
-  const deadline = Date.now() + 12 * 60_000;
+  const deadline = Date.now() + 2 * 60_000;
   let lastStatus: ServerStatus | "" = "";
   while (Date.now() < deadline) {
     const res = await fetch(`/api/mint/status/${jobId}`);
@@ -232,7 +223,7 @@ async function pollJob(
     if (job.status === "failed") {
       throw new Error(job.error ?? "train job failed");
     }
-    await new Promise((r) => setTimeout(r, 3_000));
+    await new Promise((r) => setTimeout(r, 1_500));
   }
-  throw new Error("train job timed out (>12 min); check server logs");
+  throw new Error("train job timed out (>2 min); check 0G Storage indexer");
 }

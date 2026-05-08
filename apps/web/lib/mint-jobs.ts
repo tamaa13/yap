@@ -1,26 +1,19 @@
 // In-memory job tracker for the async mint flow.
 //
-// Yap's mint pipeline takes ~9 minutes (real fine-tune + decrypt + upload),
-// well past any practical HTTP timeout. Instead of blocking the request,
-// `/api/mint/start` enqueues a job, fires the work as fire-and-forget
-// against this singleton, and returns a jobId in <2 s. The client polls
-// `/api/mint/status/<id>` for progress.
-//
-// Single-process scope: pm2 runs one yap-web instance, so an in-memory
-// Map suffices. If the process restarts mid-job, the job is lost — fine
-// for the hackathon demo (don't restart during a mint). Production should
-// migrate to Redis-backed BullMQ.
+// Phase 2 pivot: fine-tune dropped from the pipeline. The pipeline now
+// runs in ~5 s (upload seed → encrypt seed → upload encrypted), but the
+// async pattern is preserved so the existing UI keeps polling without
+// a special-case sync path. After Vercel migration the work runs in
+// `after()`; this in-memory map is fine for single-process dev. Jobs
+// are GC'd after 1 hour.
 
 import "server-only";
 
 export type MintJobStatus =
   | "queued"
   | "uploading-seed"
-  | "training"
-  | "retrying"
-  | "decrypting"
-  | "encrypting-weights"
-  | "uploading-weights"
+  | "encrypting"
+  | "uploading-encrypted"
   | "ready"
   | "failed";
 
@@ -39,13 +32,9 @@ export interface MintJobResult {
     seedRoot: string;
     weightsRoot: string;
     signatureStyle: string[];
-    fineTuneBypassed: boolean;
   };
   steps: {
     seedRoot: string;
-    fineTuneTaskId: string | null;
-    fineTuneProvider: string | null;
-    fineTuneBypassed: boolean;
     weightsRoot: string;
   };
 }
@@ -63,25 +52,15 @@ export interface MintJob {
   updatedAt: number;
   result?: MintJobResult;
   error?: string;
-  /** Retry attempt number (1 = first attempt, 2 = first retry, ...). */
-  attempt?: number;
-  /** Last error message that triggered a retry. Cleared on next progress. */
-  lastRetryReason?: string;
 }
 
 const jobs = new Map<string, MintJob>();
 
-// Each phase's expected progress at completion. Used to advance the
-// progress bar smoothly during the long fine-tune phase rather than
-// jumping in big steps.
 const PHASE_PROGRESS: Record<MintJobStatus, number> = {
-  queued: 0.02,
-  "uploading-seed": 0.05,
-  training: 0.65,
-  retrying: 0.1,
-  decrypting: 0.75,
-  "encrypting-weights": 0.78,
-  "uploading-weights": 0.97,
+  queued: 0.05,
+  "uploading-seed": 0.3,
+  encrypting: 0.55,
+  "uploading-encrypted": 0.85,
   ready: 1,
   failed: 1,
 };
@@ -89,11 +68,8 @@ const PHASE_PROGRESS: Record<MintJobStatus, number> = {
 const STEP_LABEL: Record<MintJobStatus, string> = {
   queued: "Queued",
   "uploading-seed": "Uploading style seed to 0G Storage",
-  training: "Training your fighter on TEE GPU (the long part)",
-  retrying: "Last provider was slow — routing to a different one",
-  decrypting: "Verifying TEE attestation and decrypting weights",
-  "encrypting-weights": "Sealing weights with a fresh AES key",
-  "uploading-weights": "Publishing encrypted INFT to 0G Storage",
+  encrypting: "Sealing your fighter with a fresh AES key",
+  "uploading-encrypted": "Publishing INFT payload to 0G Storage",
   ready: "Ready to sign on-chain",
   failed: "Failed",
 };
@@ -116,7 +92,6 @@ export function createMintJob(): MintJob {
     updatedAt: now,
   };
   jobs.set(id, job);
-  // GC: drop jobs older than 1 hour to bound memory.
   for (const [k, v] of jobs) {
     if (now - v.startedAt > 60 * 60_000) jobs.delete(k);
   }
@@ -135,23 +110,6 @@ export function setMintJobStatus(id: string, status: MintJobStatus): void {
   job.status = status;
   job.step = STEP_LABEL[status];
   job.progress = PHASE_PROGRESS[status];
-  job.updatedAt = Date.now();
-}
-
-/** Mark the job as retrying after a provider-level failure. Records
- *  the attempt counter and the prior error for UI surfacing. */
-export function setMintJobRetrying(
-  id: string,
-  attempt: number,
-  reason: string,
-): void {
-  const job = jobs.get(id);
-  if (!job) return;
-  job.status = "retrying";
-  job.step = STEP_LABEL.retrying;
-  job.progress = PHASE_PROGRESS.retrying;
-  job.attempt = attempt;
-  job.lastRetryReason = reason;
   job.updatedAt = Date.now();
 }
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { JsonRpcProvider, Contract } from "ethers";
 import { createMintJob } from "@/lib/mint-jobs";
-import { runMintPipelineWithRetry } from "@/lib/mint-pipeline";
+import { runMintPipeline } from "@/lib/mint-pipeline";
 import { FIGHTER_INFT_ABI, FIGHTER_INFT_ADDRESS } from "@/lib/contracts";
 import { activeChain } from "@/lib/chains";
 
@@ -14,7 +14,6 @@ interface StartBody {
   archetype?: string;
   avatar?: number;
   styleSeed?: string;
-  baseModel?: string;
 }
 
 interface RouteParams {
@@ -25,10 +24,11 @@ interface RouteParams {
  * POST /api/fighters/<tokenId>/train/start
  *
  * Continuous-learning entrypoint. Validates that the requester is the
- * current INFT owner, then enqueues the same fine-tune pipeline used at
- * mint time. The returned jobId is polled at /api/mint/status/<id>; once
- * the pipeline completes, the client signs `FighterTrainer.train(...)`
- * with the prepare payload and a new training session lands on-chain.
+ * current INFT owner, then runs the same prepare pipeline as mint
+ * (encrypt new dataset → upload). The returned jobId is polled at
+ * /api/mint/status/<id>; once `ready`, the client signs
+ * `FighterTrainer.train(...)` and a new training session lands on-chain
+ * as a `FighterTrained` event — the fighter's evolution timeline.
  */
 export async function POST(req: Request, { params }: RouteParams) {
   const { tokenId } = await params;
@@ -49,7 +49,6 @@ export async function POST(req: Request, { params }: RouteParams) {
   const name = body.name?.trim() ?? "";
   const archetype = body.archetype?.trim() ?? "";
   const avatar = typeof body.avatar === "number" ? body.avatar : 0;
-  const baseModel = body.baseModel?.trim() || undefined;
 
   if (!owner || !/^0x[0-9a-fA-F]{40}$/.test(owner)) {
     return NextResponse.json(
@@ -67,14 +66,11 @@ export async function POST(req: Request, { params }: RouteParams) {
   }
 
   // Verify ownership on-chain. Anyone can hit this endpoint; only the
-  // actual owner should be allowed to spend a training slot. The on-chain
-  // FighterTrainer.train() will re-check, but failing fast here avoids
-  // wasting a 9-min fine-tune on a request that would later revert.
+  // actual owner should be allowed to extend a fighter's persona. The
+  // on-chain FighterTrainer.train() will re-check; failing fast here
+  // avoids wasting a prepare run on a request that would later revert.
   try {
     const provider = new JsonRpcProvider(activeChain.rpcUrls.default.http[0]);
-    // viem's Abi type is structurally close to ethers' InterfaceAbi but
-    // not assignment-compatible (gas optional differs). Cast at the
-    // boundary; the JSON ABI itself works the same in both libraries.
     const yapFighter = new Contract(
       FIGHTER_INFT_ADDRESS as `0x${string}`,
       FIGHTER_INFT_ABI as unknown as ConstructorParameters<typeof Contract>[1],
@@ -92,11 +88,10 @@ export async function POST(req: Request, { params }: RouteParams) {
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 
-  const bypassFineTune = process.env.ZG_FINE_TUNE_BYPASS === "true";
   const job = createMintJob();
 
-  runMintPipelineWithRetry(
-    { owner, name, archetype, avatar, seed, baseModel, bypassFineTune },
+  runMintPipeline(
+    { owner, name, archetype, avatar, seed },
     job.id,
   ).catch((e) => {
     console.warn(`[api/train ${tokenId}] job ${job.id} failed:`, e);

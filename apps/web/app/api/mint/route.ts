@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
 import { keccak256, toUtf8Bytes, hexlify } from "ethers";
-import { fineTune } from "@/lib/0g/compute";
 import { encryptWithRandomKey } from "@/lib/0g/encrypt";
 import { uploadBuffer } from "@/lib/0g/storage";
 import { FIGHTER_INFT_ADDRESS } from "@/lib/contracts";
 
 export const runtime = "nodejs";
-// Fine-tune can take 2–5 minutes on 0G testnet; bump the function timeout so
-// the handler isn't reaped under Vercel defaults.
-export const maxDuration = 600;
+export const maxDuration = 60;
 
 interface PrepareBody {
   owner?: `0x${string}`;
@@ -16,7 +13,6 @@ interface PrepareBody {
   archetype?: string;
   avatar?: number;
   styleSeed?: string;
-  baseModel?: string;
 }
 
 interface PrepareResponse {
@@ -36,13 +32,9 @@ interface PrepareResponse {
     seedRoot: string;
     weightsRoot: string;
     signatureStyle: string[];
-    fineTuneBypassed: boolean;
   };
   steps: {
     seedRoot: string;
-    fineTuneTaskId: string | null;
-    fineTuneProvider: string | null;
-    fineTuneBypassed: boolean;
     weightsRoot: string;
   };
 }
@@ -50,11 +42,11 @@ interface PrepareResponse {
 /**
  * POST /api/mint  — preparation step (no on-chain mint)
  *
- * Performs the expensive off-chain pipeline (upload seed → fine-tune →
- * encrypt → upload weights → compute metadataHash + sealedKey) and returns
- * the values the client needs to sign the `mint()` transaction from its own
- * wallet. The client pays `mintFee` directly to the contract, owns the tx
- * in its history, and no server-side minting key is involved.
+ * Performs the off-chain pipeline (upload seed → encrypt seed → upload
+ * encrypted blob → compute metadataHash + sealedKey) and returns the
+ * values the client signs into the `mint()` transaction from its own
+ * wallet. The client pays `mintFee` directly to the contract, owns the
+ * tx in its history, and no server-side minting key is involved.
  *
  * After the client mints, it POSTs the result to /api/fighters/commit to
  * persist plaintext meta (name, archetype, signatureStyle) keyed by the
@@ -67,7 +59,6 @@ export async function POST(req: Request) {
   const name = body.name?.trim() ?? "";
   const archetype = body.archetype?.trim() ?? "";
   const avatar = typeof body.avatar === "number" ? body.avatar : 0;
-  const baseModel = body.baseModel?.trim() || undefined;
 
   if (!owner || !/^0x[0-9a-fA-F]{40}$/.test(owner)) {
     return NextResponse.json({ error: "valid owner address required" }, { status: 400 });
@@ -81,55 +72,30 @@ export async function POST(req: Request) {
     );
   }
 
-  const bypassFineTune = process.env.ZG_FINE_TUNE_BYPASS === "true";
-
   try {
     const tStart = Date.now();
     const log = (msg: string) =>
       console.log(`[mint +${Date.now() - tStart}ms] ${msg}`);
 
-    // 1. Upload raw seed (dataset for fine-tune + auditable fingerprint).
     log("upload seed start");
     const seedBytes = new TextEncoder().encode(seed);
     const seedUpload = await uploadBuffer(seedBytes);
     log(`upload seed done — root=${seedUpload.rootHash.slice(0, 12)}`);
 
-    // 2. Produce weightsBytes — either via real fine-tune or bypass fallback.
-    let weightsBytes: Uint8Array = seedBytes;
-    let fineTuneTaskId: string | null = null;
-    let fineTuneProvider: string | null = null;
-    let attestationSig: string | undefined;
-    if (!bypassFineTune) {
-      log("fineTune start");
-      const ft = await fineTune({
-        datasetHash: seedUpload.rootHash,
-        baseModel,
-      });
-      log(`fineTune done — task=${ft.taskId.slice(0, 8)} weights=${ft.weightsBytes.byteLength}B`);
-      weightsBytes = ft.weightsBytes;
-      fineTuneTaskId = ft.taskId;
-      fineTuneProvider = ft.providerAddress;
-      attestationSig = ft.attestationSig;
-    }
+    log("encrypt start");
+    const { ciphertext, key, iv } = await encryptWithRandomKey(seedBytes);
+    log(`encrypt done — ${ciphertext.byteLength}B`);
 
-    // 3. Encrypt final weights payload with a fresh AES-GCM key.
-    log("encrypt weights start");
-    const { ciphertext, key, iv } = await encryptWithRandomKey(weightsBytes);
-    log(`encrypt weights done — ${ciphertext.byteLength}B`);
-
-    // 4. Upload encrypted blob.
-    log("upload weights start");
+    log("upload encrypted start");
     const weightsUpload = await uploadBuffer(ciphertext);
-    log(`upload weights done — root=${weightsUpload.rootHash.slice(0, 12)}`);
+    log(`upload encrypted done — root=${weightsUpload.rootHash.slice(0, 12)}`);
     const encryptedURI = `0g://${weightsUpload.rootHash}`;
 
-    // 5. Pack iv || key as sealedKey envelope.
     const sealedKeyBytes = new Uint8Array(iv.byteLength + key.byteLength);
     sealedKeyBytes.set(iv, 0);
     sealedKeyBytes.set(key, iv.byteLength);
     const sealedKey = hexlify(sealedKeyBytes);
 
-    // 6. metadataHash = keccak(public provenance JSON).
     const metadataHash = keccak256(
       toUtf8Bytes(
         JSON.stringify({
@@ -138,10 +104,6 @@ export async function POST(req: Request) {
           owner,
           seedRoot: seedUpload.rootHash,
           weightsRoot: weightsUpload.rootHash,
-          fineTuneTaskId,
-          fineTuneProvider,
-          attestationSig,
-          fineTuneBypassed: bypassFineTune,
         }),
       ),
     ) as `0x${string}`;
@@ -163,13 +125,9 @@ export async function POST(req: Request) {
         seedRoot: seedUpload.rootHash,
         weightsRoot: weightsUpload.rootHash,
         signatureStyle,
-        fineTuneBypassed: bypassFineTune,
       },
       steps: {
         seedRoot: seedUpload.rootHash,
-        fineTuneTaskId,
-        fineTuneProvider,
-        fineTuneBypassed: bypassFineTune,
         weightsRoot: weightsUpload.rootHash,
       },
     };

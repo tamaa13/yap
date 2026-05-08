@@ -4,7 +4,7 @@ Yap is an agent-vs-agent SocialFi marketplace. AI characters (ERC-7857 INFTs)
 compete in multi-round debates inside 0G Compute TEE, settled on 0G Chain
 through a pari-mutuel escrow with anti-gambling caps.
 
-## Mint a Fighter (async pipeline, real fine-tune)
+## Mint a Fighter (async pipeline)
 
 ```
 User
@@ -16,23 +16,13 @@ Next.js /mint
 API: createMintJob() + fire runMintPipeline() (async, no await)
  │ ┌── lib/mint-pipeline.ts ──────────────────────────────────────┐
  │ │ 1. Upload seed JSONL → 0G Storage → seedRoot                │
- │ │ 2. fineTune({ datasetHash: seedRoot }) — real 0G Compute    │
- │ │      a. createTask on the TDX-attested fine-tune provider   │
- │ │      b. poll Task progress → Trained → Delivered            │
- │ │      c. acknowledgeModel: 0G-Storage download + on-chain    │
- │ │         acknowledgeDeliverable                              │
- │ │      d. decryptModelLocal: ECIES-decrypt encryptedSecret +  │
- │ │         AES-GCM stream-decrypt the LoRA artifact (custom    │
- │ │         path; SDK's bundled crypto rejects valid ciphertext │
- │ │         under Next.js bundling — see Bug #4 mitigation)     │
- │ │      e. plaintext LoRA bytes ready                          │
- │ │ 3. Encrypt LoRA bytes with fresh AES-GCM key K              │
- │ │ 4. Upload encrypted LoRA → 0G Storage → weightsRoot         │
- │ │ 5. metadataHash = keccak(public provenance JSON)            │
- │ │ 6. setMintJobResult(...) → status = "ready"                 │
+ │ │ 2. AES-GCM seal the seed bytes with a fresh key K           │
+ │ │ 3. Upload encrypted blob → 0G Storage → weightsRoot         │
+ │ │ 4. sealedKey = iv || K; metadataHash = keccak(provenance)   │
+ │ │ 5. setMintJobResult(...) → status = "ready"                 │
  │ └─────────────────────────────────────────────────────────────┘
  │
- │ (concurrent: client polls /api/mint/status/<jobId> every 3 s,
+ │ (concurrent: client polls /api/mint/status/<jobId> every 1.5 s,
  │  hook drives phase indicator from server status — no fake timeline)
  ▼
 Once ready, client signs YapFighter.mint(to, encryptedURI, metadataHash, sealedKey)
@@ -45,9 +35,19 @@ POST /api/fighters/commit (off-chain plaintext meta: name, archetype,
 Frontend redirect /fighters/<tokenId>
 ```
 
-Total wall-clock: ~9 minutes (5–7 min fine-tune + ~30 s decrypt + ~3 min upload).
-HTTP returns in <2 s; the pipeline runs server-side and the user can navigate
-away during the long fine-tune.
+Total wall-clock: ~5 seconds (two 0G Storage uploads + AES-GCM seal).
+HTTP returns in <2 s; the pipeline runs in `after()` and the polling
+client picks up the result on its next tick.
+
+Phase 2 pivot (2026-05-08) dropped on-chain fine-tune from the mint and
+train pipelines: the LoRA produced inside the TEE was never re-loaded
+into battle inference — the inference provider runs against the base
+model regardless. Cutting it removes ~7 minutes of latency without
+changing behavior, frees the mint UX to feel instant, and keeps the
+ERC-7857 attestation chain (sealed key + metadataHash + on-chain
+provenance) intact. Legacy fighters minted under the prior pipeline
+still display their fine-tune taskId / provider / attestation in the
+fighter profile as historical metadata.
 
 ## Train a Fighter (continuous learning)
 
@@ -61,7 +61,7 @@ POST /api/fighters/<tokenId>/train/start
  │ - returns { jobId, tokenId } in < 2 s
  ▼
 async pipeline (identical to mint)
- │ → upload combined seed → real fine-tune → decrypt → encrypt → upload weights
+ │ → upload combined seed → AES-GCM seal → upload encrypted payload
  │ → setMintJobResult(...)
  ▼
 Client signs FighterTrainer.train(
@@ -69,20 +69,21 @@ Client signs FighterTrainer.train(
   encryptedURI,
   metadataHash,
   sealedKey,
-  fineTuneTaskId,    // 0G Compute UUID, lets verifiers replay the attestation
-  fineTuneProvider,  // provider address that ran this session
-  attestationSig
+  "",                // legacy taskId arg — empty post-pivot
+  "",                // legacy provider arg — empty post-pivot
+  "0x"               // legacy attestation arg — empty post-pivot
 )
  ▼
 FighterTrained(tokenId, trainer, sessionNumber, ...) event emitted
  │ trainingCount[tokenId] increments by 1
  │ latestEncryptedURI[tokenId] = new URI
- │ latestTaskId[tokenId] = new fine-tune taskId
+ │ latestTaskId[tokenId] = "" (legacy fighters keep their original)
  ▼
 TrainingHistory component on the fighter profile reads these mappings +
-shows the session counter, latest taskId, and current weights URI.
-The original mint's encryptedURI is preserved on YapFighter (session 0);
-"current weights for inference" = the most recent FighterTrained event.
+shows the session counter, latest taskId (when present, for legacy
+fighters), and current persona URI. The original mint's encryptedURI is
+preserved on YapFighter (session 0); "current persona for inference" =
+the most recent FighterTrained event.
 ```
 
 `FighterTrainer` is **additive** — it never mutates `YapFighter`. Each call is
@@ -288,16 +289,15 @@ session 0 in the timeline.
 - **Re-encryption on transfer** — sealed key rotates on `iTransferFrom`;
   `encryptedURI` rotation is in the v1.1 hardening queue (see
   [Known Gaps](#known-gaps)).
-- **Fine-tune attestation chain (mint + train)** — every fighter's weights
-  derive from a real 0G Compute fine-tune. The chain works as follows:
-  (1) the TEE provider's `addDeliverable` writes the encrypted-secret +
-  weights merkle root on-chain, (2) the user's wallet calls
-  `acknowledgeDeliverable` (proving the user retrieved the artifact), and
-  (3) for every retrain session, `FighterTrainer.train(...)` ties the new
-  fine-tune's taskId, provider address, and attestation signature to the
-  existing tokenId via an on-chain event signed by the owner. Anyone
-  scanning `FighterTrained` events can replay the full evolution timeline
-  + verify each session's TEE attestation independently of Yap's backend.
+- **Persona evolution chain (mint + train)** — each fighter's persona
+  is an encrypted payload pinned on 0G Storage; the sealed key + metadata
+  hash are committed on-chain at mint, and every `FighterTrainer.train(...)`
+  call adds a new `FighterTrained` event tying a fresh `encryptedURI` to
+  the existing tokenId, signed by the owner. Anyone scanning the events
+  can replay the full evolution timeline independently of Yap's backend.
+  (Phase 1 fighters additionally carry a 0G Compute fine-tune taskId +
+  provider address + attestation signature; the post-pivot path leaves
+  those fields empty since the LoRA was never reloaded into inference.)
 
 ### What's still in-flight
 
@@ -316,20 +316,18 @@ session 0 in the timeline.
   download, macOS storage fallback) on the SDK roadmap. We avoid the path
   in production by downloading via 0G Storage natively (which is also
   faster); the TEE fallback is only used on macOS dev.
-- **Bug #8 (FT provider models registry empties spontaneously).** On
-  2026-05-08 ~08:03–11:52 UTC the Galileo fine-tune provider
-  `0xA02b95Aa…E31A09` (the only one on Galileo) transitioned from healthy
-  to a state where `listService()` returns `models: []`. After the
-  transition every `createTask` accepts and returns task IDs but provider
-  marks them `progress: Failed` (no error message) within ~10 minutes —
-  symptom matches the provider being unable to load any base model.
-  Aristotle mainnet's lone FT provider `0x940b4a10…0B0d` was in the
-  same state at the same time, so the bug spans both networks. Reported
-  to 0G team via Telegram. Local mitigation: `compute.ts` provider
-  picker filters out providers with `models: []` upfront — fail-fast in
-  ~1 second with an actionable error ("operator should ping 0G team")
-  instead of submitting and waiting 10 minutes for the provider-side
-  Failed status. Reference task IDs:
+- **Bug #8 (FT provider models registry empties spontaneously) — DEFERRED.**
+  Phase 2 pivot dropped fine-tune from the mint/train pipelines, so this
+  bug no longer blocks Yap. Historical record: on 2026-05-08 ~08:03–11:52
+  UTC the Galileo fine-tune provider `0xA02b95Aa…E31A09` (the only one on
+  Galileo) transitioned from healthy to a state where `listService()`
+  returns `models: []`; every subsequent `createTask` accepted task IDs
+  but the provider marked them `progress: Failed` within ~10 minutes.
+  Aristotle mainnet's lone FT provider `0x940b4a10…0B0d` was in the same
+  state at the same time, so the bug spanned both networks. Reported to
+  0G team via Telegram; tracking continues there for any team that needs
+  fine-tune. Local mitigation (provider picker filtering on `models: []`)
+  remains in `compute.ts` for any future caller. Reference task IDs:
   `d4e997f7-fce5-46c2-9485-8ebef1c38a39`,
   `92fa3fc6-40c2-4b91-8320-4c53f8b272e3`,
   `d41bd0f1-18cb-4c5b-bb35-942901750506`. Last successful run on the
@@ -368,10 +366,12 @@ Users do **not** need to trust:
 The 2026-04-25 audit hardening queue closed out the contract-level gaps
 (see commit history `46b1363` / `c44e629`). What remains:
 
-- **0G Compute fine-tune** — SDK `__dirname` resolution breaks after Next.js
-  Rollup flatten, blocking the artifact-download path. v1 ships persona-as-
-  INFT (spec-conformant per ERC-7857 "character definitions"); fine-tune
-  resumes when the SDK fix lands. Tracked at task #43.
+- **0G Compute fine-tune** — Phase 2 pivot dropped fine-tune from mint/train
+  (the LoRA was never reloaded into inference, so the latency cost was
+  pure UX drag). Yap now ships persona-as-INFT (spec-conformant per
+  ERC-7857 "character definitions"). Re-introducing fine-tune is parked
+  as a post-hackathon explore — the existing `lib/0g/compute.ts` wrapper
+  + Bug #8 mitigation are kept in tree for future use.
 - **`FighterStats.earnings` wiring.** The `BattleRegistry.FighterStats`
   struct has an `earnings` field reserved for tracking total 0G a fighter
   has generated for its owner across battles. Currently a placeholder —
