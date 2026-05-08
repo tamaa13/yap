@@ -43,6 +43,7 @@ export type TrainPhase =
   | "queued"
   | "uploading-seed"
   | "training"
+  | "retrying"
   | "decrypting"
   | "encrypting-weights"
   | "uploading-weights"

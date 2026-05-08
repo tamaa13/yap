@@ -23,6 +23,7 @@ const PHASE_LABEL: Record<TrainPhase, string> = {
   queued: "Queued",
   "uploading-seed": "Uploading style seed to 0G Storage",
   training: "Training on TEE GPU (the long part)",
+  retrying: "Last provider was slow — routing to a different one",
   decrypting: "Verifying TEE attestation + decrypting",
   "encrypting-weights": "Sealing weights with fresh AES key",
   "uploading-weights": "Publishing encrypted INFT to 0G Storage",
