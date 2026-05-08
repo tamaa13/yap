@@ -185,22 +185,26 @@ export async function fineTune(call: FineTuneCall): Promise<FineTuneResult> {
   // 1. Pick provider.
   let providerAddress = call.providerAddress;
   if (!providerAddress) {
-    const services = await ft.listService();
+    // listService returns an ethers v6 `Result` tuple wrapper, not a
+    // plain Array. Indexing past the end of a Result throws a RangeError
+    // ("out of result range") instead of yielding undefined — so
+    // `eligible[0]` on a fully-excluded result was crashing the retry.
+    // Spread into a real array first; filter/find then behave as expected.
+    const services = Array.from(await ft.listService());
     const excluded = call.excludeProviders;
     const eligible = excluded
       ? services.filter((s) => !excluded.has(s.provider))
       : services;
-    const match = eligible.find(
-      (s) => !s.occupied && (s.models?.includes(baseModel) ?? true),
-    );
-    const fallback = eligible[0];
-    const chosen = match ?? fallback;
-    if (!chosen) {
+    if (eligible.length === 0) {
       const reason = excluded?.size
         ? `no remaining fine-tune providers (excluded ${excluded.size})`
         : "no fine-tune providers available on 0G Compute";
       throw new Error(reason);
     }
+    const match = eligible.find(
+      (s) => !s.occupied && (s.models?.includes(baseModel) ?? true),
+    );
+    const chosen = match ?? eligible[0];
     providerAddress = chosen.provider;
   }
 
