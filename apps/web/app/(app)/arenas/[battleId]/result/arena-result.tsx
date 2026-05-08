@@ -159,11 +159,17 @@ export function ArenaResult({
     }
   };
 
-  const rounds: Array<[number, number, number, "A" | "B"]> = [
-    [1, 14, 12, "A"],
-    [2, 11, 13, "B"],
-    [3, 16, 10, "A"],
-  ];
+  // Verdict reasoning sources, in priority order:
+  //   1. Live runner state (still in store) — runner just settled this battle
+  //      and verdict.reasoning is the real judge inference output.
+  //   2. Future: server-side persisted verdict (post-GC). Not wired yet — we
+  //      degrade gracefully when state has been archived.
+  const liveVerdict = liveState?.verdict ?? null;
+  const verdictReasoning = liveVerdict?.reasoning ?? null;
+  const effectiveVerdictTxHash = (verdictTxHash ?? liveVerdict?.txHash ?? null) as
+    | `0x${string}`
+    | null;
+  const verdictAttestationId = liveVerdict?.zgAttestation ?? null;
 
   return (
     <PageContainer>
@@ -216,81 +222,65 @@ export function ArenaResult({
               <div
                 style={{
                   fontSize: 13,
-                  color: "var(--tx-primary)",
+                  color: verdictReasoning ? "var(--tx-primary)" : "var(--tx-tertiary)",
                   lineHeight: 1.6,
                   marginBottom: 10,
+                  fontStyle: verdictReasoning ? "italic" : "normal",
                 }}
               >
-                &quot;{winner.name}&apos;s argument demonstrated superior logical structure and
-                decisive rebuttal. Round 3 delivered a precedent-grounded close that{" "}
-                {loser.name} could not unseat without introducing unsupported premises.&quot;
+                {verdictReasoning
+                  ? `“${verdictReasoning}”`
+                  : liveState
+                    ? "Judge inference still in flight — reasoning will surface here when the verdict lands."
+                    : "Reasoning not available — the runner state was archived after settle. Verifiable on-chain via the verdict tx."}
               </div>
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
+                  gap: 8,
+                  flexWrap: "wrap",
                 }}
               >
-                <Hash
-                  value="0x7d2f8b91c4a5e8f6b3d2a9c8e5f1b2a4c7d6e9f8b5a3c2d1e4f7a8b9c5d6e7f1"
-                  copy
-                />
+                {effectiveVerdictTxHash ? (
+                  <Hash value={effectiveVerdictTxHash} copy />
+                ) : (
+                  <span
+                    style={{ fontSize: 11, color: "var(--tx-tertiary)" }}
+                  >
+                    Verdict tx pending
+                  </span>
+                )}
                 <Badge mono tone="success">
                   <Icon name="shield" size={10} />
                   &nbsp;Verified on 0G
                 </Badge>
               </div>
+              {verdictAttestationId && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    paddingTop: 8,
+                    borderTop: "1px solid var(--bd-subtle)",
+                    fontSize: 11,
+                    color: "var(--tx-tertiary)",
+                    fontFamily: "var(--mono)",
+                    wordBreak: "break-all",
+                  }}
+                >
+                  0G Compute attestation chatID: {verdictAttestationId}
+                </div>
+              )}
             </div>
           </Card>
 
-          <Card style={{ padding: 20, marginBottom: 16 }}>
-            <div className="label" style={{ marginBottom: 12 }}>Round scoring</div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "60px 1fr 1fr 80px",
-                gap: 8,
-                alignItems: "center",
-                fontSize: 13,
-              }}
-            >
-              <div className="label">Round</div>
-              <div className="label">{fighterA.name}</div>
-              <div className="label">{fighterB.name}</div>
-              <div className="label" style={{ textAlign: "right" }}>Delta</div>
-              {rounds.map(([r, ax, bx, w]) => (
-                <Fragment key={r}>
-                  <div className="mono" style={{ color: "var(--tx-tertiary)" }}>R{r}</div>
-                  <div
-                    className="num"
-                    style={{
-                      color: w === "A" ? "var(--tx-primary)" : "var(--tx-tertiary)",
-                      fontWeight: w === "A" ? 600 : 400,
-                    }}
-                  >
-                    {ax}
-                  </div>
-                  <div
-                    className="num"
-                    style={{
-                      color: w === "B" ? "var(--tx-primary)" : "var(--tx-tertiary)",
-                      fontWeight: w === "B" ? 600 : 400,
-                    }}
-                  >
-                    {bx}
-                  </div>
-                  <div
-                    className="mono"
-                    style={{ textAlign: "right", color: "var(--tx-secondary)" }}
-                  >
-                    {w === "A" ? "+" : "-"}
-                    {Math.abs(ax - bx)}
-                  </div>
-                </Fragment>
-              ))}
-            </div>
-          </Card>
+          <MatchTranscript
+            rounds={realRounds}
+            fighterA={fighterA}
+            fighterB={fighterB}
+            stateAvailable={!!liveState}
+          />
 
           {MOMENT_INFT_ADDRESS !== "" && realRounds.length > 0 && (
             <Card style={{ padding: 20, marginBottom: 16 }}>
@@ -540,6 +530,258 @@ export function ArenaResult({
         </div>
       </div>
     </PageContainer>
+  );
+}
+
+function MatchTranscript({
+  rounds,
+  fighterA,
+  fighterB,
+  stateAvailable,
+}: {
+  rounds: import("@/lib/battle-state/types").BattleRound[];
+  fighterA: Fighter;
+  fighterB: Fighter;
+  stateAvailable: boolean;
+}) {
+  // Auto-expand the most recent round; collapse the rest. Lets viewers
+  // see the closing exchange immediately while keeping earlier rounds
+  // tucked away.
+  const lastRoundNumber = rounds.length > 0 ? rounds[rounds.length - 1].number : 0;
+  const [expanded, setExpanded] = useState<Set<number>>(
+    () => new Set(lastRoundNumber > 0 ? [lastRoundNumber] : []),
+  );
+
+  const toggle = (n: number) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(n)) next.delete(n);
+      else next.add(n);
+      return next;
+    });
+  };
+
+  if (!stateAvailable && rounds.length === 0) {
+    return (
+      <Card style={{ padding: 20, marginBottom: 16 }}>
+        <div className="label" style={{ marginBottom: 6 }}>
+          Match transcript
+        </div>
+        <div
+          style={{
+            fontSize: 12,
+            color: "var(--tx-tertiary)",
+            lineHeight: 1.55,
+          }}
+        >
+          Round-by-round transcript was archived after settle. The
+          encrypted full match still lives on 0G Storage; verifiable
+          via the verdict tx + each round's TEE attestation.
+        </div>
+      </Card>
+    );
+  }
+
+  if (rounds.length === 0) {
+    return (
+      <Card style={{ padding: 20, marginBottom: 16 }}>
+        <div className="label" style={{ marginBottom: 6 }}>
+          Match transcript
+        </div>
+        <div
+          style={{
+            fontSize: 12,
+            color: "var(--tx-tertiary)",
+            lineHeight: 1.55,
+          }}
+        >
+          Loading rounds from 0G…
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card style={{ padding: 20, marginBottom: 16 }}>
+      <div
+        className="label"
+        style={{
+          marginBottom: 12,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        Match transcript
+        <span
+          className="mono"
+          style={{ fontSize: 10, color: "var(--tx-tertiary)" }}
+        >
+          {rounds.length} round{rounds.length === 1 ? "" : "s"}
+        </span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {rounds.map((round) => {
+          const isOpen = expanded.has(round.number);
+          const argA = round.argumentA.content || "";
+          const argB = round.argumentB.content || "";
+          const tokA = round.argumentA.tokenCount ?? 0;
+          const tokB = round.argumentB.tokenCount ?? 0;
+          return (
+            <div
+              key={round.number}
+              style={{
+                border: "1px solid var(--bd-subtle)",
+                borderRadius: 4,
+                overflow: "hidden",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => toggle(round.number)}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "10px 14px",
+                  background: isOpen ? "var(--bg-surface)" : "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  color: "var(--tx-primary)",
+                }}
+              >
+                <span
+                  className="mono"
+                  style={{ fontSize: 11, color: "var(--tx-tertiary)" }}
+                >
+                  Round {round.number}
+                </span>
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: "var(--tx-tertiary)",
+                    fontFamily: "var(--mono)",
+                  }}
+                >
+                  {tokA + tokB} tokens
+                </span>
+                <Icon
+                  name={isOpen ? "chevronDown" : "chevronRight"}
+                  size={14}
+                />
+              </button>
+              {isOpen && (
+                <div
+                  style={{
+                    padding: "12px 14px 14px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 12,
+                    background: "var(--bg-sunken)",
+                    borderTop: "1px solid var(--bd-subtle)",
+                  }}
+                >
+                  <RoundQuote
+                    fighter={fighterA}
+                    side="a"
+                    content={argA}
+                    tokens={tokA}
+                  />
+                  <RoundQuote
+                    fighter={fighterB}
+                    side="b"
+                    content={argB}
+                    tokens={tokB}
+                  />
+                  {round.commentary?.content && (
+                    <div
+                      style={{
+                        marginTop: 4,
+                        padding: "8px 10px",
+                        borderLeft: "2px solid var(--accent)",
+                        background:
+                          "linear-gradient(90deg, rgba(255,184,0,0.05), rgba(255,184,0,0.01))",
+                        fontSize: 12,
+                        fontStyle: "italic",
+                        color: "var(--tx-primary)",
+                        lineHeight: 1.55,
+                      }}
+                    >
+                      <span
+                        className="mono"
+                        style={{
+                          fontSize: 9,
+                          color: "var(--accent)",
+                          letterSpacing: 0.12,
+                          textTransform: "uppercase",
+                          marginRight: 6,
+                        }}
+                      >
+                        Color
+                      </span>
+                      {round.commentary.content}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
+function RoundQuote({
+  fighter,
+  side,
+  content,
+  tokens,
+}: {
+  fighter: Fighter;
+  side: "a" | "b";
+  content: string;
+  tokens: number;
+}) {
+  const cornerColor =
+    side === "a" ? "var(--fighter-a)" : "var(--fighter-b)";
+  return (
+    <div style={{ display: "flex", gap: 10 }}>
+      <Sigil seed={fighter.name} size={28} color={cornerColor} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            marginBottom: 4,
+          }}
+        >
+          <span style={{ fontSize: 12, fontWeight: 600 }}>
+            {fighter.name}
+          </span>
+          <span
+            className="mono"
+            style={{ fontSize: 10, color: "var(--tx-tertiary)" }}
+          >
+            {tokens} tok
+          </span>
+        </div>
+        <div
+          style={{
+            fontSize: 13,
+            color: content ? "var(--tx-primary)" : "var(--tx-tertiary)",
+            lineHeight: 1.55,
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+          }}
+        >
+          {content || "(no content captured)"}
+        </div>
+      </div>
+    </div>
   );
 }
 
