@@ -37,17 +37,16 @@ export default function WalletPage() {
       </div>
 
       <div
-        className="al-stats-grid-4"
+        className="al-stats-grid-3"
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
+          gridTemplateColumns: "repeat(3, 1fr)",
           gap: 12,
           marginBottom: 20,
         }}
       >
         <StatCard label="Balance" value={displayBalance.toFixed(2)} sub="0G liquid" />
         <StatCard label="Locked in bets" value={locked.toFixed(2)} sub="0G escrowed" />
-        <StatCard label="Pending payouts" value="—" sub="0G settling" />
         <StatCard
           label="Lifetime P/L"
           value={`${pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}`}
@@ -72,10 +71,6 @@ export default function WalletPage() {
           0G · {fmtAddr(addr)}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Button variant="primary" leading={<Icon name="download" size={14} />}>
-            Deposit
-          </Button>
-          <Button leading={<Icon name="send" size={14} />}>Withdraw</Button>
           <Button
             leading={<Icon name="copy" size={14} />}
             onClick={() => addr && navigator.clipboard?.writeText(addr)}
