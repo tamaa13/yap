@@ -61,6 +61,32 @@
   },
   {
     "type": "function",
+    "name": "DISPUTE_ACCEPTANCE_PERIOD",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "DISPUTE_MAX_LIFETIME",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "MAX_DURATION_DAYS",
     "inputs": [],
     "outputs": [
@@ -97,6 +123,19 @@
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "acceptRental",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -195,6 +234,11 @@
             "name": "active",
             "type": "bool",
             "internalType": "bool"
+          },
+          {
+            "name": "disputable",
+            "type": "bool",
+            "internalType": "bool"
           }
         ]
       }
@@ -223,6 +267,86 @@
   {
     "type": "function",
     "name": "cancelRentListing",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "claimRentalTimeout",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "disputeOf",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "status",
+        "type": "uint8",
+        "internalType": "uint8"
+      },
+      {
+        "name": "renter",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "owner",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "disputeWindowEnds",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "maxLifetimeEnds",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "escrowed",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "ownerProposalHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "renterProposalHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "disputeRental",
     "inputs": [
       {
         "name": "tokenId",
@@ -267,6 +391,19 @@
   },
   {
     "type": "function",
+    "name": "forceCloseRental",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "getActiveRental",
     "inputs": [
       {
@@ -300,6 +437,67 @@
             "name": "paid",
             "type": "uint256",
             "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getDispute",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct RentalEscrow.DisputeState",
+        "components": [
+          {
+            "name": "status",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "renter",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "owner",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "disputeWindowEnds",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "maxLifetimeEnds",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "escrowed",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "ownerProposalHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "renterProposalHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
           }
         ]
       }
@@ -349,6 +547,11 @@
           },
           {
             "name": "active",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "disputable",
             "type": "bool",
             "internalType": "bool"
           }
@@ -462,6 +665,29 @@
   },
   {
     "type": "function",
+    "name": "listForRentDisputable",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "pricePerDay",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxDurationDays",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "onERC721Received",
     "inputs": [
       {
@@ -526,6 +752,29 @@
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "proposeRentalSplit",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "renterAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "ownerAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -614,6 +863,11 @@
       },
       {
         "name": "active",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "disputable",
         "type": "bool",
         "internalType": "bool"
       }
@@ -852,6 +1106,12 @@
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
+      },
+      {
+        "name": "disputable",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
       }
     ],
     "anonymous": false
@@ -877,6 +1137,57 @@
   },
   {
     "type": "event",
+    "name": "RentalAccepted",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "renter",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RentalDisputed",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "renter",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RentalForceClosed",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "RentalPermissionsUpdated",
     "inputs": [
       {
@@ -884,6 +1195,68 @@
         "type": "bytes",
         "indexed": false,
         "internalType": "bytes"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RentalSettled",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "renterPayout",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "ownerPayout",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "platformFee",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RentalSplitProposed",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "proposer",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "renterAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "ownerAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -1053,6 +1426,16 @@
   },
   {
     "type": "error",
+    "name": "AcceptanceWindowClosed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AcceptanceWindowOpen",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "AccessControlBadConfirmation",
     "inputs": []
   },
@@ -1089,6 +1472,11 @@
   },
   {
     "type": "error",
+    "name": "AlreadySettled",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "DurationExceedsMax",
     "inputs": []
   },
@@ -1115,6 +1503,26 @@
   {
     "type": "error",
     "name": "InsufficientPayment",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidSplit",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "LifetimeNotReached",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotDisputable",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotInDispute",
     "inputs": []
   },
   {
@@ -1154,12 +1562,22 @@
   },
   {
     "type": "error",
+    "name": "RentalStillLive",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "SelfRent",
     "inputs": []
   },
   {
     "type": "error",
     "name": "TransferFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "UnauthorizedParty",
     "inputs": []
   },
   {

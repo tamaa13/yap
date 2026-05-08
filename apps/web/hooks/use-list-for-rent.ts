@@ -46,10 +46,12 @@ export function useListForRent() {
       tokenId,
       pricePerDayEth,
       maxDurationDays,
+      disputable,
     }: {
       tokenId: number;
       pricePerDayEth: string;
       maxDurationDays: number;
+      disputable?: boolean;
     }) => {
       if (!RENTAL_ESCROW_ADDRESS || !FIGHTER_INFT_ADDRESS) {
         throw new Error("Rental escrow not configured");
@@ -70,7 +72,7 @@ export function useListForRent() {
       const tx = await list.writeContractAsync({
         address: RENTAL_ESCROW_ADDRESS as `0x${string}`,
         abi: RENTAL_ESCROW_ABI,
-        functionName: "listForRent",
+        functionName: disputable ? "listForRentDisputable" : "listForRent",
         args: [BigInt(tokenId), priceWei, BigInt(maxDurationDays)],
       });
       setPhase("done");
