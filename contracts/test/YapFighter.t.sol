@@ -233,6 +233,51 @@ contract YapFighterTest is Test {
         fighter.iCloneFrom(bob, id, tvp);
     }
 
+    /// @dev Anima-style replay protection. Without consuming the proof
+    ///      after first use, an owner could mint N clones from a single
+    ///      attestation within the validity window. We mark the
+    ///      (proofId, tokenId, recipient) tuple consumed on success.
+    function test_ICloneFrom_RevertsOnProofReplay() public {
+        uint256 id = _mintTo(alice, keccak256("m"));
+        (IERC7857.TransferValidityProof memory tvp,) = _buildProof(
+            keccak256("mClonedReplay"),
+            hex"03",
+            id,
+            bob
+        );
+
+        vm.prank(alice);
+        fighter.iCloneFrom(bob, id, tvp);
+
+        // Same proof, same recipient — should fail on the consumed flag.
+        vm.prank(alice);
+        vm.expectRevert(YapFighter.ProofAlreadyConsumed.selector);
+        fighter.iCloneFrom(bob, id, tvp);
+    }
+
+    function test_ITransferFrom_RevertsOnProofReplay() public {
+        uint256 id = _mintTo(alice, keccak256("m"));
+        (IERC7857.TransferValidityProof memory tvp,) = _buildProof(
+            keccak256("mTransferReplay"),
+            hex"04",
+            id,
+            bob
+        );
+        IERC7857.TransferValidityProof[] memory proofs = new IERC7857.TransferValidityProof[](1);
+        proofs[0] = tvp;
+
+        vm.prank(alice);
+        fighter.iTransferFrom(alice, bob, id, proofs, NEW_URI);
+
+        // Bob now owns. If they tried to use the same proof to bounce
+        // it back to alice, ownership atomicity already blocked it. But
+        // anyone trying to *replay* the same (proofId, tokenId, bob)
+        // tuple gets the explicit consumed-flag revert.
+        vm.prank(bob);
+        vm.expectRevert(YapFighter.ProofAlreadyConsumed.selector);
+        fighter.iTransferFrom(bob, bob, id, proofs, NEW_URI);
+    }
+
     // ---------------- authorize / revoke ----------------
 
     function test_Authorize_AddsExecutor() public {
