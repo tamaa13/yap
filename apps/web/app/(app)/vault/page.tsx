@@ -14,7 +14,9 @@ import { PageContainer } from "@/components/shell/page-container";
 import { GateScreen } from "@/components/wallet/gate-screen";
 import { useFighters } from "@/hooks/use-fighters";
 import { useMyBets } from "@/hooks/use-my-bets";
+import { battleArenaPath, useMyMoments } from "@/hooks/use-my-moments";
 import { useSubnameBatch } from "@/hooks/use-subname";
+import { MOMENT_INFT_ADDRESS } from "@/lib/contracts";
 import { useDeclineBattle } from "@/hooks/use-accept-battle";
 import { usePendingChallenges } from "@/hooks/use-pending-challenges";
 import { useToast } from "@/components/ui/toast";
@@ -28,7 +30,8 @@ type VaultTab =
   | "rentedIn"
   | "challenges"
   | "bets"
-  | "history";
+  | "history"
+  | "moments";
 
 const VALID_TABS: ReadonlySet<VaultTab> = new Set([
   "owned",
@@ -37,6 +40,7 @@ const VALID_TABS: ReadonlySet<VaultTab> = new Set([
   "challenges",
   "bets",
   "history",
+  "moments",
 ]);
 
 export default function VaultPage() {
@@ -90,6 +94,7 @@ export default function VaultPage() {
   // multicall instead of one RPC per card.
   const allTokenIds = mine.map((f) => f.id);
   const { labels: subnameLabels } = useSubnameBatch(allTokenIds);
+  const { data: myMoments, isLoading: momentsLoading } = useMyMoments();
 
   return (
     <PageContainer>
@@ -137,6 +142,9 @@ export default function VaultPage() {
           },
           { value: "bets", label: "Bets", count: activeBets.length },
           { value: "history", label: "History", count: settledBets.length },
+          ...(MOMENT_INFT_ADDRESS !== ""
+            ? [{ value: "moments", label: "Moments", count: myMoments.length }]
+            : []),
         ]}
         style={{ marginBottom: 20 }}
       />
@@ -621,6 +629,83 @@ export default function VaultPage() {
               </tbody>
             </table>
           </Card>
+        ))}
+
+      {tab === "moments" &&
+        (momentsLoading && myMoments.length === 0 ? (
+          <EmptyState
+            title="Reading the chain…"
+            body="Pulling Moment INFTs you've collected."
+          />
+        ) : myMoments.length === 0 ? (
+          <EmptyState
+            title="No moments minted"
+            body="Settle a battle, mint the round you'll want to remember. Each Moment is an ERC-7857 INFT bound to a specific (battle, round, side)."
+          />
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+              gap: 12,
+            }}
+          >
+            {myMoments.map((m) => (
+              <Card key={m.tokenId} style={{ padding: 16 }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                  <Sigil
+                    seed={`moment-${m.battleId}-${m.roundNo}-${m.side}`}
+                    size={56}
+                    color={m.side === 0 ? "var(--fighter-a)" : "var(--fighter-b)"}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>
+                      Moment #{m.tokenId}
+                    </div>
+                    <div
+                      className="mono"
+                      style={{
+                        fontSize: 11,
+                        color: "var(--tx-tertiary)",
+                        marginTop: 2,
+                        letterSpacing: 0.04,
+                      }}
+                    >
+                      Battle {m.battleId} · R{m.roundNo} · {m.side === 0 ? "A" : "B"}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "var(--tx-secondary)",
+                        marginTop: 6,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      Fighter #{m.fighterTokenId}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 6, marginTop: 14 }}>
+                  <Button
+                    size="sm"
+                    onClick={() => router.push(battleArenaPath(m.battleId))}
+                    style={{ flex: 1 }}
+                  >
+                    Source battle
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() =>
+                      router.push(`/fighters/${m.fighterTokenId}`)
+                    }
+                    style={{ flex: 1 }}
+                  >
+                    Fighter
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
         ))}
     </PageContainer>
   );
