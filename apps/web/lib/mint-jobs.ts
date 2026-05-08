@@ -17,6 +17,7 @@ export type MintJobStatus =
   | "queued"
   | "uploading-seed"
   | "training"
+  | "retrying"
   | "decrypting"
   | "encrypting-weights"
   | "uploading-weights"
@@ -62,6 +63,10 @@ export interface MintJob {
   updatedAt: number;
   result?: MintJobResult;
   error?: string;
+  /** Retry attempt number (1 = first attempt, 2 = first retry, ...). */
+  attempt?: number;
+  /** Last error message that triggered a retry. Cleared on next progress. */
+  lastRetryReason?: string;
 }
 
 const jobs = new Map<string, MintJob>();
@@ -73,6 +78,7 @@ const PHASE_PROGRESS: Record<MintJobStatus, number> = {
   queued: 0.02,
   "uploading-seed": 0.05,
   training: 0.65,
+  retrying: 0.1,
   decrypting: 0.75,
   "encrypting-weights": 0.78,
   "uploading-weights": 0.97,
@@ -84,6 +90,7 @@ const STEP_LABEL: Record<MintJobStatus, string> = {
   queued: "Queued",
   "uploading-seed": "Uploading style seed to 0G Storage",
   training: "Training your fighter on TEE GPU (the long part)",
+  retrying: "Last provider was slow — routing to a different one",
   decrypting: "Verifying TEE attestation and decrypting weights",
   "encrypting-weights": "Sealing weights with a fresh AES key",
   "uploading-weights": "Publishing encrypted INFT to 0G Storage",
@@ -128,6 +135,23 @@ export function setMintJobStatus(id: string, status: MintJobStatus): void {
   job.status = status;
   job.step = STEP_LABEL[status];
   job.progress = PHASE_PROGRESS[status];
+  job.updatedAt = Date.now();
+}
+
+/** Mark the job as retrying after a provider-level failure. Records
+ *  the attempt counter and the prior error for UI surfacing. */
+export function setMintJobRetrying(
+  id: string,
+  attempt: number,
+  reason: string,
+): void {
+  const job = jobs.get(id);
+  if (!job) return;
+  job.status = "retrying";
+  job.step = STEP_LABEL.retrying;
+  job.progress = PHASE_PROGRESS.retrying;
+  job.attempt = attempt;
+  job.lastRetryReason = reason;
   job.updatedAt = Date.now();
 }
 

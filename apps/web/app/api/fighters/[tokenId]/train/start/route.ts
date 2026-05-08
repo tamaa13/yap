@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { JsonRpcProvider, Contract } from "ethers";
 import { createMintJob } from "@/lib/mint-jobs";
-import { runMintPipeline } from "@/lib/mint-pipeline";
+import { runMintPipelineWithRetry } from "@/lib/mint-pipeline";
 import { FIGHTER_INFT_ABI, FIGHTER_INFT_ADDRESS } from "@/lib/contracts";
 import { activeChain } from "@/lib/chains";
 
@@ -95,7 +95,7 @@ export async function POST(req: Request, { params }: RouteParams) {
   const bypassFineTune = process.env.ZG_FINE_TUNE_BYPASS === "true";
   const job = createMintJob();
 
-  runMintPipeline(
+  runMintPipelineWithRetry(
     { owner, name, archetype, avatar, seed, baseModel, bypassFineTune },
     job.id,
   ).catch((e) => {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createMintJob } from "@/lib/mint-jobs";
-import { runMintPipeline } from "@/lib/mint-pipeline";
+import { runMintPipelineWithRetry } from "@/lib/mint-pipeline";
 import { FIGHTER_INFT_ADDRESS } from "@/lib/contracts";
 
 export const runtime = "nodejs";
@@ -56,7 +56,9 @@ export async function POST(req: Request) {
   // Fire-and-forget. Errors are captured into the job state by
   // runMintPipeline itself, so a logged warning is the most we want
   // here — the client will see status: "failed" via /status polling.
-  runMintPipeline(
+  // The Retry wrapper rotates around providers that timeout (anima
+  // pattern: when the counterparty is uncooperative, route around).
+  runMintPipelineWithRetry(
     { owner, name, archetype, avatar, seed, baseModel, bypassFineTune },
     job.id,
   ).catch((e) => {

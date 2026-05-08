@@ -134,6 +134,12 @@ export function useMintFighter() {
               setPhase("seed");
               break;
             case "training":
+            // "retrying" lives in the same conceptual slot as training —
+            // the server picked a fresh provider after the previous one
+            // timed out. UI step label updates via the job.step field
+            // surfaced by /status, so we keep the spinner anchored on
+            // the training stage rather than bouncing back.
+            case "retrying":
               setPhase("training");
               break;
             case "decrypting":
@@ -259,11 +265,15 @@ interface MintJobShape {
     | "queued"
     | "uploading-seed"
     | "training"
+    | "retrying"
     | "decrypting"
     | "encrypting-weights"
     | "uploading-weights"
     | "ready"
     | "failed";
+  step?: string;
+  attempt?: number;
+  lastRetryReason?: string;
   result?: PrepareResponse;
   error?: string;
 }

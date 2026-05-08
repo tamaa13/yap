@@ -7,12 +7,13 @@
 
 import "server-only";
 import { keccak256, toUtf8Bytes, hexlify } from "ethers";
-import { fineTune } from "@/lib/0g/compute";
+import { fineTune, FineTuneProviderError } from "@/lib/0g/compute";
 import { encryptWithRandomKey } from "@/lib/0g/encrypt";
 import { uploadBuffer } from "@/lib/0g/storage";
 import {
   setMintJobError,
   setMintJobResult,
+  setMintJobRetrying,
   setMintJobStatus,
   type MintJobResult,
 } from "@/lib/mint-jobs";
@@ -25,6 +26,9 @@ export interface MintPipelineArgs {
   seed: string;
   baseModel?: string;
   bypassFineTune: boolean;
+  /** Provider addresses to skip during this run's fine-tune auto-pick.
+   *  Populated by the retry wrapper after a provider-level failure. */
+  excludeProviders?: ReadonlySet<string>;
 }
 
 /**
@@ -40,7 +44,16 @@ export async function runMintPipeline(
   args: MintPipelineArgs,
   jobId?: string,
 ): Promise<MintJobResult> {
-  const { owner, name, archetype, avatar, seed, baseModel, bypassFineTune } = args;
+  const {
+    owner,
+    name,
+    archetype,
+    avatar,
+    seed,
+    baseModel,
+    bypassFineTune,
+    excludeProviders,
+  } = args;
   const tStart = Date.now();
   const log = (msg: string) =>
     console.log(`[mint${jobId ? ` ${jobId}` : ""} +${Date.now() - tStart}ms] ${msg}`);
@@ -64,6 +77,7 @@ export async function runMintPipeline(
       const ft = await fineTune({
         datasetHash: seedUpload.rootHash,
         baseModel,
+        excludeProviders,
       });
       log(`fineTune done — task=${ft.taskId.slice(0, 8)} weights=${ft.weightsBytes.byteLength}B`);
       weightsBytes = ft.weightsBytes;
@@ -166,4 +180,48 @@ function extractSignatureQuotes(seed: string): string[] {
     picked.push(quotes[Math.floor(i * step)]);
   }
   return picked;
+}
+
+/**
+ * Resilience wrapper: runs `runMintPipeline` with up to `maxAttempts`
+ * tries, growing an exclude-set of providers that just failed so the
+ * next attempt picks a different one. Anima-style in spirit — when the
+ * counterparty (here: a TEE provider) is uncooperative, we route around
+ * them rather than blocking the user.
+ *
+ * Surfaces "retrying" status to the UI between attempts so the polling
+ * client can show a meaningful intermediate state instead of 10 minutes
+ * of opaque "training" before a terminal failure.
+ *
+ * Only retries on FineTuneProviderError — other errors (storage upload,
+ * decrypt) bubble up directly since retrying with a different provider
+ * wouldn't help.
+ */
+export async function runMintPipelineWithRetry(
+  args: MintPipelineArgs,
+  jobId: string,
+  opts: { maxAttempts?: number } = {},
+): Promise<MintJobResult> {
+  const maxAttempts = opts.maxAttempts ?? 3;
+  const excluded = new Set<string>();
+  let lastError: Error | undefined;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await runMintPipeline({ ...args, excludeProviders: excluded }, jobId);
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e));
+      if (e instanceof FineTuneProviderError && attempt < maxAttempts) {
+        excluded.add(e.providerAddress);
+        setMintJobRetrying(jobId, attempt + 1, lastError.message);
+        continue;
+      }
+      // Non-provider error or last attempt — bubble up. The inner
+      // `runMintPipeline` already wrote setMintJobError on its way out.
+      throw e;
+    }
+  }
+
+  // Loop fell through without returning — defensive.
+  throw lastError ?? new Error("mint pipeline exhausted retries");
 }

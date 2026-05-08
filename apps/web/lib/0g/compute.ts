@@ -120,6 +120,9 @@ export interface FineTuneCall {
   datasetHash: string;
   baseModel?: string;
   providerAddress?: string;
+  /** Provider addresses to skip during auto-pick. Used by the retry
+   *  wrapper to avoid re-picking a provider that just timed out. */
+  excludeProviders?: ReadonlySet<string>;
   config?: Partial<FineTuneConfig>;
 }
 
@@ -129,6 +132,17 @@ export interface FineTuneResult {
   preTrainedModelName: string;
   weightsBytes: Uint8Array;
   attestationSig?: string;
+}
+
+/** Thrown when fine-tune fails so callers can identify which provider
+ *  to exclude from the next retry. Wraps the original message verbatim. */
+export class FineTuneProviderError extends Error {
+  readonly providerAddress: string;
+  constructor(message: string, providerAddress: string) {
+    super(message);
+    this.name = "FineTuneProviderError";
+    this.providerAddress = providerAddress;
+  }
 }
 
 const DEFAULT_FINE_TUNE_CONFIG: FineTuneConfig = {
@@ -172,12 +186,21 @@ export async function fineTune(call: FineTuneCall): Promise<FineTuneResult> {
   let providerAddress = call.providerAddress;
   if (!providerAddress) {
     const services = await ft.listService();
-    const match = services.find(
+    const excluded = call.excludeProviders;
+    const eligible = excluded
+      ? services.filter((s) => !excluded.has(s.provider))
+      : services;
+    const match = eligible.find(
       (s) => !s.occupied && (s.models?.includes(baseModel) ?? true),
     );
-    const fallback = services[0];
+    const fallback = eligible[0];
     const chosen = match ?? fallback;
-    if (!chosen) throw new Error("no fine-tune providers available on 0G Compute");
+    if (!chosen) {
+      const reason = excluded?.size
+        ? `no remaining fine-tune providers (excluded ${excluded.size})`
+        : "no fine-tune providers available on 0G Compute";
+      throw new Error(reason);
+    }
     providerAddress = chosen.provider;
   }
 
@@ -246,13 +269,17 @@ export async function fineTune(call: FineTuneCall): Promise<FineTuneResult> {
       break;
     }
     if (FAIL_STATES.has(progress)) {
-      throw new Error(`fine-tune task ${taskId} ${task.progress}`);
+      throw new FineTuneProviderError(
+        `fine-tune task ${taskId} ${task.progress}`,
+        providerAddress,
+      );
     }
     await new Promise((r) => setTimeout(r, pollMs));
   }
   if (Date.now() >= deadline) {
-    throw new Error(
+    throw new FineTuneProviderError(
       `fine-tune task ${taskId} timed out after ${maxWaitMs}ms on provider ${providerAddress}`,
+      providerAddress,
     );
   }
 
