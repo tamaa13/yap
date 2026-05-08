@@ -1,14 +1,14 @@
 # Yap
 
-**Verifiable AI combat arena where each fighter is a TEE-attested INFT that *evolves* via continuous on-chain training. Battles settle in 0G Compute and verdicts go on-chain through a routing-proof attestation — no off-stack signer service.**
+**Verifiable AI combat arena where each fighter is an ERC-7857 character INFT and every verdict is TEE-attested on-chain. No off-stack signer service.**
 
-Each fighter is an **ERC-7857 character INFT**: an encrypted persona definition seeded by the owner, fine-tuned on a 0G Compute TDX provider, and packaged with the resulting LoRA weights as the INFT's encrypted payload. Owners can:
-- **Mint** new fighters from a JSONL style seed (real fine-tune, ~7 min)
-- **Train** existing fighters incrementally — every training session is a fresh TEE-attested fine-tune that adds an on-chain `FighterTrained` event to the fighter's evolution history
-- **Battle** their fighters head-to-head via 0G Compute TeeML inference, with the same provider both judging and signing the verdict via routing-proof attestation
-- **Rent** them out via `authorizeUsage`, or **sell** on the marketplace
+Each fighter is an **ERC-7857 character INFT**: an encrypted persona definition the owner seeds and re-seals over time, packaged as the INFT's encrypted payload. Owners can:
+- **Mint** new fighters from a JSONL style seed in about five seconds — encrypted persona pinned on 0G Storage, sealed key + metadata committed on-chain.
+- **Train** existing fighters incrementally — each session re-seals the persona with new style lines and emits a `FighterTrained` event so the evolution timeline is independently auditable.
+- **Battle** their fighters head-to-head via 0G Compute TeeML inference, with the provider both judging and signing the verdict via routing-proof attestation.
+- **Rent** them out via `authorizeUsage`, or **sell** on the marketplace.
 
-The result is a complete agentic-economy primitive: agents as **assets** (INFT), **services** (rentals), **participants** (autonomous battle execution), **price-discovery** (skill rankings via on-chain ELO), and **evolving entities** (continuous learning). Every layer of the 0G stack does real work — Storage holds encrypted persona + LoRA weights, Compute runs the fine-tune *and* the inference *and* signs verdicts, Chain settles every economy event, and ERC-7857 makes the character itself a transferable asset.
+The result is a complete agentic-economy primitive: agents as **assets** (INFT), **services** (rentals), **participants** (autonomous battle execution), **price-discovery** (skill rankings via on-chain ELO), and **evolving entities** (continuous re-sealing). Every layer of the 0G stack does real work — Storage holds encrypted persona payloads, Compute runs the inference *and* signs verdicts, Chain settles every economy event, and ERC-7857 makes the character itself a transferable asset.
 
 **Yap is not a betting dApp.** It is the consumer surface for an agent economy where reputation is provable, skill is monetizable, and AI character growth is verifiable.
 
@@ -41,8 +41,7 @@ Built on [0G](https://0g.ai) for the [0G APAC Hackathon 2026](https://www.hackqu
       ▼
 ┌─────────────────────────┬────────────────────────────────────────┐
 │ 0G Compute (TeeML)      │ 0G Storage                             │
-│ ─ Fine-tune (mint+train)│ ─ Encrypted persona seed (per session) │
-│ ─ Per-round inference   │ ─ LoRA weights (encrypted, AES-GCM)    │
+│ ─ Per-round inference   │ ─ Encrypted persona payload (mint+train)│
 │ ─ Pool-blinded judge    │ ─ Battle transcripts                   │
 │ ─ Routing-proof verdict │                                        │
 │   signature (TEE-bound) │                                        │
@@ -67,19 +66,19 @@ Built on [0G](https://0g.ai) for the [0G APAC Hackathon 2026](https://www.hackqu
 
 **Mint (one-time per fighter):**
 1. `POST /api/mint/start` → returns `jobId` in <2 s; pipeline runs server-side
-2. Server: upload seed → fine-tune (5–7 min) → ECIES-decrypt secret → AES-GCM stream-decrypt LoRA → re-encrypt → upload to 0G Storage
+2. Server: upload seed → AES-GCM seal the persona → upload encrypted blob to 0G Storage (~5 s end to end)
 3. Client polls `/api/mint/status/<id>`; status drives the UI's phase indicator
 4. Once `ready`, client signs `YapFighter.mint(...)` with the prepare payload
 5. `Minted` event → fighter NFT lives on-chain
 
 **Train (any time after mint):**
 1. Owner adds new style lines on the fighter profile (e.g. lessons from a battle)
-2. `POST /api/fighters/<tokenId>/train/start` validates ownership + enqueues identical pipeline
+2. `POST /api/fighters/<tokenId>/train/start` validates ownership + runs the same prepare pipeline
 3. Same async polling pattern as mint
 4. Once `ready`, client signs `FighterTrainer.train(...)`
 5. `FighterTrained(tokenId, sessionNumber, encryptedURI, ...)` event lands; the fighter's profile shows session N
 
-The fighter's INFT itself is unchanged — `FighterTrainer` is purely additive. The fighter's "current weights" are the most recent `FighterTrained` event for that tokenId; the original mint URI is preserved as session 0.
+The fighter's INFT itself is unchanged — `FighterTrainer` is purely additive. The fighter's "current persona" is the most recent `FighterTrained` event for that tokenId; the original mint URI is preserved as session 0.
 
 ## Local Setup
 
@@ -100,9 +99,9 @@ cp .env.example .env
 
 # 3. Env (web) — runtime broker + relayer keys
 cp apps/web/.env.example apps/web/.env.local
-# Fill ZG_BROKER_KEY (Compute ledger), ZG_RELAYER_KEY (verdict tx),
-# ZG_INFERENCE_PROVIDER (provider whose teeSignerAddress = oracleKey).
-# ZG_FINE_TUNE_BYPASS=false enforces real fine-tune end-to-end.
+# Fill ZG_BROKER_KEY (Compute ledger + Storage uploads),
+# ZG_RELAYER_KEY (verdict tx), and ZG_INFERENCE_PROVIDER (provider
+# whose teeSignerAddress = oracleKey).
 
 # 4. Contracts — build + test
 pnpm contracts:build
@@ -141,15 +140,17 @@ pnpm dev
 | YapMarketplace | `0x076e42a64e4ba43700ebb0830086138468dfa275` | [chainscan](https://chainscan-galileo.0g.ai/address/0x076e42a64e4ba43700ebb0830086138468dfa275) |
 | RentalEscrow | `0xe5Df2d51ef75A268daAd122038D94cEA9c3111EA` | [chainscan](https://chainscan-galileo.0g.ai/address/0xe5Df2d51ef75A268daAd122038D94cEA9c3111EA) |
 | YapInbox (CREATE2) | `0xe92dB21A770c32a19795556C46D5c6a274955DBD` | [chainscan](https://chainscan-galileo.0g.ai/address/0xe92dB21A770c32a19795556C46D5c6a274955DBD) |
+| MomentINFT (CREATE2) | _broadcast pending_ | — |
+| MomentMarketplace (CREATE2) | _broadcast pending_ | — |
+| YapSubnameRegistrar (CREATE2) | _broadcast pending_ | — |
 
 `oracleKey` = `0x83df4B8EbA7c0B3B740019b8c9a77ffF77D508cF` — the TEE-derived signing address registered by 0G Compute provider `0xa48f01287233509FD694a22Bf840225062E67836`.
 
 ## 0G Modules Used
 
 1. **INFT / ERC-7857** — every fighter is an ERC-7857 *character INFT*: encrypted persona definition + on-chain `traitsRoot` seed. Transferable via TEE-attested re-encryption; rentable via `authorizeUsage`; tradeable on-chain.
-2. **0G Storage** — encrypted persona seeds + encrypted LoRA weights (mint *and* every train session) + battle transcripts. Reads via TEE provider's 0G Storage download; uploads via `@0gfoundation/0g-ts-sdk@1.2.6` (locally pnpm-patched for zero-copy MemData reads — the stock SDK reallocates the input buffer per chunk, which scales to hours on a 90 MB LoRA).
-3. **0G Compute (TeeML)** — handles three distinct workloads inside the same TEE provider:
-   - **Fine-tune** at mint and at every `train()` (real LoRA training on a TDX-attested H100; ~5–7 min)
+2. **0G Storage** — encrypted persona payloads (mint *and* every train session) + battle transcripts. Uploads via `@0gfoundation/0g-ts-sdk@1.2.6` (locally pnpm-patched for zero-copy MemData reads — the stock SDK reallocates the input buffer per chunk, which is wasteful even for the small encrypted-seed payloads we ship today).
+3. **0G Compute (TeeML)** — handles two distinct workloads inside the same TEE provider:
    - **Inference** during battles — per-round fighter responses + pool-blinded judge call
    - **Verdict signing** — routing-proof attestation `<sha256(reqBody)>:<sha256(respBody)>:<providerType>:<providerIdentity>:<sha256(tlsCert)>` signed by the provider's enclave key
 4. **0G Chain** — settles every economy event: pari-mutuel verdict, ELO + match history, marketplace, rentals, **and the on-chain training timeline** via `FighterTrainer.FighterTrained` events. Verifies the TEE provider's routing-proof on-chain: ECDSA recovery → `oracleKey == teeSignerAddress`; `sha256(responseBody)` matches the attestation's response-hash field; reconstructed canonical `YAP_VERDICT|<chainid>|<escrow>|<battleId>|<winner>|<verdictHash>` text appears verbatim in the response body.

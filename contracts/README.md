@@ -1,24 +1,33 @@
 # Yap Contracts
 
-Foundry project for the Yap AI combat arena on 0G. Four contracts:
+Foundry project for the Yap AI combat arena on 0G:
 
 | Contract | Purpose |
 |---|---|
 | `YapFighter.sol` | ERC-7857 INFT — each token is an AI fighter; encrypted weights live off-chain (0G Storage/IPFS). Transfers require a re-sealing proof attested by the `verifier`. |
 | `BattleEscrow.sol` | Betting pool + pro-rata payout for 1v1 battles. TEE oracle submits the signed verdict; settles after a 24h dispute window. |
 | `BattleRegistry.sol` | Match history + ELO (K=32) tracking. Mutations gated to the escrow. |
-| `YapMarketplace.sol` | Secondary market for YapFighter tokens. Fixed-price listings, pull payments for sellers + treasury, 2.5% platform fee (cap 10%), pausable. |
+| `YapMarketplace.sol` | Secondary market for YapFighter tokens. Fixed-price listings, pull payments for sellers + treasury, 2.5% platform fee (cap 10%), pausable. Reused by `MomentMarketplace` (separate instance, identical code). |
 | `RentalEscrow.sol` | Open-market rental escrow (custody-based). Owners deposit a fighter with a price-per-day; any wallet rents for N days; escrow is the token owner during a listing and calls `YapFighter.authorizeUsage` on the renter so the canonical authorization reflects the rental. 2.5% platform fee, pausable. |
+| `FighterTrainer.sol` | Append-only on-chain training timeline; emits `FighterTrained` per session. |
+| `YapInbox.sol` | Singleton CREATE2 inbox for cross-agent messaging. |
+| `MomentINFT.sol` | ERC-7857 collectible for outstanding battle rounds — sibling of YapFighter. Mint gated by `BattleEscrow.Settled` + caller-owns-side; (battleId, roundNo, side) uniqueness; clones inherit provenance. |
+| `YapSubnameRegistrar.sol` | Permissionless `<label>.yap.0g` registrar. Standalone phase 1 (label↔tokenId, no SidRegistry); SPACE ID integration is phase 2. |
 
 ## Galileo testnet deployments
 
 | Contract | Address |
 |---|---|
-| `YapFighter` | `0xeDc375D18fC3997E8E38BC98aB1Cd6A9Fe6db35B` |
-| `BattleEscrow` | `0xAa019127eE3Fab9adB86aAEE85923533f4f2399E` |
-| `BattleRegistry` | `0x2c5512CCe2bDcE034b22C956245fdd43D6E4195D` |
-| `YapMarketplace` | `0x4725b40B391d81E82CE715F901B85989eBb5873A` |
-| `RentalEscrow` | _broadcast pending_ |
+| `YapFighter` | `0xD023b0C5B0CcC829DBF0B39Df5E81aECe4d36A24` |
+| `FighterTrainer` | `0xC10bd77cdA8300877898612B00608bA522d5a460` |
+| `BattleEscrow` | `0x4bd214FdFE925124c9e145E577Ac860C0D93Fb2e` |
+| `BattleRegistry` | `0x755ef230d456b6cc991ccfff38ec5c6b0133d37b` |
+| `YapMarketplace` | `0x076e42a64e4ba43700ebb0830086138468dfa275` |
+| `RentalEscrow` | `0xe5Df2d51ef75A268daAd122038D94cEA9c3111EA` |
+| `YapInbox` (CREATE2) | `0xe92dB21A770c32a19795556C46D5c6a274955DBD` |
+| `MomentINFT` (CREATE2) | _broadcast pending_ |
+| `MomentMarketplace` (CREATE2) | _broadcast pending_ |
+| `YapSubnameRegistrar` (CREATE2) | _broadcast pending_ |
 
 ## Toolchain
 
@@ -48,7 +57,7 @@ export PATH="$HOME/.foundry/bin:$PATH"
 forge test -vv
 ```
 
-110 tests across the five contracts; full suite runs in <1s.
+235 unit tests across all contracts; full suite runs in <1s. Fork tests (`*ForkE2E`) require `--fork-url https://evmrpc-testnet.0g.ai`.
 
 ## Deploy
 
@@ -91,7 +100,7 @@ The script prints all four addresses + the wired roles. It automatically calls `
 Use this when the other core contracts are already live and only `YapMarketplace` needs to be broadcast:
 
 ```bash
-export YAP_FIGHTER=0xeDc375D18fC3997E8E38BC98aB1Cd6A9Fe6db35B
+export YAP_FIGHTER=0xD023b0C5B0CcC829DBF0B39Df5E81aECe4d36A24
 forge script script/DeployMarketplace.s.sol:DeployMarketplace \
   --rpc-url zg_testnet \
   --broadcast \
@@ -101,8 +110,41 @@ forge script script/DeployMarketplace.s.sol:DeployMarketplace \
 ### Deploy just the rental escrow against existing YapFighter
 
 ```bash
-export YAP_FIGHTER=0xeDc375D18fC3997E8E38BC98aB1Cd6A9Fe6db35B
+export YAP_FIGHTER=0xD023b0C5B0CcC829DBF0B39Df5E81aECe4d36A24
 forge script script/DeployRentalEscrow.s.sol:DeployRentalEscrow \
+  --rpc-url zg_testnet \
+  --broadcast \
+  --evm-version cancun
+```
+
+### Deploy MomentINFT (CREATE2)
+
+```bash
+export YAP_FIGHTER=0xD023b0C5B0CcC829DBF0B39Df5E81aECe4d36A24
+export YAP_BATTLE_ESCROW=0x4bd214FdFE925124c9e145E577Ac860C0D93Fb2e
+# optional:
+# export YAP_MOMENT_MINT_FEE=0
+forge script script/DeployMomentINFT.s.sol:DeployMomentINFT \
+  --rpc-url zg_testnet \
+  --broadcast \
+  --evm-version cancun
+```
+
+### Deploy MomentMarketplace (CREATE2, second YapMarketplace instance)
+
+```bash
+export YAP_MOMENT_INFT=<MomentINFT address from above>
+forge script script/DeployMomentMarketplace.s.sol:DeployMomentMarketplace \
+  --rpc-url zg_testnet \
+  --broadcast \
+  --evm-version cancun
+```
+
+### Deploy YapSubnameRegistrar (CREATE2)
+
+```bash
+export YAP_FIGHTER=0xD023b0C5B0CcC829DBF0B39Df5E81aECe4d36A24
+forge script script/DeployYapSubnameRegistrar.s.sol:DeployYapSubnameRegistrar \
   --rpc-url zg_testnet \
   --broadcast \
   --evm-version cancun
@@ -118,6 +160,10 @@ out/BattleEscrow.sol/BattleEscrow.json
 out/BattleRegistry.sol/BattleRegistry.json
 out/YapMarketplace.sol/YapMarketplace.json
 out/RentalEscrow.sol/RentalEscrow.json
+out/FighterTrainer.sol/FighterTrainer.json
+out/YapInbox.sol/YapInbox.json
+out/MomentINFT.sol/MomentINFT.json
+out/YapSubnameRegistrar.sol/YapSubnameRegistrar.json
 ```
 
 Each JSON includes the ABI (for `viem`/`wagmi` on the web side), bytecode, deployed bytecode, and source map.
@@ -196,6 +242,23 @@ Gas estimates (from `forge test --match-contract YapMarketplaceTest`, warm cache
 3. **`effectiveUser` vs canonical YapFighter authorization**: they're redundant by design but in different directions. During a rental, both `RentalEscrow.effectiveUser` and `YapFighter.isExecutor(tokenId, renter)` return truthy for the renter. Prefer `isExecutor` for in-contract checks (e.g., BattleEscrow), prefer `effectiveUser` for UI display since it collapses the owner/renter/stray-owner cases into one address.
 4. **Executor cap not hit**: re-rent path explicitly revokes the prior renter, so `YapFighter.executorCount(tokenId)` stays at 1 throughout a listing's lifetime.
 
+### MomentINFT (ERC-7857 sibling of YapFighter)
+
+- `mintMoment(battleId, roundNo, side, encryptedTranscriptURI, metadataHash, sealedKey, provenanceHash)` — public, payable when `mintFee > 0`. Reverts unless `BattleEscrow.getBattle(battleId).status == Settled`, `roundNo ∈ [1, maxRounds]`, `side ∈ {0,1}`, and the caller is the owner or active executor of the side's fighter on YapFighter. The `(battleId, roundNo, side)` triple is single-use — collectible serial numbers are produced via `iCloneFrom`.
+- `iTransferFrom` / `iCloneFrom` — same sealed-key + bound-proofId mechanics as YapFighter; clones inherit the parent's `momentOf` provenance verbatim (same battle/round/side, new tokenId).
+- `mint(...)` (IERC7857) — disabled, reverts with `MintNotSupported`. Use `mintMoment`.
+- `momentOf(tokenId)` returns `(battleId, fighterTokenId, provenanceHash, roundNo, side)`. `provenanceHash` is opaque on-chain; indexers use it to rank "canonical" / "highest reaction" moments off-chain.
+- `isMomentClaimed(battleId, roundNo, side)` — uniqueness check.
+- Tradeable through a separate `YapMarketplace` instance whose `fighterContract` is the MomentINFT — see `script/DeployMomentMarketplace.s.sol`.
+
+### YapSubnameRegistrar (`<label>.yap.0g`)
+
+- `register(label, tokenId)` payable — caller must own the fighter; label `[a-z0-9-]{3,32}`, no leading/trailing hyphen; one label per tokenId, one tokenId per label. Optional `registerFee` (default 0, admin-configurable).
+- `release(tokenId)` — current fighter owner releases their label so it (and the tokenId) can be re-registered.
+- Resolution views: `tokenIdOf(label) → uint256` (forward, 0 = unregistered); `labelOf(tokenId) → string` (reverse, empty = unregistered); `effectiveOwner(label) → address` (lazy walk through `fighter.ownerOf` so the canonical wallet follows the NFT — no callback needed); `isAvailable(label) → bool` (well-formedness + uniqueness, never reverts).
+- Bulk resolvers for UI multicall: `resolveBatch(uint256[] tokenIds) → string[]` and `resolveLabelsBatch(string[]) → uint256[]`.
+- Phase 1 is standalone — there is no SidRegistry write here. Phase 2 will publish into the SANN `yap.0g` node once that domain is registered with SPACE ID; the on-chain shape (tokenId binding) stays the same.
+
 ## Roles summary
 
 | Role | Held by (default) | Powers |
@@ -208,3 +271,5 @@ Gas estimates (from `forge test --match-contract YapMarketplaceTest`, warm cache
 | `BattleRegistry.ESCROW_ROLE` | `escrow` | mutate match history + stats |
 | `YapMarketplace.DEFAULT_ADMIN_ROLE` / `ADMIN_ROLE` | `admin` | pause/unpause, set fee, set treasury |
 | `RentalEscrow.DEFAULT_ADMIN_ROLE` / `ADMIN_ROLE` | `admin` | pause/unpause, set fee, set treasury, set default rental permissions |
+| `MomentINFT.DEFAULT_ADMIN_ROLE` / `ADMIN_ROLE` | `admin` | set verifier/treasury/mintFee |
+| `YapSubnameRegistrar.DEFAULT_ADMIN_ROLE` / `ADMIN_ROLE` | `admin` | set registerFee, set treasury |
