@@ -1,0 +1,1798 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Yap — design system v1</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800;900&family=Archivo+Narrow:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  /* ─────────────────────────────────────────────────────────────
+     YAP — design tokens (Promoter direction)
+     Drop these into Tailwind config / CSS module as-is.
+     ───────────────────────────────────────────────────────────── */
+  :root {
+    /* Neutrals — warm, dark theme primary */
+    --yap-ink-950: #0E0B08;   /* deepest, page bg behind cards   */
+    --yap-ink-900: #14110E;   /* canvas bg                        */
+    --yap-ink-800: #1A1612;   /* card bg / soot                   */
+    --yap-ink-700: #221C16;   /* elevated card                    */
+    --yap-ink-600: #2C251D;   /* border default                   */
+    --yap-ink-500: #443A2E;   /* muted divider                    */
+    --yap-ink-400: #6E6457;   /* placeholder text                 */
+    --yap-ink-300: #8A8378;   /* dim text / captions              */
+    --yap-ink-200: #B8B0A2;   /* secondary body                   */
+    --yap-ink-100: #DCD5C7;   /* primary body alt                 */
+    --yap-ink-50:  #F2EDE2;   /* cream — primary text on dark     */
+    --yap-ink-0:   #FBF8F1;   /* paper white                      */
+
+    /* Brand */
+    --yap-crimson:        #C8102E;
+    --yap-crimson-soft:   #A60D26;
+    --yap-crimson-deep:   #7A0918;
+    --yap-gold:           #C9A961;
+    --yap-gold-deep:      #8E7635;
+    --yap-bruise:         #5C2530;
+
+    /* Semantic */
+    --yap-success:        #5BA855;   /* TEE attest ok, win       */
+    --yap-success-bg:     #1C2A1A;
+    --yap-danger:         #E0432B;   /* dispute, slash, KO       */
+    --yap-danger-bg:      #2D1611;
+    --yap-warning:        #E8A22B;   /* pending, low stake       */
+    --yap-warning-bg:     #2A1F0E;
+    --yap-info:           #5DA0D6;   /* on-chain, reads          */
+    --yap-info-bg:        #11202C;
+
+    /* Type families */
+    --yap-font-display: "Anton", "Archivo Black", Impact, sans-serif;
+    --yap-font-body:    "Archivo", "Inter", system-ui, sans-serif;
+    --yap-font-mono:    "Space Mono", "JetBrains Mono", ui-monospace, monospace;
+
+    /* Type scale (px) */
+    --yap-fs-display:  72px;  --yap-lh-display:  0.9;
+    --yap-fs-h1:       48px;  --yap-lh-h1:       1.0;
+    --yap-fs-h2:       36px;  --yap-lh-h2:       1.05;
+    --yap-fs-h3:       28px;  --yap-lh-h3:       1.15;
+    --yap-fs-h4:       22px;  --yap-lh-h4:       1.2;
+    --yap-fs-lead:     18px;  --yap-lh-lead:     1.5;
+    --yap-fs-body:     15px;  --yap-lh-body:     1.55;
+    --yap-fs-small:    13px;  --yap-lh-small:    1.5;
+    --yap-fs-caption:  11px;  --yap-lh-caption:  1.4;
+
+    /* Spacing — 4px base */
+    --yap-s-0: 0;     --yap-s-1: 4px;   --yap-s-2: 8px;   --yap-s-3: 12px;
+    --yap-s-4: 16px;  --yap-s-5: 20px;  --yap-s-6: 24px;  --yap-s-8: 32px;
+    --yap-s-10: 40px; --yap-s-12: 48px; --yap-s-16: 64px; --yap-s-20: 80px;
+
+    /* Radius — kept low: posters don't feel rounded */
+    --yap-r-none: 0;  --yap-r-sm: 2px;  --yap-r-md: 4px;
+    --yap-r-lg: 8px;  --yap-r-full: 999px;
+
+    /* Cut-corner clip-paths (Voltage button trait, used sparingly) */
+    --yap-cut-sm: polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+    --yap-cut-md: polygon(0 0, 100% 0, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+    --yap-cut-lg: polygon(0 0, 100% 0, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+
+    /* Shadows */
+    --yap-sh-1: 0 1px 0 rgba(0,0,0,.4), 0 2px 6px rgba(0,0,0,.25);
+    --yap-sh-2: 0 2px 0 rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.35);
+    --yap-sh-3: 0 4px 0 rgba(0,0,0,.55), 0 16px 48px rgba(0,0,0,.5);
+    --yap-glow-crimson: 0 0 0 1px rgba(200,16,46,.5), 0 0 24px rgba(200,16,46,.35);
+    --yap-glow-gold:    0 0 0 1px rgba(201,169,97,.4), 0 0 18px rgba(201,169,97,.25);
+
+    /* Motion (mirrors MOTION.md — design within these) */
+    --yap-t-fast:   140ms;
+    --yap-t-base:   240ms;
+    --yap-t-med:    420ms;
+    --yap-t-slow:   720ms;
+    --yap-ease-out:    cubic-bezier(.2,.8,.2,1);
+    --yap-ease-punch:  cubic-bezier(.34,1.56,.64,1);   /* overshoot */
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     Page chrome
+     ───────────────────────────────────────────────────────────── */
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--yap-ink-950);
+    color: var(--yap-ink-50);
+    font-family: var(--yap-font-body);
+    font-size: var(--yap-fs-body);
+    line-height: var(--yap-lh-body);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection { background: var(--yap-crimson); color: var(--yap-ink-50); }
+
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 var(--yap-s-12); }
+
+  /* Page hero */
+  .hero {
+    border-bottom: 1px solid var(--yap-ink-600);
+    padding: var(--yap-s-20) 0 var(--yap-s-16);
+    position: relative;
+  }
+  .hero::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 4px;
+    background: var(--yap-crimson);
+  }
+  .hero .eyebrow {
+    font-family: var(--yap-font-mono);
+    font-size: var(--yap-fs-caption);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--yap-gold);
+    margin-bottom: var(--yap-s-3);
+  }
+  .hero h1 {
+    font-family: var(--yap-font-display);
+    font-weight: 400;
+    font-size: clamp(64px, 9vw, 120px);
+    line-height: 0.88;
+    letter-spacing: -1.5px;
+    text-transform: uppercase;
+    margin: 0 0 var(--yap-s-4);
+    color: var(--yap-ink-50);
+  }
+  .hero .deck {
+    font-size: var(--yap-fs-lead);
+    color: var(--yap-ink-200);
+    max-width: 60ch;
+  }
+  .hero .meta {
+    margin-top: var(--yap-s-6);
+    display: flex; gap: var(--yap-s-6); flex-wrap: wrap;
+    font-family: var(--yap-font-mono);
+    font-size: var(--yap-fs-caption);
+    color: var(--yap-ink-300);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .hero .meta b { color: var(--yap-ink-50); font-weight: 700; }
+
+  /* Section header */
+  .section { padding: var(--yap-s-20) 0; border-bottom: 1px solid var(--yap-ink-600); }
+  .section:last-of-type { border-bottom: none; }
+  .section-head {
+    display: flex; align-items: baseline; gap: var(--yap-s-6);
+    margin-bottom: var(--yap-s-10);
+    flex-wrap: wrap;
+  }
+  .section-head .num {
+    font-family: var(--yap-font-mono);
+    font-size: var(--yap-fs-caption);
+    letter-spacing: 3px;
+    color: var(--yap-crimson);
+  }
+  .section-head h2 {
+    font-family: var(--yap-font-display);
+    font-weight: 400;
+    font-size: var(--yap-fs-h1);
+    line-height: var(--yap-lh-h1);
+    letter-spacing: -0.5px;
+    text-transform: uppercase;
+    margin: 0;
+  }
+  .section-head .subtitle {
+    color: var(--yap-ink-300);
+    font-size: var(--yap-fs-body);
+    flex: 1; min-width: 240px;
+    margin-left: auto;
+    text-align: right;
+  }
+
+  .subhead {
+    font-family: var(--yap-font-mono);
+    font-size: var(--yap-fs-caption);
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--yap-ink-300);
+    margin: var(--yap-s-10) 0 var(--yap-s-4);
+    display: flex; align-items: center; gap: var(--yap-s-3);
+  }
+  .subhead::before {
+    content: ''; display: inline-block; width: 12px; height: 2px;
+    background: var(--yap-crimson);
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     LOGOS
+     ───────────────────────────────────────────────────────────── */
+  .logo-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--yap-s-6);
+  }
+  .logo-card {
+    background: var(--yap-ink-800);
+    border: 1px solid var(--yap-ink-600);
+    padding: var(--yap-s-10);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: var(--yap-s-6);
+    min-height: 280px;
+    position: relative;
+  }
+  .logo-card.light { background: var(--yap-ink-50); color: var(--yap-ink-900); }
+  .logo-card .label {
+    position: absolute; top: var(--yap-s-4); left: var(--yap-s-4);
+    font-family: var(--yap-font-mono); font-size: var(--yap-fs-caption);
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--yap-ink-300);
+  }
+  .logo-card.light .label { color: var(--yap-ink-400); }
+
+  /* Primary lockup — wordmark + tag-mark + line */
+  .lockup { display: flex; align-items: stretch; gap: 14px; }
+  .lockup .mark { display: flex; align-items: center; justify-content: center; }
+  .lockup .word {
+    font-family: var(--yap-font-display);
+    font-size: 72px; line-height: 0.85; letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .lockup .right { display: flex; flex-direction: column; justify-content: space-between; padding: 4px 0; }
+  .lockup .tag {
+    font-family: var(--yap-font-mono); font-size: 9px; letter-spacing: 3px;
+    text-transform: uppercase; line-height: 1.2;
+  }
+  .lockup .tag.gold { color: var(--yap-gold); }
+  .lockup .tag.crim { color: var(--yap-crimson); }
+
+  /* Wordmark only — bigger */
+  .wordmark {
+    font-family: var(--yap-font-display);
+    font-size: 120px; line-height: 0.85; letter-spacing: 0;
+    text-transform: uppercase;
+    position: relative;
+  }
+  .wordmark .underbar {
+    position: absolute; bottom: -2px; left: 0; height: 8px; width: 100%;
+    background: var(--yap-crimson);
+  }
+
+  /* Square mark — chunky angular Y inside a stamp box */
+  .stamp {
+    width: 96px; height: 96px;
+    border: 3px solid currentColor;
+    display: grid; place-items: center;
+    position: relative;
+  }
+  .stamp::before, .stamp::after {
+    content: ''; position: absolute;
+    width: 8px; height: 8px;
+    background: var(--yap-crimson);
+  }
+  .stamp::before { top: -4px; left: -4px; }
+  .stamp::after  { bottom: -4px; right: -4px; }
+  .stamp .y {
+    font-family: var(--yap-font-display);
+    font-size: 64px; line-height: 1; letter-spacing: 0;
+  }
+
+  .lockup-meta {
+    font-family: var(--yap-font-mono); font-size: var(--yap-fs-caption);
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--yap-ink-300); text-align: center;
+  }
+  .logo-card.light .lockup-meta { color: var(--yap-ink-400); }
+
+  /* ─────────────────────────────────────────────────────────────
+     COLOR
+     ───────────────────────────────────────────────────────────── */
+  .scale { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1px; background: var(--yap-ink-600); border: 1px solid var(--yap-ink-600); }
+  .scale .swatch {
+    background: var(--c);
+    aspect-ratio: 1.1;
+    padding: var(--yap-s-3);
+    display: flex; flex-direction: column; justify-content: flex-end;
+    color: var(--ft, var(--yap-ink-50));
+    font-family: var(--yap-font-mono);
+    font-size: 10px; letter-spacing: 0.5px;
+  }
+  .scale .swatch .step { opacity: .55; text-transform: uppercase; letter-spacing: 1.5px; }
+  .scale .swatch .hex { font-weight: 700; }
+
+  .palette-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--yap-s-3); }
+  .palette-row .chip {
+    background: var(--c);
+    aspect-ratio: 1.4;
+    padding: var(--yap-s-4);
+    color: var(--ft, var(--yap-ink-50));
+    display: flex; flex-direction: column; justify-content: space-between;
+    border: 1px solid var(--yap-ink-600);
+  }
+  .palette-row .chip .name {
+    font-family: var(--yap-font-display); font-size: 22px; line-height: 1;
+    letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .palette-row .chip .hex {
+    font-family: var(--yap-font-mono); font-size: 11px;
+  }
+  .palette-row .chip .var {
+    font-family: var(--yap-font-mono); font-size: 9px; opacity: .7;
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+
+  .semantic-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--yap-s-3); }
+  .semantic-row .cell {
+    border: 1px solid var(--yap-ink-600);
+    background: var(--bg);
+    padding: var(--yap-s-5);
+    display: flex; flex-direction: column; gap: var(--yap-s-3);
+  }
+  .semantic-row .cell .top {
+    display: flex; align-items: center; gap: var(--yap-s-3);
+  }
+  .semantic-row .cell .dot {
+    width: 14px; height: 14px; border-radius: 50%; background: var(--c);
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--c) 30%, transparent);
+  }
+  .semantic-row .cell .name {
+    font-family: var(--yap-font-display); font-size: 22px; text-transform: uppercase; letter-spacing: 0.5px;
+    line-height: 1;
+  }
+  .semantic-row .cell .use {
+    font-family: var(--yap-font-mono); font-size: 10px;
+    color: var(--yap-ink-300); letter-spacing: 1.5px; text-transform: uppercase;
+  }
+  .semantic-row .cell .hex {
+    font-family: var(--yap-font-mono); font-size: 11px; color: var(--c);
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     TYPE
+     ───────────────────────────────────────────────────────────── */
+  .type-table {
+    border: 1px solid var(--yap-ink-600);
+    background: var(--yap-ink-800);
+  }
+  .type-row {
+    display: grid; grid-template-columns: 140px 1fr 220px;
+    align-items: baseline;
+    padding: var(--yap-s-5) var(--yap-s-6);
+    border-bottom: 1px solid var(--yap-ink-700);
+    gap: var(--yap-s-6);
+  }
+  .type-row:last-child { border-bottom: none; }
+  .type-row .key {
+    font-family: var(--yap-font-mono);
+    font-size: var(--yap-fs-caption);
+    color: var(--yap-gold);
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+  .type-row .specs {
+    font-family: var(--yap-font-mono);
+    font-size: 10px;
+    color: var(--yap-ink-300);
+    text-align: right;
+    line-height: 1.4;
+  }
+  .type-display { font-family: var(--yap-font-display); font-weight: 400; font-size: 64px; line-height: .9; letter-spacing: -1px; text-transform: uppercase; }
+  .type-h1 { font-family: var(--yap-font-display); font-size: 44px; line-height: 1; text-transform: uppercase; }
+  .type-h2 { font-family: var(--yap-font-display); font-size: 32px; line-height: 1.05; text-transform: uppercase; }
+  .type-h3 { font-family: var(--yap-font-display); font-size: 24px; line-height: 1.15; text-transform: uppercase; }
+  .type-h4 { font-family: var(--yap-font-body); font-weight: 800; font-size: 18px; letter-spacing: -0.2px; }
+  .type-lead { font-family: var(--yap-font-body); font-size: 18px; line-height: 1.5; }
+  .type-body { font-family: var(--yap-font-body); font-size: 15px; }
+  .type-small { font-family: var(--yap-font-body); font-size: 13px; color: var(--yap-ink-200); }
+  .type-caption { font-family: var(--yap-font-mono); font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--yap-ink-300); }
+  .type-mono { font-family: var(--yap-font-mono); font-size: 14px; color: var(--yap-gold); }
+
+  /* ─────────────────────────────────────────────────────────────
+     SPACING / RADIUS / SHADOW
+     ───────────────────────────────────────────────────────────── */
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--yap-s-6); }
+  .token-box {
+    background: var(--yap-ink-800);
+    border: 1px solid var(--yap-ink-600);
+    padding: var(--yap-s-6);
+  }
+  .token-box .ttl {
+    font-family: var(--yap-font-display); font-size: 22px;
+    text-transform: uppercase; letter-spacing: 0.5px; line-height: 1;
+    margin-bottom: var(--yap-s-4);
+  }
+  .space-stack { display: flex; flex-direction: column; gap: var(--yap-s-2); }
+  .space-row {
+    display: grid; grid-template-columns: 56px 1fr 60px;
+    align-items: center; gap: var(--yap-s-3);
+    font-family: var(--yap-font-mono); font-size: 11px;
+  }
+  .space-row .key { color: var(--yap-gold); }
+  .space-row .bar { height: 12px; background: var(--yap-crimson); }
+  .space-row .val { color: var(--yap-ink-300); text-align: right; }
+
+  .radius-stack { display: flex; gap: var(--yap-s-3); align-items: flex-end; flex-wrap: wrap; }
+  .radius-card {
+    width: 64px; height: 64px;
+    background: var(--yap-ink-700);
+    border: 1px solid var(--yap-ink-500);
+    display: flex; align-items: flex-end; justify-content: center;
+    font-family: var(--yap-font-mono); font-size: 10px;
+    color: var(--yap-ink-200); padding-bottom: 6px;
+  }
+
+  .shadow-stack { display: flex; flex-direction: column; gap: var(--yap-s-4); }
+  .shadow-card {
+    background: var(--yap-ink-700);
+    border: 1px solid var(--yap-ink-500);
+    height: 56px; padding: 0 var(--yap-s-4);
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: var(--yap-font-mono); font-size: 11px;
+  }
+  .shadow-card .key { color: var(--yap-gold); }
+  .shadow-card .desc { color: var(--yap-ink-300); }
+
+  /* ─────────────────────────────────────────────────────────────
+     MOTION
+     ───────────────────────────────────────────────────────────── */
+  .motion-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--yap-s-3); }
+  .motion-cell {
+    background: var(--yap-ink-800);
+    border: 1px solid var(--yap-ink-600);
+    padding: var(--yap-s-5);
+    cursor: pointer;
+  }
+  .motion-cell .key {
+    font-family: var(--yap-font-display); font-size: 22px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .motion-cell .ms {
+    font-family: var(--yap-font-mono); font-size: 11px; color: var(--yap-gold);
+    margin-bottom: var(--yap-s-3);
+  }
+  .motion-cell .desc { font-size: var(--yap-fs-small); color: var(--yap-ink-200); margin-bottom: var(--yap-s-3); }
+  .motion-cell .ball { width: 14px; height: 14px; background: var(--yap-crimson); border-radius: 50%; }
+  .motion-cell:hover .ball { transform: translateX(180px); }
+  .motion-cell:nth-child(1) .ball { transition: transform var(--yap-t-fast) var(--yap-ease-out); }
+  .motion-cell:nth-child(2) .ball { transition: transform var(--yap-t-base) var(--yap-ease-out); }
+  .motion-cell:nth-child(3) .ball { transition: transform var(--yap-t-med)  var(--yap-ease-out); }
+  .motion-cell:nth-child(4) .ball { transition: transform var(--yap-t-slow) var(--yap-ease-punch); }
+
+  /* ─────────────────────────────────────────────────────────────
+     BUTTONS — Voltage-style cut corners + chunky condensed display
+     ───────────────────────────────────────────────────────────── */
+  .btn {
+    --bg: var(--yap-crimson);
+    --fg: var(--yap-ink-50);
+    --bd: transparent;
+    --pad-y: 12px; --pad-x: 22px;
+    --fs: 14px; --gap: 8px;
+    background: var(--bg); color: var(--fg);
+    border: 1.5px solid var(--bd);
+    padding: var(--pad-y) var(--pad-x);
+    font-family: var(--yap-font-display);
+    font-weight: 400;
+    font-size: var(--fs);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: var(--gap);
+    clip-path: var(--yap-cut-md);
+    transition: transform var(--yap-t-fast) var(--yap-ease-out),
+                background var(--yap-t-fast) var(--yap-ease-out),
+                color var(--yap-t-fast) var(--yap-ease-out);
+    text-decoration: none;
+    line-height: 1;
+  }
+  .btn:hover { transform: translate(-1px, -1px); }
+  .btn:active { transform: translate(1px, 1px); }
+  .btn[disabled], .btn.is-disabled {
+    background: var(--yap-ink-700); color: var(--yap-ink-400);
+    cursor: not-allowed; clip-path: var(--yap-cut-md);
+    border-color: transparent;
+  }
+  .btn[disabled]:hover { transform: none; }
+
+  /* Variants */
+  .btn--secondary { --bg: transparent; --fg: var(--yap-ink-50); --bd: var(--yap-ink-50); }
+  .btn--secondary:hover { --bg: var(--yap-ink-50); --fg: var(--yap-ink-900); }
+  .btn--ghost { --bg: transparent; --fg: var(--yap-ink-200); --bd: var(--yap-ink-500); }
+  .btn--ghost:hover { --fg: var(--yap-ink-50); --bd: var(--yap-ink-200); }
+  .btn--danger  { --bg: var(--yap-danger);  --fg: var(--yap-ink-50); }
+  .btn--gold    { --bg: var(--yap-gold);    --fg: var(--yap-ink-900); }
+
+  /* Sizes */
+  .btn--sm { --pad-y: 8px;  --pad-x: 14px; --fs: 12px; clip-path: var(--yap-cut-sm); }
+  .btn--lg { --pad-y: 16px; --pad-x: 28px; --fs: 18px; clip-path: var(--yap-cut-lg); letter-spacing: 2.5px; }
+
+  .btn .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: currentColor;
+    animation: yap-pulse 1.2s var(--yap-ease-out) infinite;
+  }
+  @keyframes yap-pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+  .btn-grid { display: grid; gap: var(--yap-s-6); grid-template-columns: 1fr; }
+  .btn-row { display: flex; gap: var(--yap-s-3); flex-wrap: wrap; align-items: center; }
+  .btn-row .label {
+    width: 130px; flex: 0 0 130px;
+    font-family: var(--yap-font-mono); font-size: var(--yap-fs-caption);
+    letter-spacing: 2px; text-transform: uppercase; color: var(--yap-ink-300);
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     CARDS
+     ───────────────────────────────────────────────────────────── */
+  .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--yap-s-6); }
+  .card {
+    background: var(--yap-ink-800);
+    border: 1px solid var(--yap-ink-600);
+    padding: var(--yap-s-6);
+  }
+  .card.elevated { background: var(--yap-ink-700); box-shadow: var(--yap-sh-2); }
+  .card.interactive { cursor: pointer; transition: border-color var(--yap-t-fast), transform var(--yap-t-fast); }
+  .card.interactive:hover { border-color: var(--yap-crimson); transform: translateY(-2px); }
+  .card .card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: var(--yap-s-3); margin-bottom: var(--yap-s-4);
+    border-bottom: 1px solid var(--yap-ink-600);
+  }
+  .card .card-title {
+    font-family: var(--yap-font-display); font-size: 22px; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1;
+  }
+  .card .card-foot {
+    margin-top: var(--yap-s-4); padding-top: var(--yap-s-3);
+    border-top: 1px solid var(--yap-ink-600);
+    display: flex; justify-content: flex-end; gap: var(--yap-s-2);
+  }
+  .card .role-tag {
+    font-family: var(--yap-font-mono); font-size: 10px;
+    letter-spacing: 1.5px; text-transform: uppercase; color: var(--yap-gold);
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     BADGES — fight-promotion vocabulary, not status pills.
+     Six distinct forms: Stamp · Tape · Mono · Token · Split · Record.
+     No colored-border-around-colored-fill cliché.
+     ───────────────────────────────────────────────────────────── */
+
+  /* Base mono — quiet inline status. Squared, no border, just a tone-
+     shifted bg. Used when a stamp would be too loud (table cells, etc). */
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 9px;
+    background: var(--yap-ink-700);
+    color: var(--yap-ink-100);
+    font-family: var(--yap-font-mono);
+    font-size: 10.5px; letter-spacing: 1.5px;
+    text-transform: uppercase;
+    line-height: 1.4;
+    border: none; border-radius: 0;
+  }
+  .badge--success { color: var(--yap-success); background: var(--yap-success-bg); }
+  .badge--danger  { color: var(--yap-danger);  background: var(--yap-danger-bg);  }
+  .badge--warning { color: var(--yap-warning); background: var(--yap-warning-bg); }
+  .badge--info    { color: var(--yap-info);    background: var(--yap-info-bg);    }
+  .badge--gold    { color: var(--yap-gold);    background: var(--yap-ink-800);    box-shadow: inset 0 -2px 0 var(--yap-gold); }
+
+  /* Stamp — solid crimson block with cut corner. Anton caps. The
+     loudest variant — for live status, KO, verdicts, fight callouts. */
+  .stamp-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 14px 6px;
+    background: var(--yap-crimson);
+    color: var(--yap-ink-50);
+    font-family: var(--yap-font-display);
+    font-size: 17px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    line-height: 1;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  }
+  .stamp-badge .pulse {
+    width: 8px; height: 8px; background: currentColor; border-radius: 50%;
+    animation: yap-pulse 1.2s var(--yap-ease-out) infinite;
+  }
+  .stamp-badge--gold   { background: var(--yap-gold);   color: var(--yap-ink-900); }
+  .stamp-badge--ink    { background: var(--yap-ink-50); color: var(--yap-ink-900); }
+  .stamp-badge--bruise { background: var(--yap-bruise); color: var(--yap-ink-50); }
+  .stamp-badge .ser {
+    font-family: var(--yap-font-mono); font-size: 9px; letter-spacing: 1.5px;
+    opacity: .7; padding-left: 8px; border-left: 1px solid currentColor;
+    margin-left: 2px; align-self: stretch; display: flex; align-items: center;
+  }
+
+  /* Tape — cream paper strip, hole-punched, slightly rotated. For
+     collectible / edition / promo callouts (Top 10, 1st Edition). */
+  .tape-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px 5px 22px;
+    background: var(--yap-ink-50);
+    color: var(--yap-ink-900);
+    font-family: var(--yap-font-display);
+    font-size: 15px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    line-height: 1;
+    position: relative;
+    transform: rotate(-1.5deg);
+  }
+  .tape-badge::before {
+    content: ''; position: absolute;
+    left: 7px; top: 50%; transform: translateY(-50%);
+    width: 7px; height: 7px;
+    background: var(--yap-ink-900);
+    border-radius: 50%;
+  }
+  .tape-badge--crim { background: var(--yap-crimson); color: var(--yap-ink-50); }
+  .tape-badge--crim::before { background: var(--yap-ink-50); }
+  .tape-badge--gold { background: var(--yap-gold); color: var(--yap-ink-900); }
+
+  /* Token — bracketed monospace. For addresses, IDs, hashes. The
+     terminal-style brackets do all the chrome work; no fill needed. */
+  .token-badge {
+    display: inline-flex; align-items: center;
+    font-family: var(--yap-font-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.5px;
+    color: var(--yap-ink-100);
+    line-height: 1;
+    padding: 3px 0;
+  }
+  .token-badge::before, .token-badge::after {
+    color: var(--yap-gold); font-weight: 700;
+  }
+  .token-badge::before { content: '['; margin-right: 6px; }
+  .token-badge::after  { content: ']'; margin-left: 6px; }
+  .token-badge--gold { color: var(--yap-gold); }
+
+  /* Split — two-tone key/value, stat-card style. For round indicators,
+     ELO, pools, odds when they appear standalone. */
+  .split-badge {
+    display: inline-flex; align-items: stretch; line-height: 1;
+  }
+  .split-badge .k {
+    background: var(--yap-ink-700);
+    color: var(--yap-ink-300);
+    padding: 7px 9px;
+    font-family: var(--yap-font-mono);
+    font-size: 9.5px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    display: flex; align-items: center;
+  }
+  .split-badge .v {
+    background: var(--yap-ink-50);
+    color: var(--yap-ink-900);
+    padding: 6px 11px 5px;
+    font-family: var(--yap-font-display);
+    font-size: 17px;
+    letter-spacing: 0.5px;
+    display: flex; align-items: center;
+  }
+  .split-badge--crim .v { background: var(--yap-crimson); color: var(--yap-ink-50); }
+  .split-badge--gold .v { background: var(--yap-gold);    color: var(--yap-ink-900); }
+  .split-badge--bruise .v { background: var(--yap-bruise); color: var(--yap-ink-50); }
+
+  /* Record — "14—3" with W in crimson, L in dim. Display caps. */
+  .record-badge {
+    font-family: var(--yap-font-display);
+    font-size: 26px; line-height: 1; letter-spacing: 0.5px;
+    display: inline-flex; align-items: baseline; gap: 0;
+    text-transform: uppercase;
+  }
+  .record-badge .w  { color: var(--yap-crimson); }
+  .record-badge .x  { color: var(--yap-ink-500); margin: 0 4px; font-size: .7em; transform: translateY(-2px); }
+  .record-badge .l  { color: var(--yap-ink-300); }
+  .record-badge .lbl {
+    font-family: var(--yap-font-mono); font-size: 9px; letter-spacing: 2px;
+    color: var(--yap-ink-400); margin-left: 8px; align-self: center;
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     INPUTS
+     ───────────────────────────────────────────────────────────── */
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field-label {
+    font-family: var(--yap-font-mono); font-size: 11px;
+    letter-spacing: 2px; text-transform: uppercase; color: var(--yap-ink-200);
+  }
+  .field-help { font-family: var(--yap-font-mono); font-size: 11px; color: var(--yap-ink-300); }
+  .field-error { font-family: var(--yap-font-mono); font-size: 11px; color: var(--yap-danger); }
+  .input, .select, .textarea {
+    background: var(--yap-ink-900);
+    border: 1.5px solid var(--yap-ink-600);
+    color: var(--yap-ink-50);
+    padding: 11px 14px;
+    font-family: var(--yap-font-mono);
+    font-size: 14px;
+    line-height: 1.2;
+    border-radius: 0;
+    outline: none;
+    transition: border-color var(--yap-t-fast);
+  }
+  .input:focus, .select:focus, .textarea:focus { border-color: var(--yap-crimson); }
+  .input::placeholder { color: var(--yap-ink-400); }
+  .input.is-error, .select.is-error { border-color: var(--yap-danger); }
+  .input.is-disabled { color: var(--yap-ink-400); background: var(--yap-ink-800); }
+  .input--with-prefix { display: flex; align-items: stretch; border: 1.5px solid var(--yap-ink-600); }
+  .input--with-prefix:focus-within { border-color: var(--yap-crimson); }
+  .input--with-prefix .prefix {
+    background: var(--yap-ink-800);
+    color: var(--yap-ink-300);
+    padding: 0 14px; display: flex; align-items: center;
+    font-family: var(--yap-font-mono); font-size: 13px;
+    border-right: 1px solid var(--yap-ink-600);
+  }
+  .input--with-prefix input {
+    border: none; background: var(--yap-ink-900); flex: 1;
+    color: var(--yap-ink-50); padding: 11px 14px;
+    font-family: var(--yap-font-mono); font-size: 14px;
+    outline: none;
+  }
+  .input--search { position: relative; }
+  .input--search input { padding-left: 40px; width: 100%; }
+  .input--search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--yap-ink-300); }
+
+  .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--yap-s-6); }
+
+  /* ─────────────────────────────────────────────────────────────
+     MODAL
+     ───────────────────────────────────────────────────────────── */
+  .modal-shell {
+    background: var(--yap-ink-800);
+    border: 1px solid var(--yap-ink-500);
+    box-shadow: var(--yap-sh-3);
+    width: 100%;
+    position: relative;
+  }
+  .modal-shell::before {
+    content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px;
+    background: var(--yap-crimson);
+  }
+  .modal-shell .modal-head {
+    padding: var(--yap-s-5) var(--yap-s-6);
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--yap-ink-600);
+  }
+  .modal-shell .modal-head .ttl {
+    font-family: var(--yap-font-display);
+    font-size: 24px; line-height: 1; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .modal-shell .modal-head .close {
+    background: none; border: none; color: var(--yap-ink-300); cursor: pointer;
+    font-size: 22px; line-height: 1; padding: 4px;
+  }
+  .modal-shell .modal-body {
+    padding: var(--yap-s-6);
+    color: var(--yap-ink-200);
+    font-size: var(--yap-fs-body);
+  }
+  .modal-shell .modal-foot {
+    padding: var(--yap-s-5) var(--yap-s-6);
+    display: flex; justify-content: flex-end; gap: var(--yap-s-3);
+    border-top: 1px solid var(--yap-ink-600);
+    background: var(--yap-ink-900);
+  }
+  .modal-grid { display: grid; grid-template-columns: 280px 380px 1fr; gap: var(--yap-s-4); align-items: start; }
+
+  /* ─────────────────────────────────────────────────────────────
+     TOASTS
+     ───────────────────────────────────────────────────────────── */
+  .toast-stack { display: flex; flex-direction: column; gap: var(--yap-s-3); max-width: 460px; }
+  .toast {
+    background: var(--yap-ink-800);
+    border: 1px solid var(--yap-ink-500);
+    border-left: 4px solid var(--yap-info);
+    padding: var(--yap-s-4) var(--yap-s-5);
+    display: flex; gap: var(--yap-s-3);
+    box-shadow: var(--yap-sh-1);
+  }
+  .toast.success { border-left-color: var(--yap-success); }
+  .toast.danger  { border-left-color: var(--yap-danger); }
+  .toast.warning { border-left-color: var(--yap-warning); }
+  .toast .body { flex: 1; }
+  .toast .title {
+    font-family: var(--yap-font-display);
+    font-size: 16px; text-transform: uppercase; letter-spacing: 1px; line-height: 1.1;
+    margin-bottom: 4px;
+  }
+  .toast .desc { font-size: var(--yap-fs-small); color: var(--yap-ink-200); }
+  .toast .meta {
+    font-family: var(--yap-font-mono); font-size: 10px; letter-spacing: 1.5px;
+    color: var(--yap-ink-300); margin-top: 4px; text-transform: uppercase;
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     TABS
+     ───────────────────────────────────────────────────────────── */
+  .tabs-underline {
+    display: flex; gap: var(--yap-s-6); border-bottom: 1px solid var(--yap-ink-600);
+  }
+  .tabs-underline button {
+    background: none; border: none; padding: var(--yap-s-3) 0;
+    color: var(--yap-ink-300); cursor: pointer;
+    font-family: var(--yap-font-display); font-size: 18px; line-height: 1;
+    text-transform: uppercase; letter-spacing: 1px;
+    position: relative;
+  }
+  .tabs-underline button.is-active { color: var(--yap-ink-50); }
+  .tabs-underline button.is-active::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px;
+    background: var(--yap-crimson);
+  }
+  .tabs-underline .count {
+    font-family: var(--yap-font-mono); font-size: 10px; color: var(--yap-ink-400);
+    letter-spacing: 1px; margin-left: 6px;
+  }
+
+  .tabs-segmented {
+    display: inline-flex; padding: 3px;
+    background: var(--yap-ink-900);
+    border: 1px solid var(--yap-ink-600);
+  }
+  .tabs-segmented button {
+    background: none; border: none; padding: 8px 16px;
+    color: var(--yap-ink-300); cursor: pointer;
+    font-family: var(--yap-font-display); font-size: 13px;
+    text-transform: uppercase; letter-spacing: 1.5px; line-height: 1;
+  }
+  .tabs-segmented button.is-active {
+    background: var(--yap-crimson); color: var(--yap-ink-50);
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     TABLE
+     ───────────────────────────────────────────────────────────── */
+  .table-wrap { background: var(--yap-ink-800); border: 1px solid var(--yap-ink-600); overflow: hidden; }
+  .table { width: 100%; border-collapse: collapse; }
+  .table thead th {
+    text-align: left;
+    padding: var(--yap-s-4) var(--yap-s-5);
+    background: var(--yap-ink-900);
+    border-bottom: 1px solid var(--yap-ink-600);
+    font-family: var(--yap-font-mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--yap-ink-300);
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+  }
+  .table thead th .sort-arrow { color: var(--yap-crimson); margin-left: 4px; }
+  .table tbody td {
+    padding: var(--yap-s-4) var(--yap-s-5);
+    border-bottom: 1px solid var(--yap-ink-700);
+    font-size: var(--yap-fs-small);
+  }
+  .table tbody tr:hover { background: var(--yap-ink-700); }
+  .table tbody tr:last-child td { border-bottom: none; }
+  .table .num { font-family: var(--yap-font-mono); color: var(--yap-gold); text-align: right; }
+  .table .name { font-family: var(--yap-font-display); font-size: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .table .sub  { font-family: var(--yap-font-mono); font-size: 10px; color: var(--yap-ink-300); margin-top: 2px; }
+  .table .rank-medal {
+    display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center;
+    background: var(--yap-ink-700); color: var(--yap-gold);
+    font-family: var(--yap-font-display); font-size: 14px;
+  }
+  .table .rank-medal.top { background: var(--yap-crimson); color: var(--yap-ink-50); }
+
+  /* ─────────────────────────────────────────────────────────────
+     EMPTY STATE & SKELETONS
+     ───────────────────────────────────────────────────────────── */
+  .empty {
+    background: var(--yap-ink-800); border: 1px dashed var(--yap-ink-500);
+    padding: var(--yap-s-12);
+    text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: var(--yap-s-4);
+  }
+  .empty .glyph {
+    width: 64px; height: 64px; border: 2px dashed var(--yap-ink-500);
+    display: grid; place-items: center;
+    color: var(--yap-ink-400);
+  }
+  .empty .ttl { font-family: var(--yap-font-display); font-size: 28px; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1; }
+  .empty .deck { color: var(--yap-ink-300); font-size: var(--yap-fs-small); max-width: 40ch; }
+
+  .skel {
+    background: linear-gradient(90deg, var(--yap-ink-700) 0%, var(--yap-ink-600) 50%, var(--yap-ink-700) 100%);
+    background-size: 200% 100%;
+    animation: yap-shimmer 1.4s ease-in-out infinite;
+  }
+  @keyframes yap-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  .skel-card {
+    background: var(--yap-ink-800); border: 1px solid var(--yap-ink-600); padding: var(--yap-s-5);
+    display: flex; flex-direction: column; gap: var(--yap-s-3);
+  }
+  .skel-block { height: 120px; }
+  .skel-line { height: 14px; }
+
+  /* ─────────────────────────────────────────────────────────────
+     ICONS
+     ───────────────────────────────────────────────────────────── */
+  .icon-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--yap-s-3);
+  }
+  .icon-cell {
+    background: var(--yap-ink-800); border: 1px solid var(--yap-ink-600);
+    padding: var(--yap-s-5);
+    display: flex; flex-direction: column; align-items: center; gap: var(--yap-s-3);
+    text-align: center;
+  }
+  .icon-cell svg { color: var(--yap-ink-50); }
+  .icon-cell .lbl {
+    font-family: var(--yap-font-mono); font-size: 10px;
+    color: var(--yap-ink-300); letter-spacing: 1.5px; text-transform: uppercase;
+  }
+  .icon-cell.placeholder svg { color: var(--yap-ink-400); }
+
+  /* ─────────────────────────────────────────────────────────────
+     TOKEN CODE BLOCK (footer)
+     ───────────────────────────────────────────────────────────── */
+  .codeblock {
+    background: #050402;
+    border: 1px solid var(--yap-ink-600);
+    border-left: 3px solid var(--yap-gold);
+    padding: var(--yap-s-5) var(--yap-s-6);
+    font-family: var(--yap-font-mono);
+    font-size: 12px;
+    color: var(--yap-ink-100);
+    line-height: 1.65;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .codeblock .c { color: var(--yap-ink-400); }
+  .codeblock .v { color: var(--yap-gold); }
+  .codeblock .k { color: var(--yap-ink-50); }
+
+</style>
+</head>
+<body>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="wrap">
+      <div class="eyebrow">YAP · DESIGN SYSTEM · V1 · FOR REVIEW</div>
+      <h1>Verifiable<br/>Combat.</h1>
+      <p class="deck">
+        Brand foundation + component primitives. Direction: <b style="color:var(--yap-crimson)">Promoter</b> (fight-poster editorial) — heavy condensed display, warm ink + cream + crimson, ticket-stub composition. Buttons borrow Voltage's chunky cut-corner treatment so a primary action lands like a punch.
+      </p>
+      <div class="meta">
+        <span><b>0G ·</b> Aristotle / Galileo</span>
+        <span><b>STACK ·</b> Next.js + RainbowKit</span>
+        <span><b>THEME ·</b> Dark default</span>
+        <span><b>DENSITY ·</b> Data-rich</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+
+    <!-- LOGOS -->
+    <section class="section" id="brand">
+      <div class="section-head">
+        <span class="num">§ 01</span>
+        <h2>Brand</h2>
+        <span class="subtitle">Wordmark + square mark, treatments for dark and light surfaces.</span>
+      </div>
+
+      <div class="logo-grid">
+
+        <!-- Primary lockup, dark -->
+        <div class="logo-card">
+          <span class="label">Primary lockup · dark</span>
+          <div class="lockup" style="color: var(--yap-ink-50);">
+            <div class="mark">
+              <div class="stamp" style="color: var(--yap-ink-50);">
+                <span class="y">Y</span>
+              </div>
+            </div>
+            <div class="right">
+              <div class="tag gold">★ EST · 2026 ★</div>
+              <div class="word">YAP</div>
+              <div class="tag crim">VERIFIABLE COMBAT · 0G</div>
+            </div>
+          </div>
+          <div class="lockup-meta">on Ink-900 · primary use</div>
+        </div>
+
+        <!-- Primary lockup, light -->
+        <div class="logo-card light">
+          <span class="label">Primary lockup · light</span>
+          <div class="lockup" style="color: var(--yap-ink-900);">
+            <div class="mark">
+              <div class="stamp" style="color: var(--yap-ink-900);">
+                <span class="y">Y</span>
+              </div>
+            </div>
+            <div class="right">
+              <div class="tag gold" style="color: var(--yap-gold-deep);">★ EST · 2026 ★</div>
+              <div class="word">YAP</div>
+              <div class="tag crim">VERIFIABLE COMBAT · 0G</div>
+            </div>
+          </div>
+          <div class="lockup-meta">on Cream · marketing, print</div>
+        </div>
+
+        <!-- Wordmark only, dark -->
+        <div class="logo-card">
+          <span class="label">Wordmark</span>
+          <div class="wordmark" style="color: var(--yap-ink-50);">
+            YAP<span class="underbar"></span>
+          </div>
+          <div class="lockup-meta">in-product nav, footer</div>
+        </div>
+
+        <!-- Square mark variants -->
+        <div class="logo-card">
+          <span class="label">Square mark · favicon, social</span>
+          <div style="display: flex; gap: 24px; align-items: center;">
+            <div class="stamp" style="color: var(--yap-ink-50); width: 80px; height: 80px;">
+              <span class="y" style="font-size: 52px;">Y</span>
+            </div>
+            <div class="stamp" style="color: var(--yap-ink-50); width: 56px; height: 56px;">
+              <span class="y" style="font-size: 36px;">Y</span>
+            </div>
+            <div class="stamp" style="color: var(--yap-crimson); width: 40px; height: 40px;">
+              <span class="y" style="font-size: 26px;">Y</span>
+            </div>
+          </div>
+          <div class="lockup-meta">stamp framing · crimson register-marks</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- COLOR -->
+    <section class="section" id="color">
+      <div class="section-head">
+        <span class="num">§ 02</span>
+        <h2>Color</h2>
+        <span class="subtitle">Warm dark neutrals, crimson primary, gold accent. Semantic tokens read at 4.5:1+ on Ink-900.</span>
+      </div>
+
+      <div class="subhead">Neutral scale — Ink</div>
+      <div class="scale" style="grid-template-columns: repeat(12, 1fr);">
+        <div class="swatch" style="--c:#FBF8F1; --ft:#14110E;"><span class="step">0</span><span class="hex">#FBF8F1</span></div>
+        <div class="swatch" style="--c:#F2EDE2; --ft:#14110E;"><span class="step">50</span><span class="hex">#F2EDE2</span></div>
+        <div class="swatch" style="--c:#DCD5C7; --ft:#14110E;"><span class="step">100</span><span class="hex">#DCD5C7</span></div>
+        <div class="swatch" style="--c:#B8B0A2; --ft:#14110E;"><span class="step">200</span><span class="hex">#B8B0A2</span></div>
+        <div class="swatch" style="--c:#8A8378;"><span class="step">300</span><span class="hex">#8A8378</span></div>
+        <div class="swatch" style="--c:#6E6457;"><span class="step">400</span><span class="hex">#6E6457</span></div>
+        <div class="swatch" style="--c:#443A2E;"><span class="step">500</span><span class="hex">#443A2E</span></div>
+        <div class="swatch" style="--c:#2C251D;"><span class="step">600</span><span class="hex">#2C251D</span></div>
+        <div class="swatch" style="--c:#221C16;"><span class="step">700</span><span class="hex">#221C16</span></div>
+        <div class="swatch" style="--c:#1A1612;"><span class="step">800</span><span class="hex">#1A1612</span></div>
+        <div class="swatch" style="--c:#14110E;"><span class="step">900</span><span class="hex">#14110E</span></div>
+        <div class="swatch" style="--c:#0E0B08;"><span class="step">950</span><span class="hex">#0E0B08</span></div>
+      </div>
+
+      <div class="subhead">Brand</div>
+      <div class="palette-row">
+        <div class="chip" style="--c:#C8102E;"><div><div class="var">--yap-crimson</div><div class="name">Crimson</div></div><div class="hex">#C8102E</div></div>
+        <div class="chip" style="--c:#A60D26;"><div><div class="var">crimson-soft</div><div class="name">Soft</div></div><div class="hex">#A60D26</div></div>
+        <div class="chip" style="--c:#7A0918;"><div><div class="var">crimson-deep</div><div class="name">Deep</div></div><div class="hex">#7A0918</div></div>
+        <div class="chip" style="--c:#C9A961; --ft:#14110E;"><div><div class="var" style="color: var(--yap-ink-700)">--yap-gold</div><div class="name">Gold</div></div><div class="hex">#C9A961</div></div>
+        <div class="chip" style="--c:#8E7635;"><div><div class="var">gold-deep</div><div class="name">Bullion</div></div><div class="hex">#8E7635</div></div>
+        <div class="chip" style="--c:#5C2530;"><div><div class="var">--yap-bruise</div><div class="name">Bruise</div></div><div class="hex">#5C2530</div></div>
+      </div>
+
+      <div class="subhead">Semantic</div>
+      <div class="semantic-row">
+        <div class="cell" style="--bg:#1C2A1A; --c:#5BA855;">
+          <div class="top"><div class="dot"></div><div class="name">Success</div></div>
+          <div class="use">TEE attest · win · settle</div>
+          <div class="hex">#5BA855</div>
+        </div>
+        <div class="cell" style="--bg:#2D1611; --c:#E0432B;">
+          <div class="top"><div class="dot"></div><div class="name">Danger</div></div>
+          <div class="use">dispute · slash · K.O.</div>
+          <div class="hex">#E0432B</div>
+        </div>
+        <div class="cell" style="--bg:#2A1F0E; --c:#E8A22B;">
+          <div class="top"><div class="dot"></div><div class="name">Warning</div></div>
+          <div class="use">pending · low stake</div>
+          <div class="hex">#E8A22B</div>
+        </div>
+        <div class="cell" style="--bg:#11202C; --c:#5DA0D6;">
+          <div class="top"><div class="dot"></div><div class="name">Info</div></div>
+          <div class="use">on-chain · reads · neutral</div>
+          <div class="hex">#5DA0D6</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TYPE -->
+    <section class="section" id="type">
+      <div class="section-head">
+        <span class="num">§ 03</span>
+        <h2>Type</h2>
+        <span class="subtitle">Anton (display) · Archivo (body) · Space Mono (numeric / token IDs / addresses). All Google Fonts, open source.</span>
+      </div>
+
+      <div class="type-table">
+        <div class="type-row">
+          <div class="key">Display</div>
+          <div class="type-display">Step Up.</div>
+          <div class="specs">Anton 400 · 72/0.9<br/>tracking −1px · UPPER</div>
+        </div>
+        <div class="type-row">
+          <div class="key">H1</div>
+          <div class="type-h1">The Verdict Is In</div>
+          <div class="specs">Anton 400 · 48/1.0</div>
+        </div>
+        <div class="type-row">
+          <div class="key">H2</div>
+          <div class="type-h2">Round 02 — Live</div>
+          <div class="specs">Anton 400 · 36/1.05</div>
+        </div>
+        <div class="type-row">
+          <div class="key">H3</div>
+          <div class="type-h3">Tale of the Tape</div>
+          <div class="specs">Anton 400 · 28/1.15</div>
+        </div>
+        <div class="type-row">
+          <div class="key">H4</div>
+          <div class="type-h4">Defender accepted the challenge.</div>
+          <div class="specs">Archivo 800 · 22/1.2</div>
+        </div>
+        <div class="type-row">
+          <div class="key">Lead</div>
+          <div class="type-lead">A pinned 0G Compute TEE provider runs the inference per round and signs the verdict via routing-proof attestation.</div>
+          <div class="specs">Archivo 400 · 18/1.5</div>
+        </div>
+        <div class="type-row">
+          <div class="key">Body</div>
+          <div class="type-body">The judge's reasoning runs to four paragraphs. Round one was scored unanimously for the challenger; round two was contested; round three settled it.</div>
+          <div class="specs">Archivo 400 · 15/1.55</div>
+        </div>
+        <div class="type-row">
+          <div class="key">Small</div>
+          <div class="type-small">Outside bettors and the two fighter owners stake into a single pari-mutuel pool.</div>
+          <div class="specs">Archivo 400 · 13/1.5</div>
+        </div>
+        <div class="type-row">
+          <div class="key">Caption</div>
+          <div class="type-caption">PINNED PROVIDER · TEE-VERIFIED · 0G COMPUTE</div>
+          <div class="specs">Space Mono 400 · 11/1.4 · 1.5px</div>
+        </div>
+        <div class="type-row">
+          <div class="key">Mono</div>
+          <div class="type-mono">#4827 · 0x1d4D…c485D · 24.18000 OG · ELO 1842</div>
+          <div class="specs">Space Mono 700 · 14/1.4<br/>tabular nums</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TOKENS -->
+    <section class="section" id="tokens">
+      <div class="section-head">
+        <span class="num">§ 04</span>
+        <h2>Tokens</h2>
+        <span class="subtitle">4px spacing base · low radii (posters don't round) · weighty shadows · motion within MOTION.md durations.</span>
+      </div>
+
+      <div class="three-col">
+        <div class="token-box">
+          <div class="ttl">Spacing</div>
+          <div class="space-stack">
+            <div class="space-row"><span class="key">--s-1</span><span class="bar" style="width:4px"></span><span class="val">4px</span></div>
+            <div class="space-row"><span class="key">--s-2</span><span class="bar" style="width:8px"></span><span class="val">8px</span></div>
+            <div class="space-row"><span class="key">--s-3</span><span class="bar" style="width:12px"></span><span class="val">12px</span></div>
+            <div class="space-row"><span class="key">--s-4</span><span class="bar" style="width:16px"></span><span class="val">16px</span></div>
+            <div class="space-row"><span class="key">--s-5</span><span class="bar" style="width:20px"></span><span class="val">20px</span></div>
+            <div class="space-row"><span class="key">--s-6</span><span class="bar" style="width:24px"></span><span class="val">24px</span></div>
+            <div class="space-row"><span class="key">--s-8</span><span class="bar" style="width:32px"></span><span class="val">32px</span></div>
+            <div class="space-row"><span class="key">--s-10</span><span class="bar" style="width:40px"></span><span class="val">40px</span></div>
+            <div class="space-row"><span class="key">--s-12</span><span class="bar" style="width:48px"></span><span class="val">48px</span></div>
+            <div class="space-row"><span class="key">--s-16</span><span class="bar" style="width:64px"></span><span class="val">64px</span></div>
+            <div class="space-row"><span class="key">--s-20</span><span class="bar" style="width:80px"></span><span class="val">80px</span></div>
+          </div>
+        </div>
+
+        <div class="token-box">
+          <div class="ttl">Radius</div>
+          <div class="radius-stack">
+            <div class="radius-card">none</div>
+            <div class="radius-card" style="border-radius: 2px;">sm 2</div>
+            <div class="radius-card" style="border-radius: 4px;">md 4</div>
+            <div class="radius-card" style="border-radius: 8px;">lg 8</div>
+            <div class="radius-card" style="border-radius: 999px; width: 100px;">full</div>
+          </div>
+          <p style="font-family: var(--yap-font-mono); font-size: 11px; color: var(--yap-ink-300); margin-top: var(--yap-s-4); line-height: 1.5;">
+            Cards = 0. Inputs = 0. Buttons use cut-corner clip-path, not radius. Pills (full) only on dot-status badges.
+          </p>
+
+          <div class="ttl" style="margin-top: var(--yap-s-8);">Shadow</div>
+          <div class="shadow-stack">
+            <div class="shadow-card" style="box-shadow: var(--yap-sh-1);"><span class="key">--sh-1</span><span class="desc">resting card</span></div>
+            <div class="shadow-card" style="box-shadow: var(--yap-sh-2);"><span class="key">--sh-2</span><span class="desc">menu / popover</span></div>
+            <div class="shadow-card" style="box-shadow: var(--yap-sh-3);"><span class="key">--sh-3</span><span class="desc">modal / verdict reveal</span></div>
+            <div class="shadow-card" style="box-shadow: var(--yap-glow-crimson);"><span class="key" style="color: var(--yap-crimson)">--glow-crimson</span><span class="desc">live · KO · alert</span></div>
+          </div>
+        </div>
+
+        <div class="token-box">
+          <div class="ttl">Motion</div>
+          <p style="font-family: var(--yap-font-mono); font-size: 11px; color: var(--yap-ink-300); margin: 0 0 var(--yap-s-4); line-height: 1.5;">
+            Hover any cell to test. Slow tier uses an overshoot ease (verdict reveal, mint complete).
+          </p>
+          <div class="motion-grid">
+            <div class="motion-cell"><div class="key">Fast</div><div class="ms">140ms</div><div class="desc">hover · tap</div><div class="ball"></div></div>
+            <div class="motion-cell"><div class="key">Base</div><div class="ms">240ms</div><div class="desc">enter · exit</div><div class="ball"></div></div>
+            <div class="motion-cell"><div class="key">Med</div><div class="ms">420ms</div><div class="desc">drawer · modal</div><div class="ball"></div></div>
+            <div class="motion-cell"><div class="key">Slow</div><div class="ms">720ms</div><div class="desc">verdict + overshoot</div><div class="ball"></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BUTTONS -->
+    <section class="section" id="buttons">
+      <div class="section-head">
+        <span class="num">§ 05</span>
+        <h2>Buttons</h2>
+        <span class="subtitle">Cut-corner clip-path. Anton caps, 2px tracking. Hover = −1/−1 nudge. Tap = +1/+1.</span>
+      </div>
+
+      <div class="btn-grid">
+        <div class="btn-row">
+          <span class="label">Variants</span>
+          <button class="btn">Step Up</button>
+          <button class="btn btn--secondary">Tale of Tape</button>
+          <button class="btn btn--ghost">View History</button>
+          <button class="btn btn--danger">Dispute</button>
+          <button class="btn btn--gold">Mint Moment</button>
+        </div>
+
+        <div class="btn-row">
+          <span class="label">Sizes</span>
+          <button class="btn btn--sm">Quick Bet</button>
+          <button class="btn">Place Bet</button>
+          <button class="btn btn--lg">Sign &amp; Mint</button>
+        </div>
+
+        <div class="btn-row">
+          <span class="label">With icon</span>
+          <button class="btn">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 7l4 4 6-8"/></svg>
+            Accept
+          </button>
+          <button class="btn btn--secondary">
+            Stake
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 7h8M7 3l4 4-4 4"/></svg>
+          </button>
+          <button class="btn btn--danger">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 4v3M7 10h0M2 11h10L7 2z"/></svg>
+            File Dispute
+          </button>
+        </div>
+
+        <div class="btn-row">
+          <span class="label">States</span>
+          <button class="btn"><span class="dot"></span>Signing…</button>
+          <button class="btn btn--secondary"><span class="dot"></span>Awaiting Defender</button>
+          <button class="btn" disabled>Insufficient OG</button>
+          <button class="btn btn--ghost is-disabled">Settled</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CARDS -->
+    <section class="section" id="cards">
+      <div class="section-head">
+        <span class="num">§ 06</span>
+        <h2>Cards</h2>
+        <span class="subtitle">Squared, bordered, low-radius. Interactive cards lift 2px and reveal a crimson border on hover.</span>
+      </div>
+
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Default</div><span class="role-tag">resting</span></div>
+          <div style="font-size: var(--yap-fs-small); color: var(--yap-ink-200);">Standard surface for most content. No shadow. Border in Ink-600.</div>
+          <div class="card-foot">
+            <button class="btn btn--ghost btn--sm">Cancel</button>
+            <button class="btn btn--sm">Confirm</button>
+          </div>
+        </div>
+        <div class="card elevated">
+          <div class="card-head"><div class="card-title">Elevated</div><span class="role-tag">menu · panel</span></div>
+          <div style="font-size: var(--yap-fs-small); color: var(--yap-ink-200);">Floats above default. Shadow-2. For popovers, drawers, side panels.</div>
+          <div class="card-foot">
+            <button class="btn btn--ghost btn--sm">Dismiss</button>
+          </div>
+        </div>
+        <div class="card interactive">
+          <div class="card-head"><div class="card-title">Interactive</div><span class="role-tag">hover-able</span></div>
+          <div style="font-size: var(--yap-fs-small); color: var(--yap-ink-200);">Hover lifts the card and turns the border crimson. Tap target for fighters, marketplace listings, moments.</div>
+          <div class="card-foot">
+            <span class="badge badge--gold"><span class="dot"></span>FOR SALE</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BADGES -->
+    <section class="section" id="badges">
+      <div class="section-head">
+        <span class="num">§ 07</span>
+        <h2>Badges</h2>
+        <span class="subtitle">Six forms drawn from the fight-promotion vocabulary — Stamp, Tape, Mono, Token, Split, Record. Pick the form that matches the loudness of the moment.</span>
+      </div>
+
+      <div class="subhead">Stamp — for live status, verdicts, KO, callouts</div>
+      <div class="btn-row" style="gap: var(--yap-s-4); align-items: center;">
+        <span class="stamp-badge"><span class="pulse"></span>Live · R02<span class="ser">14:22</span></span>
+        <span class="stamp-badge stamp-badge--gold">★ Verdict In</span>
+        <span class="stamp-badge stamp-badge--ink">K.O.</span>
+        <span class="stamp-badge stamp-badge--bruise">Disputed<span class="ser">DSP-0419</span></span>
+        <span class="stamp-badge">Mint Open<span class="ser">EDT 03</span></span>
+      </div>
+
+      <div class="subhead">Tape — collectible, edition, promo callouts</div>
+      <div class="btn-row" style="gap: var(--yap-s-6); align-items: center;">
+        <span class="tape-badge">★ Top 10</span>
+        <span class="tape-badge tape-badge--crim">1st Edition</span>
+        <span class="tape-badge tape-badge--gold">Vault Drop</span>
+        <span class="tape-badge">Rental · 14d</span>
+        <span class="tape-badge tape-badge--crim">Hot Streak</span>
+      </div>
+
+      <div class="subhead">Mono — quiet inline status (table cells, dense rows)</div>
+      <div class="btn-row" style="gap: var(--yap-s-3); align-items: center;">
+        <span class="badge">Galileo · 16602</span>
+        <span class="badge badge--gold">★ Featured</span>
+        <span class="badge badge--success">TEE · Verified</span>
+        <span class="badge badge--danger">Custody Hold</span>
+        <span class="badge badge--warning">Stake Pending</span>
+        <span class="badge badge--info">On-chain</span>
+        <span class="badge">Mainnet · 16661</span>
+      </div>
+
+      <div class="subhead">Token — addresses, IDs, hashes</div>
+      <div class="btn-row" style="gap: var(--yap-s-5); align-items: center;">
+        <span class="token-badge token-badge--gold">#4827</span>
+        <span class="token-badge">0x1d4D…c485D</span>
+        <span class="token-badge">tx 0x9a1f…34c2</span>
+        <span class="token-badge token-badge--gold">silver-tongue.yap.0g</span>
+        <span class="token-badge">block 4,201,883</span>
+      </div>
+
+      <div class="subhead">Split — stat callouts (ELO, round, pool, odds)</div>
+      <div class="btn-row" style="gap: var(--yap-s-3); align-items: center; flex-wrap: wrap;">
+        <span class="split-badge"><span class="k">ELO</span><span class="v">1842</span></span>
+        <span class="split-badge split-badge--crim"><span class="k">Round</span><span class="v">02 / 03</span></span>
+        <span class="split-badge split-badge--gold"><span class="k">Pool</span><span class="v">21.00 OG</span></span>
+        <span class="split-badge"><span class="k">Odds</span><span class="v">1.6×</span></span>
+        <span class="split-badge split-badge--bruise"><span class="k">Stake</span><span class="v">12.4 OG</span></span>
+      </div>
+
+      <div class="subhead">Record — fight-card W—L</div>
+      <div class="btn-row" style="gap: var(--yap-s-10); align-items: center;">
+        <span class="record-badge"><span class="w">14</span><span class="x">×</span><span class="l">3</span><span class="lbl">Stiletto</span></span>
+        <span class="record-badge"><span class="w">11</span><span class="x">×</span><span class="l">6</span><span class="lbl">Pyreclaw</span></span>
+        <span class="record-badge"><span class="w">8</span><span class="x">×</span><span class="l">5</span><span class="lbl">Junkyard</span></span>
+      </div>
+
+      <p style="font-family: var(--yap-font-mono); font-size: 11px; color: var(--yap-ink-400); margin-top: var(--yap-s-6); letter-spacing: 1.5px; text-transform: uppercase; max-width: 80ch;">
+        Loudness ladder: <b style="color:var(--yap-ink-200)">Stamp &gt; Tape &gt; Split &gt; Record &gt; Mono &gt; Token</b>. One stamp per surface. Tape rotates ±1.5°, never more — it's a prop, not a logo.
+      </p>
+    </section>
+
+    <!-- INPUTS -->
+    <section class="section" id="inputs">
+      <div class="section-head">
+        <span class="num">§ 08</span>
+        <h2>Inputs</h2>
+        <span class="subtitle">Mono inside the field. Square corners. Crimson focus ring. Numeric prefixes lock-aligned to the field edge.</span>
+      </div>
+
+      <div class="input-grid">
+        <div class="field">
+          <label class="field-label">Fighter name</label>
+          <input class="input" placeholder="Reach for a name…" value="silver-tongue" />
+          <span class="field-help">.yap.0g subname registers on-chain at mint.</span>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Stake amount</label>
+          <div class="input--with-prefix">
+            <span class="prefix">OG</span>
+            <input type="text" placeholder="0.00" value="12.4000" />
+          </div>
+          <span class="field-help">Fee 0.5% + protocol 0.25%. Minimum 1.0 OG.</span>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Archetype</label>
+          <select class="select">
+            <option>Silver-tongue</option>
+            <option>Maximalist</option>
+            <option>Devil's-advocate</option>
+            <option>Logician</option>
+          </select>
+          <span class="field-help">Each archetype shifts inference temperature + verbosity priors.</span>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Search</label>
+          <div class="input--search">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg>
+            <input class="input" placeholder="Find a fighter, address, or moment…" />
+          </div>
+          <span class="field-help">Try: 0x1d4D, #4827, silver-tongue.yap.0g</span>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Address (error)</label>
+          <input class="input is-error" value="0x1d4Dc485Z" />
+          <span class="field-error">▲ Invalid address — last char must be hex.</span>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Settled (disabled)</label>
+          <input class="input is-disabled" value="Battle settled · 24.18 OG paid" disabled />
+          <span class="field-help">Locked once settle() emits.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODAL + TOASTS -->
+    <section class="section" id="modal">
+      <div class="section-head">
+        <span class="num">§ 09</span>
+        <h2>Modals &amp; Toasts</h2>
+        <span class="subtitle">Modals lead with a 3px crimson rule. Toasts use a 4px tone-coloured stripe on the left edge.</span>
+      </div>
+
+      <div class="modal-grid">
+
+        <div class="modal-shell" style="width: 280px;">
+          <div class="modal-head"><div class="ttl">Confirm — sm</div><button class="close">×</button></div>
+          <div class="modal-body">Withdraw 12.4 OG from BattleEscrow? This action emits Settle().</div>
+          <div class="modal-foot">
+            <button class="btn btn--ghost btn--sm">Cancel</button>
+            <button class="btn btn--sm">Sign</button>
+          </div>
+        </div>
+
+        <div class="modal-shell" style="width: 380px;">
+          <div class="modal-head"><div class="ttl">Train Fighter — md</div><button class="close">×</button></div>
+          <div class="modal-body" style="display: flex; flex-direction: column; gap: var(--yap-s-3);">
+            <div class="field">
+              <label class="field-label">New seed prompt</label>
+              <textarea class="textarea" rows="3" style="font-family: var(--yap-font-body);">Lean meaner. Cut the throat-clearing.</textarea>
+            </div>
+            <div class="field">
+              <label class="field-label">Training stake</label>
+              <div class="input--with-prefix"><span class="prefix">OG</span><input value="2.00" /></div>
+            </div>
+          </div>
+          <div class="modal-foot">
+            <button class="btn btn--ghost btn--sm">Cancel</button>
+            <button class="btn btn--sm">Train</button>
+          </div>
+        </div>
+
+        <!-- toasts -->
+        <div class="toast-stack">
+          <div class="toast success">
+            <div class="body">
+              <div class="title">Verdict Settled</div>
+              <div class="desc">Stiletto wins R3 unanimous. 24.18 OG paid out.</div>
+              <div class="meta">tx 0x9a1f…34c2 · block 4,201,883</div>
+            </div>
+          </div>
+          <div class="toast danger">
+            <div class="body">
+              <div class="title">Dispute Filed</div>
+              <div class="desc">Custody escrow opened — co-sign required from owner.</div>
+              <div class="meta">case #DSP-0419 · 72h timer</div>
+            </div>
+          </div>
+          <div class="toast warning">
+            <div class="body">
+              <div class="title">Round 2 Pending</div>
+              <div class="desc">Defender hasn't replied. 4:21 left on shot clock.</div>
+            </div>
+          </div>
+          <div class="toast">
+            <div class="body">
+              <div class="title">TEE Attestation Verified</div>
+              <div class="desc">Routing proof signed by pinned provider.</div>
+              <div class="meta">prv 0x44a8…921e</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TABS -->
+    <section class="section" id="tabs">
+      <div class="section-head">
+        <span class="num">§ 10</span>
+        <h2>Tabs</h2>
+        <span class="subtitle">Underline tabs for primary nav (vault, fighter detail). Segmented for tight filters (open / live / settled).</span>
+      </div>
+
+      <div class="subhead">Underline</div>
+      <div class="tabs-underline">
+        <button class="is-active">My Fighters <span class="count">04</span></button>
+        <button>Listings <span class="count">02</span></button>
+        <button>Rentals <span class="count">01</span></button>
+        <button>Moments <span class="count">11</span></button>
+      </div>
+
+      <div class="subhead">Segmented</div>
+      <div class="btn-row" style="gap: var(--yap-s-4);">
+        <div class="tabs-segmented">
+          <button class="is-active">Open</button>
+          <button>Live</button>
+          <button>Settled</button>
+        </div>
+        <div class="tabs-segmented">
+          <button>Fighters</button>
+          <button class="is-active">Moments</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TABLE -->
+    <section class="section" id="table">
+      <div class="section-head">
+        <span class="num">§ 11</span>
+        <h2>Tables</h2>
+        <span class="subtitle">Data-dense leaderboard. Display caps for fighter names, mono for numerics, gold for sortable values.</span>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width: 60px;">Rank</th>
+              <th>Fighter</th>
+              <th>Archetype</th>
+              <th class="num">ELO <span class="sort-arrow">▼</span></th>
+              <th class="num">W—L</th>
+              <th class="num">Earnings</th>
+              <th>Owner</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="rank-medal top">01</span></td>
+              <td><div class="name">Stiletto</div><div class="sub">silver-tongue.yap.0g · #4827</div></td>
+              <td><span class="badge badge--gold">Silver-tongue</span></td>
+              <td class="num">1842</td>
+              <td class="num">14—3</td>
+              <td class="num">128.40 OG</td>
+              <td><span class="badge">0x1d4D…c485D</span></td>
+            </tr>
+            <tr>
+              <td><span class="rank-medal">02</span></td>
+              <td><div class="name">Pyreclaw</div><div class="sub">maximalist.yap.0g · #5114</div></td>
+              <td><span class="badge">Maximalist</span></td>
+              <td class="num">1814</td>
+              <td class="num">11—6</td>
+              <td class="num">96.12 OG</td>
+              <td><span class="badge">0x771E…aa92F</span></td>
+            </tr>
+            <tr>
+              <td><span class="rank-medal">03</span></td>
+              <td><div class="name">Calliope</div><div class="sub">devils-advocate.yap.0g · #4209</div></td>
+              <td><span class="badge">Devil's-advocate</span></td>
+              <td class="num">1789</td>
+              <td class="num">12—5</td>
+              <td class="num">91.02 OG</td>
+              <td><span class="badge">0x9a1F…34c2D</span></td>
+            </tr>
+            <tr>
+              <td><span class="rank-medal">04</span></td>
+              <td><div class="name">Black Cassandra</div><div class="sub">logician.yap.0g · #4001</div></td>
+              <td><span class="badge">Logician</span></td>
+              <td class="num">1772</td>
+              <td class="num">9—4</td>
+              <td class="num">71.55 OG</td>
+              <td><span class="badge">0x4d12…77b1A</span></td>
+            </tr>
+            <tr>
+              <td><span class="rank-medal">05</span></td>
+              <td><div class="name">Junkyard</div><div class="sub">brawler.yap.0g · #5588</div></td>
+              <td><span class="badge">Brawler</span></td>
+              <td class="num">1760</td>
+              <td class="num">8—5</td>
+              <td class="num">62.11 OG</td>
+              <td><span class="badge">0xc01a…0091F</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- EMPTY + SKELETON -->
+    <section class="section" id="empty">
+      <div class="section-head">
+        <span class="num">§ 12</span>
+        <h2>Empty &amp; Loading</h2>
+        <span class="subtitle">Empty states own the punchline. Skeletons match the silhouette of what's loading.</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: var(--yap-s-6); align-items: start;">
+        <div class="empty">
+          <div class="glyph">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><circle cx="16" cy="16" r="13"/><path d="M11 13l5 5 5-5"/></svg>
+          </div>
+          <div class="ttl">No fighters yet.</div>
+          <div class="deck">Mint your first ERC-7857 INFT and walk it to the ring. Subname registers automatically.</div>
+          <div style="display: flex; gap: var(--yap-s-3); margin-top: var(--yap-s-2);">
+            <button class="btn">Mint a Fighter</button>
+            <button class="btn btn--ghost">Buy on Market</button>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--yap-s-3);">
+          <div class="skel-card">
+            <div class="skel skel-block"></div>
+            <div class="skel skel-line" style="width: 70%;"></div>
+            <div class="skel skel-line" style="width: 40%;"></div>
+            <div style="display: flex; gap: var(--yap-s-2); margin-top: 6px;">
+              <div class="skel skel-line" style="height: 22px; width: 60px;"></div>
+              <div class="skel skel-line" style="height: 22px; width: 50px;"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel skel-block"></div>
+            <div class="skel skel-line" style="width: 60%;"></div>
+            <div class="skel skel-line" style="width: 80%;"></div>
+            <div style="display: flex; gap: var(--yap-s-2); margin-top: 6px;">
+              <div class="skel skel-line" style="height: 22px; width: 80px;"></div>
+              <div class="skel skel-line" style="height: 22px; width: 40px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ICONS -->
+    <section class="section" id="icons">
+      <div class="section-head">
+        <span class="num">§ 13</span>
+        <h2>Icons</h2>
+        <span class="subtitle">Combat vocabulary. 24px artboard, 2px stroke, mostly geometric. Marked cells are placeholders for a custom illustrator pass.</span>
+      </div>
+
+      <div class="icon-grid">
+        <div class="icon-cell">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="14" cy="14" r="11"/><path d="M14 4v20M4 14h20" opacity="0.3"/><circle cx="14" cy="14" r="2.5"/>
+          </svg>
+          <span class="lbl">Ring</span>
+        </div>
+        <div class="icon-cell">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M4 8h20M4 14h20M4 20h20"/>
+          </svg>
+          <span class="lbl">Ropes</span>
+        </div>
+        <div class="icon-cell">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M5 9 L14 4 L23 9 V20 L14 24 L5 20 Z"/><path d="M9 16h10"/>
+          </svg>
+          <span class="lbl">Glove</span>
+        </div>
+        <div class="icon-cell">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M7 6h14v6a7 7 0 0 1-14 0z"/><path d="M14 19v5M9 24h10"/>
+          </svg>
+          <span class="lbl">Bell</span>
+        </div>
+        <div class="icon-cell">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <rect x="5" y="6" width="18" height="16"/><path d="M9 10h10M9 14h10M9 18h6"/>
+          </svg>
+          <span class="lbl">Scorecard</span>
+        </div>
+        <div class="icon-cell">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <rect x="10" y="3" width="8" height="14" rx="4"/><path d="M6 13a8 8 0 0 0 16 0M14 21v3M10 24h8"/>
+          </svg>
+          <span class="lbl">Mic</span>
+        </div>
+        <div class="icon-cell">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 4 L19 4 L21 9 L17 9 L20 18 L14 22 L8 18 L11 9 L7 9 Z"/>
+          </svg>
+          <span class="lbl">Trophy</span>
+        </div>
+        <div class="icon-cell">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 11 L11 5 L23 17 L17 23 Z"/><path d="M9 7 L21 19" /><path d="M3 23h12"/>
+          </svg>
+          <span class="lbl">Gavel</span>
+        </div>
+        <div class="icon-cell">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="14" cy="14" r="9"/><path d="M14 8v6l4 2"/><path d="M14 5L11 2M14 5l3-3"/>
+          </svg>
+          <span class="lbl">Seal</span>
+        </div>
+        <div class="icon-cell">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="9" height="6" rx="1"/><rect x="16" y="11" width="9" height="6" rx="1"/><path d="M12 14h4"/>
+          </svg>
+          <span class="lbl">Chain</span>
+        </div>
+        <div class="icon-cell">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M3 14h22"/><path d="M3 9h7M14 9h6M3 19h4M11 19h12"/>
+          </svg>
+          <span class="lbl">Ticker</span>
+        </div>
+        <div class="icon-cell">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 3 L21 9 L17 14 L23 14 L11 25 L14 17 L8 17 Z"/>
+          </svg>
+          <span class="lbl">KO</span>
+        </div>
+        <div class="icon-cell">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M5 5 L23 23 M23 5 L5 23"/><circle cx="14" cy="14" r="11" opacity="0.3"/>
+          </svg>
+          <span class="lbl">Punch</span>
+        </div>
+        <div class="icon-cell">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M3 14 L25 14"/><path d="M5 11 L5 17 M9 9 L9 19 M14 7 L14 21 M19 9 L19 19 M23 11 L23 17"/>
+          </svg>
+          <span class="lbl">Tape</span>
+        </div>
+      </div>
+      <p style="font-family: var(--yap-font-mono); font-size: 11px; color: var(--yap-ink-400); margin-top: var(--yap-s-4); letter-spacing: 1.5px; text-transform: uppercase;">
+        These are first-pass geometric icons — the final illustrator pass should keep the 2px stroke + flat geometric language and add hand-drawn weight to ring, glove, gavel.
+      </p>
+    </section>
+
+    <!-- TOKENS CODE -->
+    <section class="section" id="code">
+      <div class="section-head">
+        <span class="num">§ 14</span>
+        <h2>Tokens · CSS</h2>
+        <span class="subtitle">Lifted directly from the styles on this page. Drop into globals.css or a Tailwind config.</span>
+      </div>
+
+      <div class="codeblock"><span class="c">/* yap-tokens.css */</span>
+<span class="k">:root</span> {
+  <span class="c">/* neutrals */</span>
+  --yap-ink-50:   <span class="v">#F2EDE2</span>;   --yap-ink-100: <span class="v">#DCD5C7</span>;
+  --yap-ink-200:  <span class="v">#B8B0A2</span>;   --yap-ink-300: <span class="v">#8A8378</span>;
+  --yap-ink-400:  <span class="v">#6E6457</span>;   --yap-ink-500: <span class="v">#443A2E</span>;
+  --yap-ink-600:  <span class="v">#2C251D</span>;   --yap-ink-700: <span class="v">#221C16</span>;
+  --yap-ink-800:  <span class="v">#1A1612</span>;   --yap-ink-900: <span class="v">#14110E</span>;
+
+  <span class="c">/* brand */</span>
+  --yap-crimson:  <span class="v">#C8102E</span>;   --yap-gold:    <span class="v">#C9A961</span>;
+  --yap-bruise:   <span class="v">#5C2530</span>;
+
+  <span class="c">/* semantic */</span>
+  --yap-success:  <span class="v">#5BA855</span>;   --yap-danger:  <span class="v">#E0432B</span>;
+  --yap-warning:  <span class="v">#E8A22B</span>;   --yap-info:    <span class="v">#5DA0D6</span>;
+
+  <span class="c">/* type */</span>
+  --yap-font-display: <span class="v">"Anton"</span>, Impact, sans-serif;
+  --yap-font-body:    <span class="v">"Archivo"</span>, system-ui, sans-serif;
+  --yap-font-mono:    <span class="v">"Space Mono"</span>, ui-monospace, monospace;
+
+  <span class="c">/* motion (matches MOTION.md) */</span>
+  --yap-t-fast: <span class="v">140ms</span>;   --yap-t-base: <span class="v">240ms</span>;
+  --yap-t-med:  <span class="v">420ms</span>;   --yap-t-slow: <span class="v">720ms</span>;
+  --yap-ease-out:   <span class="v">cubic-bezier(.2,.8,.2,1)</span>;
+  --yap-ease-punch: <span class="v">cubic-bezier(.34,1.56,.64,1)</span>;
+
+  <span class="c">/* button cut-corner */</span>
+  --yap-cut-md: <span class="v">polygon(0 0, 100% 0, 100% 100%, 12px 100%, 0 calc(100% - 12px))</span>;
+}</div>
+    </section>
+
+    <footer style="padding: var(--yap-s-12) 0; text-align: center;">
+      <div style="font-family: var(--yap-font-mono); font-size: 11px; color: var(--yap-ink-400); letter-spacing: 2px; text-transform: uppercase;">
+        Yap · DESIGN SYSTEM v1 · pending review · next: page mocks (5.3)
+      </div>
+    </footer>
+
+  </main>
+
+</body>
+</html>
