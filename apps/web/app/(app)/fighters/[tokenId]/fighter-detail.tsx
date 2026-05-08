@@ -26,6 +26,7 @@ import { useWalletGate, useWallet } from "@/hooks/use-wallet";
 import { parseEther } from "viem";
 import { activeChain } from "@/lib/chains";
 import { FIGHTER_INFT_ADDRESS } from "@/lib/contracts";
+import { DisputePanel } from "./dispute-panel";
 import { TrainModal } from "./train-modal";
 import { TrainingHistory } from "./training-history";
 import { fmtNum, fmtRemaining, fmtTime } from "@/lib/format";
@@ -494,6 +495,7 @@ export function FighterDetail({
                   <>
                     <div style={{ color: "var(--tx-primary)", fontWeight: 500 }}>
                       Open for rent
+                      {rentalState?.listing?.disputable ? " · disputable" : ""}
                     </div>
                     <div>
                       {fmtNum(rentPriceDisplay, 3)} 0G per day · up to {rentMaxDuration}{" "}
@@ -501,6 +503,17 @@ export function FighterDetail({
                     </div>
                   </>
                 )}
+              </div>
+            )}
+            {rentalState?.dispute && rentalState.dispute.status !== 0 && (
+              <div style={{ marginTop: 14 }}>
+                <DisputePanel
+                  tokenId={fighter.id}
+                  rentalExpiresAt={rentalState.active?.expiresAt ?? null}
+                  dispute={rentalState.dispute}
+                  viewer={(viewerAddr as Address | undefined) ?? null}
+                  onUpdated={() => refetchRental()}
+                />
               </div>
             )}
           </Card>
