@@ -14,7 +14,15 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p 22987 -H 103.150.227.197 >> ~/.ssh/known_hosts
+          # Retry ssh-keyscan — the host occasionally drops SSH probes
+          # under load and a 5-second silent failure cancels the deploy.
+          for i in 1 2 3; do
+            if ssh-keyscan -p 22987 -H 103.150.227.197 >> ~/.ssh/known_hosts 2>&1; then
+              break
+            fi
+            echo "ssh-keyscan attempt $i failed, retrying in 3s"
+            sleep 3
+          done
 
       - name: Deploy to VPS
         run: |
@@ -24,6 +32,13 @@ jobs:
             git pull origin main
             cd apps/web
             NODE_OPTIONS="--max-old-space-size=1536" pnpm install --frozen-lockfile
+            # Always purge .next before build. Turbopack's incremental
+            # chunk cache occasionally retains references to deleted
+            # files (e.g. WelcomeBackBanner ChunkLoadError after
+            # a048c5c, RSC manifest stale after motion pilot). Cost of
+            # full rebuild is ~10-30s; cost of stale build is a broken
+            # demo. Trade is obvious.
+            rm -rf .next
             NODE_OPTIONS="--max-old-space-size=1536" pnpm build
             # startOrReload re-reads the ecosystem file every time, so
             # changes like max_memory_restart pick up without a manual
