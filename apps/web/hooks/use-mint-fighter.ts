@@ -108,29 +108,43 @@ export function useMintFighter() {
       }
 
       setPhase("seed");
-      const start = Date.now();
-      stopTimer();
-      timerRef.current = setInterval(() => {
-        const elapsed = Date.now() - start;
-        let next: MintPhase = "seed";
-        for (const [p, t] of PREPARE_TIMELINE) {
-          if (elapsed >= t) next = p;
-        }
-        setPhase(next);
-      }, 1_000);
 
       try {
-        // 1. Ask server to do the 0G Storage/Compute work + return mint params.
-        const prepareRes = await fetch("/api/mint", {
+        // 1. Open an async mint job. /start returns in <2 s with a jobId;
+        //    the 9-minute fine-tune runs in background. Poll /status until
+        //    the job carries a `result`. Server-driven status drives the
+        //    phase indicator instead of the wall-clock timeline we used to
+        //    fake during the synchronous request.
+        const startRes = await fetch("/api/mint/start", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify(args),
         });
-        if (!prepareRes.ok) {
-          const body = await prepareRes.json().catch(() => ({ error: prepareRes.statusText }));
-          throw new Error(body.error ?? `Prepare failed (${prepareRes.status})`);
+        if (!startRes.ok) {
+          const body = await startRes.json().catch(() => ({ error: startRes.statusText }));
+          throw new Error(body.error ?? `Failed to enqueue mint (${startRes.status})`);
         }
-        const prep = (await prepareRes.json()) as PrepareResponse;
+        const { jobId } = (await startRes.json()) as { jobId: string };
+
+        const prep = await pollMintJob(jobId, (status) => {
+          // Map server status → the legacy MintPhase enum so the existing
+          // step indicator UI works without changes.
+          switch (status) {
+            case "uploading-seed":
+              setPhase("seed");
+              break;
+            case "training":
+              setPhase("training");
+              break;
+            case "decrypting":
+            case "encrypting-weights":
+              setPhase("encrypting");
+              break;
+            case "uploading-weights":
+              setPhase("encrypting");
+              break;
+          }
+        });
         stopTimer();
 
         // 2. User signs the mint transaction from their own wallet.
@@ -238,4 +252,53 @@ export function useMintFighter() {
     reset,
     mintFee: mintFee as bigint | undefined,
   };
+}
+
+interface MintJobShape {
+  status:
+    | "queued"
+    | "uploading-seed"
+    | "training"
+    | "decrypting"
+    | "encrypting-weights"
+    | "uploading-weights"
+    | "ready"
+    | "failed";
+  result?: PrepareResponse;
+  error?: string;
+}
+
+/**
+ * Poll /api/mint/status/<id> until the job is `ready` or `failed`.
+ * Resolves with the prepare payload (mint params + commit metadata)
+ * the caller then signs on-chain. Notifies the caller of intermediate
+ * status changes via `onStatus` so the UI can advance its step indicator.
+ */
+async function pollMintJob(
+  jobId: string,
+  onStatus: (status: MintJobShape["status"]) => void,
+): Promise<PrepareResponse> {
+  const pollIntervalMs = 3_000;
+  // 12-minute hard cap — comfortably above the 9-minute happy-path
+  // mint while still surfacing genuine stalls instead of polling forever.
+  const deadline = Date.now() + 12 * 60_000;
+  let lastStatus: MintJobShape["status"] | "" = "";
+  while (Date.now() < deadline) {
+    const res = await fetch(`/api/mint/status/${jobId}`);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(body.error ?? `mint job lookup failed (${res.status})`);
+    }
+    const job = (await res.json()) as MintJobShape;
+    if (job.status !== lastStatus) {
+      onStatus(job.status);
+      lastStatus = job.status;
+    }
+    if (job.status === "ready" && job.result) return job.result;
+    if (job.status === "failed") {
+      throw new Error(job.error ?? "mint job failed");
+    }
+    await new Promise((r) => setTimeout(r, pollIntervalMs));
+  }
+  throw new Error("mint job timed out (>12 min); check server logs");
 }
