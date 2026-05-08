@@ -37,31 +37,10 @@ export function Profile({
               {isSelf ? "you" : fmtAddr(address)}
             </h1>
             <Hash value={address} copy />
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(4, 1fr)",
-                gap: 16,
-                marginTop: 16,
-              }}
-            >
-              <div>
-                <div className="label">Fighters</div>
-                <div className="num" style={{ fontSize: 18, fontWeight: 600 }}>
-                  {ownedFighters.length}
-                </div>
-              </div>
-              <div>
-                <div className="label">Bets placed</div>
-                <div className="num" style={{ fontSize: 18, fontWeight: 600 }}>—</div>
-              </div>
-              <div>
-                <div className="label">Win rate</div>
-                <div className="num" style={{ fontSize: 18, fontWeight: 600 }}>—</div>
-              </div>
-              <div>
-                <div className="label">P/L</div>
-                <div className="num" style={{ fontSize: 18, fontWeight: 600 }}>—</div>
+            <div style={{ marginTop: 16 }}>
+              <div className="label">Fighters owned</div>
+              <div className="num" style={{ fontSize: 22, fontWeight: 600 }}>
+                {ownedFighters.length}
               </div>
             </div>
           </div>
