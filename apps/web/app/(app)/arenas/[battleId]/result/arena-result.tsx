@@ -702,7 +702,7 @@ function MatchTranscript({
                         padding: "8px 10px",
                         borderLeft: "2px solid var(--accent)",
                         background:
-                          "linear-gradient(90deg, rgba(255,184,0,0.05), rgba(255,184,0,0.01))",
+                          "linear-gradient(90deg, rgba(200,16,46,0.08), rgba(200,16,46,0.01))",
                         fontSize: 12,
                         fontStyle: "italic",
                         color: "var(--tx-primary)",

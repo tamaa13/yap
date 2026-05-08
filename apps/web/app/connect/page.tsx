@@ -34,7 +34,7 @@ export default function ConnectPage() {
                 style={{
                   padding: "12px 14px",
                   background: "var(--accent)",
-                  color: "#0A0B0F",
+                  color: "var(--yap-ink-50)",
                   border: "1px solid var(--accent)",
                   borderRadius: 4,
                   fontSize: 13,
@@ -56,7 +56,7 @@ export default function ConnectPage() {
             style={{
               padding: "12px 14px",
               background: "var(--accent)",
-              color: "#0A0B0F",
+              color: "var(--yap-ink-50)",
               border: "1px solid var(--accent)",
               borderRadius: 4,
               fontSize: 13,

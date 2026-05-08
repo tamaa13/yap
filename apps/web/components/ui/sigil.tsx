@@ -17,7 +17,11 @@ export interface SigilProps {
   radius?: number;
 }
 
-export function Sigil({ seed, size = 48, color = "#E8E9ED", bg = "#06070A", radius = 4 }: SigilProps) {
+// Defaults sourced from Promoter palette: --yap-ink-50 (cream figure)
+// on --yap-ink-900 (canvas ground). Caller can override per fighter
+// corner color (--yap-crimson / --yap-gold) — the seed-driven hash
+// only colors the grid figures, not the bg.
+export function Sigil({ seed, size = 48, color = "#F2EDE2", bg = "#14110E", radius = 4 }: SigilProps) {
   const h = hash32(String(seed ?? ""));
   const cells = 6;
   const grid: Array<[number, number]> = [];

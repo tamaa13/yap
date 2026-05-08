@@ -72,7 +72,7 @@ export default function SettingsPage() {
                     width: 14,
                     height: 14,
                     borderRadius: 99,
-                    background: v ? "#0A0B0F" : "var(--tx-tertiary)",
+                    background: v ? "var(--yap-ink-950)" : "var(--tx-tertiary)",
                     transition: "left 150ms",
                   }}
                 />

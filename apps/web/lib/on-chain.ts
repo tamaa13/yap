@@ -6,8 +6,17 @@ import type { Battle, BattleStatus, Fighter, FighterArchetype } from "./types";
 
 // Addresses present on chain but off-chain metadata not yet wired. Synthesize
 // display-only fields from the tokenId so each fighter stays visually stable
-// across sessions.
-const PALETTE = ["#6B9AE8", "#E89A6B", "#6BCB77", "#A48FE8", "#E86B6B", "#FFB800"];
+// across sessions. Palette is the Promoter accent set — crimson + gold are
+// the corner colors, plus the warm-coherent semantic accents (success, info,
+// danger). Avatar tinting picks one per tokenId via a stable hash.
+const PALETTE = [
+  "#C8102E", // crimson — Corner A signature
+  "#C9A961", // gold — Corner B signature
+  "#5BA855", // success
+  "#5DA0D6", // info
+  "#E0432B", // danger
+  "#E8A22B", // warning
+];
 const ARCHETYPES: FighterArchetype[] = [
   "roaster",
   "debater",

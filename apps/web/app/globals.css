@@ -1,45 +1,149 @@
 @import "tailwindcss";
 
 /* ──────────────────────────────
-   Yap — Design tokens
-   Inspired by Bloomberg Terminal + Polymarket + Linear dark.
-   Single accent (amber). Geist + Geist Mono. No neon. No gradients. No glass.
+   Yap — Design tokens (Promoter direction)
+   Fight-poster editorial: warm ink + cream + crimson + gold + bruise.
+   Anton (display caps) + Archivo (body) + Space Mono (numbers, IDs).
+   See docs/design/project/design-system.html for the full system,
+   apps/web/STYLE.md for voice, apps/web/MOTION.md for motion vocab.
+   Phase A migration: alias-first — old --bg-/--tx-/--accent vars are
+   re-bound to Promoter values so existing components pick up the new
+   palette without per-callsite changes. New code references --yap-*
+   directly; legacy aliases bridge until Phase B/C touch each surface.
    ────────────────────────────── */
 
 :root {
-  --bg-canvas: #0A0B0F;
-  --bg-surface: #12131A;
-  --bg-raised: #1A1B23;
-  --bg-sunken: #06070A;
-  --bd-subtle: rgba(255, 255, 255, 0.06);
-  --bd-default: rgba(255, 255, 255, 0.10);
-  --bd-strong: rgba(255, 255, 255, 0.18);
-  --tx-primary: #E8E9ED;
-  --tx-secondary: #A0A2AB;
-  --tx-tertiary: #6B6D76;
-  --tx-disabled: #3F4048;
-  --accent: #FFB800;
-  --accent-hover: #FFC933;
-  --accent-muted: rgba(255, 184, 0, 0.12);
-  --accent-border: rgba(255, 184, 0, 0.40);
-  --fighter-a: #6B9AE8;
-  --fighter-b: #E89A6B;
-  --fighter-a-bg: rgba(107, 154, 232, 0.08);
-  --fighter-b-bg: rgba(232, 154, 107, 0.08);
-  --fighter-a-bd: rgba(107, 154, 232, 0.28);
-  --fighter-b-bd: rgba(232, 154, 107, 0.28);
-  --success: #6BCB77;
-  --warning: #E8A96B;
-  --danger: #E86B6B;
-  --info: #6B9AE8;
-  --live: #E86B6B;
-  --sans: var(--font-geist-sans), Inter, system-ui, -apple-system, sans-serif;
-  --mono: var(--font-geist-mono), 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+  /* ── Promoter primary palette ────────────────────────────────── */
+  --yap-ink-950: #0E0B08;
+  --yap-ink-900: #14110E;
+  --yap-ink-800: #1A1612;
+  --yap-ink-700: #221C16;
+  --yap-ink-600: #2C251D;
+  --yap-ink-500: #443A2E;
+  --yap-ink-400: #6E6457;
+  --yap-ink-300: #8A8378;
+  --yap-ink-200: #B8B0A2;
+  --yap-ink-100: #DCD5C7;
+  --yap-ink-50:  #F2EDE2;
+  --yap-ink-0:   #FBF8F1;
+
+  --yap-crimson:        #C8102E;
+  --yap-crimson-soft:   #A60D26;
+  --yap-crimson-deep:   #7A0918;
+  --yap-gold:           #C9A961;
+  --yap-gold-deep:      #8E7635;
+  --yap-bruise:         #5C2530;
+
+  --yap-success:        #5BA855;
+  --yap-success-bg:     #1C2A1A;
+  --yap-danger:         #E0432B;
+  --yap-danger-bg:      #2D1611;
+  --yap-warning:        #E8A22B;
+  --yap-warning-bg:     #2A1F0E;
+  --yap-info:           #5DA0D6;
+  --yap-info-bg:        #11202C;
+
+  /* ── Type families ──────────────────────────────────────────── */
+  --yap-font-display: var(--font-anton), "Archivo Black", Impact, sans-serif;
+  --yap-font-body:    var(--font-archivo), "Inter", system-ui, -apple-system, sans-serif;
+  --yap-font-mono:    var(--font-space-mono), "JetBrains Mono", ui-monospace, 'SF Mono', monospace;
+
+  /* ── Type scale (px) — design system v1 ─────────────────────── */
+  --yap-fs-display: 72px; --yap-lh-display: 0.9;
+  --yap-fs-h1: 48px;      --yap-lh-h1: 1.0;
+  --yap-fs-h2: 36px;      --yap-lh-h2: 1.05;
+  --yap-fs-h3: 28px;      --yap-lh-h3: 1.15;
+  --yap-fs-h4: 22px;      --yap-lh-h4: 1.2;
+  --yap-fs-lead: 18px;    --yap-lh-lead: 1.5;
+  --yap-fs-body: 15px;    --yap-lh-body: 1.55;
+  --yap-fs-small: 13px;   --yap-lh-small: 1.5;
+  --yap-fs-caption: 11px; --yap-lh-caption: 1.4;
+
+  /* ── Spacing (4px base) + radius (kept low — posters don't round) ── */
+  --yap-s-0: 0;     --yap-s-1: 4px;   --yap-s-2: 8px;   --yap-s-3: 12px;
+  --yap-s-4: 16px;  --yap-s-5: 20px;  --yap-s-6: 24px;  --yap-s-8: 32px;
+  --yap-s-10: 40px; --yap-s-12: 48px; --yap-s-16: 64px; --yap-s-20: 80px;
+
+  --yap-r-none: 0;  --yap-r-sm: 2px;  --yap-r-md: 4px;
+  --yap-r-lg: 8px;  --yap-r-full: 999px;
+
+  /* ── Cut-corner clip-paths (Voltage button geometry) ────────── */
+  --yap-cut-sm: polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  --yap-cut-md: polygon(0 0, 100% 0, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  --yap-cut-lg: polygon(0 0, 100% 0, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+
+  /* ── Shadows + glows ────────────────────────────────────────── */
+  --yap-sh-1: 0 1px 0 rgba(0,0,0,.4), 0 2px 6px rgba(0,0,0,.25);
+  --yap-sh-2: 0 2px 0 rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.35);
+  --yap-sh-3: 0 4px 0 rgba(0,0,0,.55), 0 16px 48px rgba(0,0,0,.5);
+  --yap-glow-crimson: 0 0 0 1px rgba(200,16,46,.5), 0 0 24px rgba(200,16,46,.35);
+  --yap-glow-gold:    0 0 0 1px rgba(201,169,97,.4), 0 0 18px rgba(201,169,97,.25);
+
+  /* ── Motion timing (mirrors MOTION.md — design within these) ── */
+  --yap-t-fast:   140ms;
+  --yap-t-base:   240ms;
+  --yap-t-med:    420ms;
+  --yap-t-slow:   720ms;
+  --yap-ease-out:    cubic-bezier(.2,.8,.2,1);
+  --yap-ease-snap:   cubic-bezier(.32,.72,0,1);
+  --yap-ease-punch:  cubic-bezier(.34,1.56,.64,1);
+  --yap-ease-data:   cubic-bezier(.25,.46,.45,.94);
+
+  /* ──────────────────────────────────────────────────────────────
+     LEGACY ALIASES — point old token names at the new Promoter
+     values so existing components and motion-pilot work pick up the
+     re-skin without needing a rename pass. Phase B/C will migrate
+     callsites to --yap-* directly where they're touched.
+     ────────────────────────────────────────────────────────────── */
+  --bg-canvas: var(--yap-ink-950);
+  --bg-surface: var(--yap-ink-800);
+  --bg-raised: var(--yap-ink-700);
+  --bg-sunken: var(--yap-ink-900);
+  /* Borders were rgba-on-white in the old scheme; on warm-ink they
+   * read flatter, so map to the inked stops directly — slightly more
+   * contrast at the same visual weight. */
+  --bd-subtle: var(--yap-ink-700);
+  --bd-default: var(--yap-ink-600);
+  --bd-strong: var(--yap-ink-500);
+  --tx-primary: var(--yap-ink-50);
+  --tx-secondary: var(--yap-ink-200);
+  --tx-tertiary: var(--yap-ink-300);
+  --tx-disabled: var(--yap-ink-500);
+  /* Accent — was amber #FFB800; now Promoter crimson. The motion
+   * pilot's reaction-slam + speech-bubble code already references
+   * --accent and picks this up automatically. */
+  --accent: var(--yap-crimson);
+  --accent-hover: var(--yap-crimson-soft);
+  --accent-muted: rgba(200, 16, 46, 0.12);
+  --accent-border: rgba(200, 16, 46, 0.40);
+  /* Fighter corner colors — Promoter mapping per main 2026-05-08:
+   * crimson for Corner A (challenger / aggression / primary), gold
+   * for Corner B (defender / premium / promo). Drops the old
+   * blue/orange boxing-cosplay pair entirely. */
+  --fighter-a: var(--yap-crimson);
+  --fighter-b: var(--yap-gold);
+  --fighter-a-bg: rgba(200, 16, 46, 0.08);
+  --fighter-b-bg: rgba(201, 169, 97, 0.08);
+  --fighter-a-bd: rgba(200, 16, 46, 0.28);
+  --fighter-b-bd: rgba(201, 169, 97, 0.28);
+  --success: var(--yap-success);
+  --warning: var(--yap-warning);
+  --danger: var(--yap-danger);
+  --info: var(--yap-info);
+  --live: var(--yap-danger);
+  /* Legacy font-family aliases — rebind to Promoter families so
+   * components using var(--sans) / var(--mono) immediately pick up
+   * Archivo + Space Mono. Pages that adopt Anton display use
+   * var(--yap-font-display) directly. */
+  --sans: var(--yap-font-body);
+  --mono: var(--yap-font-mono);
+  --display: var(--yap-font-display);
 }
 
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-archivo);
+  --font-mono: var(--font-space-mono);
+  --font-display: var(--font-anton);
   --color-canvas: var(--bg-canvas);
   --color-surface: var(--bg-surface);
   --color-raised: var(--bg-raised);
@@ -56,18 +160,23 @@ body {
   background: var(--bg-canvas);
   color: var(--tx-primary);
   font-family: var(--sans);
-  font-size: 14px;
-  line-height: 1.5;
-  font-feature-settings: 'cv11', 'ss01';
+  /* Promoter design system: body 15px / 1.55 (vs prior 14 / 1.5).
+   * Designer chose 15 deliberately for data-rich tables. */
+  font-size: var(--yap-fs-body);
+  line-height: var(--yap-lh-body);
+  font-feature-settings: 'ss01', 'tnum';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
+::selection { background: var(--yap-crimson); color: var(--yap-ink-50); }
 h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 p { margin: 0; }
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; padding: 0; }
 input, select, textarea { font-family: inherit; color: inherit; }
 a { color: inherit; text-decoration: none; }
-::selection { background: var(--accent-muted); color: var(--accent); }
+/* (selection moved up next to body so it picks up the Promoter palette
+ * directly without going through the muted alias.) */
 
 .mono { font-family: var(--mono); font-feature-settings: 'zero', 'ss01'; }
 .label { font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tx-tertiary); }

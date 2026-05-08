@@ -306,7 +306,7 @@ export function TopNav() {
                   flexShrink: 0,
                 }}
               >
-                <Sigil seed={addr ?? "anon"} size={24} color="#A0A2AB" />
+                <Sigil seed={addr ?? "anon"} size={24} color="#B8B0A2" />
                 <span
                   style={{
                     fontFamily: "var(--mono)",
