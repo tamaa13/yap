@@ -32,13 +32,33 @@ FIGHTER_B=5
 STAKE="1000000000000000"  # 0.001 OG per side
 TOPIC="e2e smoke debate"
 
+# BattleEscrow blocks self-battle via InvalidSide guard (a single user
+# cannot hold both side-A and side-B bets). We spin up a tiny burner,
+# authorize them as executor on fighterB, and have them act as defender.
+BURNER_PK="0x$(openssl rand -hex 32)"
+BURNER=$($CAST wallet address --private-key "$BURNER_PK")
+
 echo "═══ Yap battle E2E (real TEE-signed verdict) ═══"
-echo "owner:    $OWNER (both sides — self-battle)"
-echo "A vs B:   #$FIGHTER_A vs #$FIGHTER_B"
-echo "stake:    $STAKE wei each side"
-echo "API:      $API"
+echo "owner (challenger): $OWNER"
+echo "burner (defender):  $BURNER (ephemeral)"
+echo "A vs B:             #$FIGHTER_A vs #$FIGHTER_B"
+echo "stake:              $STAKE wei each side"
+echo "API:                $API"
 
 START_BAL=$($CAST balance --rpc-url "$RPC" "$OWNER")
+
+# ── 0. Fund burner + authorize as executor on fighterB ─────────────
+echo
+echo "── 0. Fund burner + authorizeUsage(#$FIGHTER_B, burner) ──"
+# Stake + buffer for accept gas + sweep tx
+$CAST send --rpc-url "$RPC" --private-key "$ZG_BROKER_KEY" "${GAS_FLAGS[@]}" \
+  --value 5000000000000000 "$BURNER" 2>&1 \
+  | grep -E "transactionHash|status" | head -2
+
+$CAST send --rpc-url "$RPC" --private-key "$ZG_BROKER_KEY" "${GAS_FLAGS[@]}" \
+  "$FIGHTER" "authorizeUsage(uint256,address,bytes)" \
+  $FIGHTER_B "$BURNER" "0x01" 2>&1 \
+  | grep -E "transactionHash|status" | head -2
 
 # ── 1. Read next battleId, create battle ─────────────────────────────
 echo
@@ -46,28 +66,27 @@ echo "── 1. createBattle ──"
 NEXT_ID_PRE=$($CAST call --rpc-url "$RPC" "$ESCROW" "nextBattleId()(uint256)")
 echo "next battleId before: $NEXT_ID_PRE"
 
-CREATE_OUT=$($CAST send --rpc-url "$RPC" --private-key "$ZG_BROKER_KEY" "${GAS_FLAGS[@]}" \
+$CAST send --rpc-url "$RPC" --private-key "$ZG_BROKER_KEY" "${GAS_FLAGS[@]}" \
   --value "$STAKE" \
   "$ESCROW" \
-  "createBattle(uint256,uint256,string,uint8)(uint256)" \
-  $FIGHTER_A $FIGHTER_B "$TOPIC" 3 2>&1)
-TX=$(echo "$CREATE_OUT" | grep -oE "0x[0-9a-f]{64}" | head -1)
-echo "tx: $TX"
+  "createBattle(uint256,uint256,string,uint8)" \
+  $FIGHTER_A $FIGHTER_B "$TOPIC" 3 2>&1 \
+  | grep -E "transactionHash|status" | head -2
 
 NEXT_ID_POST=$($CAST call --rpc-url "$RPC" "$ESCROW" "nextBattleId()(uint256)")
 BID=$NEXT_ID_POST
 echo "battleId: $BID"
 
-# ── 2. Accept (same wallet) ──────────────────────────────────────────
+# ── 2. Burner accepts as defender ────────────────────────────────────
 echo
-echo "── 2. acceptBattle ──"
-$CAST send --rpc-url "$RPC" --private-key "$ZG_BROKER_KEY" "${GAS_FLAGS[@]}" \
+echo "── 2. acceptBattle (burner as defender) ──"
+$CAST send --rpc-url "$RPC" --private-key "$BURNER_PK" "${GAS_FLAGS[@]}" \
   --value "$STAKE" \
   "$ESCROW" "acceptBattle(uint256)" $BID 2>&1 \
   | grep -E "transactionHash|status" | head -2
 
-STATUS=$($CAST call --rpc-url "$RPC" "$ESCROW" "getBattle(uint256)" $BID | head -c 100)
-echo "battle struct (head): $STATUS…"
+B_STATE=$($CAST call --rpc-url "$RPC" "$ESCROW" "getBattle(uint256)" $BID | head -c 100)
+echo "battle struct (head): ${B_STATE}..."
 
 # ── 3. Trigger backend runner ───────────────────────────────────────
 echo
@@ -120,17 +139,36 @@ $CAST send --rpc-url "$RPC" --private-key "$ZG_BROKER_KEY" "${GAS_FLAGS[@]}" \
   "$ESCROW" "settle(uint256)" $BID 2>&1 \
   | grep -E "transactionHash|status" | head -2
 
-# ── 7. Claim payout ──────────────────────────────────────────────────
+# ── 7. Claim payouts (both sides try) ─────────────────────────────────
 echo
-echo "── 7. claimPayout ──"
+echo "── 7. claimPayout — broker side ──"
 $CAST send --rpc-url "$RPC" --private-key "$ZG_BROKER_KEY" "${GAS_FLAGS[@]}" \
   "$ESCROW" "claimPayout(uint256)" $BID 2>&1 \
-  | grep -E "transactionHash|status" | head -2
+  | grep -E "transactionHash|status" | head -2 || true
+
+echo
+echo "── 7b. claimPayout — burner side ──"
+$CAST send --rpc-url "$RPC" --private-key "$BURNER_PK" "${GAS_FLAGS[@]}" \
+  "$ESCROW" "claimPayout(uint256)" $BID 2>&1 \
+  | grep -E "transactionHash|status" | head -2 || true
+
+# Revoke burner's executor and sweep residual back
+$CAST send --rpc-url "$RPC" --private-key "$ZG_BROKER_KEY" "${GAS_FLAGS[@]}" \
+  "$FIGHTER" "revokeAuthorization(uint256,address)" \
+  $FIGHTER_B "$BURNER" 2>&1 | grep -E "status" | head -1
+
+BURNER_BAL=$($CAST balance --rpc-url "$RPC" "$BURNER")
+SWEEP_RESERVE="100000000000000"
+if [ "$BURNER_BAL" -gt "$SWEEP_RESERVE" ]; then
+  SWEEP=$((BURNER_BAL - SWEEP_RESERVE))
+  $CAST send --rpc-url "$RPC" --private-key "$BURNER_PK" "${GAS_FLAGS[@]}" \
+    --value "$SWEEP" "$OWNER" 2>&1 | grep -E "status" | head -1 || true
+fi
 
 # ── 8. Summary ──────────────────────────────────────────────────────
 echo
 echo "═══ Summary ═══"
 END_BAL=$($CAST balance --rpc-url "$RPC" "$OWNER")
 echo "broker net spent: $((START_BAL - END_BAL)) wei"
-echo "(self-battle: stake returned via pari-mutuel ≈ stake - platform fee + gas)"
+echo "(burner-defender: winner takes pool minus 5% platform fee)"
 echo "✅ battle E2E complete (battleId $BID)"
