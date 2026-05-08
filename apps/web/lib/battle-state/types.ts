@@ -46,10 +46,25 @@ export interface RoundArgument {
   completedAt?: number;
 }
 
+export interface RoundCommentary {
+  /** Streaming-accumulated commentary text. */
+  content: string;
+  tokenCount: number;
+  startedAt?: number;
+  completedAt?: number;
+  /** True once the commentator stream finished cleanly. False/undefined while
+   *  in flight or if the commentator was disabled / failed. */
+  done?: boolean;
+}
+
 export interface BattleRound {
   number: number; // 1-indexed
   argumentA: RoundArgument;
   argumentB: RoundArgument;
+  /** Optional ESPN-style live commentary on this round. Decorative only —
+   *  not TEE-signed, doesn't affect the verdict. Absent when the
+   *  ZG_COMMENTATOR_ENABLED gate is off or the side-call failed. */
+  commentary?: RoundCommentary;
 }
 
 export interface Verdict {
@@ -109,6 +124,13 @@ export type BattleEvent =
       argument: RoundArgument;
     }
   | { type: "round-complete"; round: number }
+  | {
+      type: "commentator-token";
+      round: number;
+      delta: string;
+      tokenCount: number;
+    }
+  | { type: "commentator-done"; round: number; commentary: RoundCommentary }
   | { type: "verdict"; verdict: Verdict }
   | { type: "failed"; failure: BattleFailure }
   | { type: "spectators"; count: number }

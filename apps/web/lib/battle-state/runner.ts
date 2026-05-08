@@ -357,6 +357,28 @@ async function runLoop(battleId: number): Promise<void> {
         rounds: setRoundArg(s.rounds, roundNo, "b", argB),
       }));
       store.publish(battleId, { type: "round-complete", round: roundNo });
+
+      // Color commentary — fire-and-forget. Decorative entertainment layer;
+      // never blocks the round loop, never affects the verdict, never
+      // throws back into the runner. Gated by ZG_COMMENTATOR_ENABLED so
+      // testnet ledger stays predictable when not actively demoing.
+      if (process.env.ZG_COMMENTATOR_ENABLED === "true") {
+        void streamCommentary({
+          battleId,
+          roundNo,
+          maxRounds: state0.maxRounds,
+          topic: state0.topic,
+          fighterAName: state0.fighterA.name,
+          fighterBName: state0.fighterB.name,
+          argA: argA.content,
+          argB: argB.content,
+        }).catch((e) => {
+          console.warn(
+            `[battle-runner ${battleId}] commentator round ${roundNo} skipped:`,
+            e instanceof Error ? e.message : e,
+          );
+        });
+      }
     }
 
     // All rounds done. Brief: "verifiable AI" requires every TEE-attested
@@ -511,6 +533,159 @@ async function streamRound(params: {
   }));
 
   return arg;
+}
+
+// ─── Color commentary (decorative, ESPN-style) ───────────────────────────
+
+/**
+ * Stream a 1-2 sentence color-commentary line for the round that just
+ * finished. Decorative — never TEE-signed, never enters the verdict
+ * pipeline. Failures are tolerated (caught at call site); the round
+ * loop has already moved on by the time this runs.
+ *
+ * Cost: one extra `streamChat` per round, capped at COMMENTATOR_TOKEN_BUDGET
+ * tokens. Use ZG_COMMENTATOR_MODEL to pin a cheaper inference model than
+ * the fighter calls.
+ *
+ * Persona prompt enforces a content boundary so the commentary stays on
+ * the arguments, not on the people/wallets/topic. See `project_yap_decisions.md`.
+ */
+async function streamCommentary(params: {
+  battleId: number;
+  roundNo: number;
+  maxRounds: number;
+  topic: string;
+  fighterAName: string;
+  fighterBName: string;
+  argA: string;
+  argB: string;
+}): Promise<void> {
+  const {
+    battleId,
+    roundNo,
+    maxRounds,
+    topic,
+    fighterAName,
+    fighterBName,
+    argA,
+    argB,
+  } = params;
+  const store = getBattleStore();
+
+  await store.update(battleId, (s) => ({
+    ...s,
+    rounds: setRoundCommentary(s.rounds, roundNo, {
+      content: "",
+      tokenCount: 0,
+      startedAt: Date.now(),
+    }),
+  }));
+
+  let tokenCount = 0;
+  const chat = await streamChat({
+    // Optional pin to a cheaper provider via env. Falls back to the
+    // default chatbot provider used by fighter calls when unset.
+    providerAddress: process.env.ZG_COMMENTATOR_PROVIDER || undefined,
+    system: COMMENTATOR_SYSTEM,
+    user: buildCommentatorUser({
+      roundNo,
+      maxRounds,
+      topic,
+      fighterAName,
+      fighterBName,
+      argA,
+      argB,
+    }),
+    temperature: 0.7,
+    maxTokens: COMMENTATOR_TOKEN_BUDGET,
+    onToken: (delta) => {
+      tokenCount += 1;
+      store.publish(battleId, {
+        type: "commentator-token",
+        round: roundNo,
+        delta,
+        tokenCount,
+      });
+    },
+  });
+
+  const commentary = {
+    content: chat.content,
+    tokenCount,
+    startedAt: undefined,
+    completedAt: Date.now(),
+    done: true,
+  };
+  await store.update(battleId, (s) => ({
+    ...s,
+    rounds: setRoundCommentary(s.rounds, roundNo, {
+      ...commentary,
+      startedAt: findCommentaryStartedAt(s.rounds, roundNo),
+    }),
+  }));
+  store.publish(battleId, {
+    type: "commentator-done",
+    round: roundNo,
+    commentary,
+  });
+}
+
+const COMMENTATOR_TOKEN_BUDGET = 90;
+
+const COMMENTATOR_SYSTEM = [
+  "You are a sharp, witty debate analyst doing live ESPN-style color",
+  "commentary on a round that just finished. Output 1-2 short, punchy",
+  "sentences. No fence-sitting, no preamble, no markdown.",
+  "",
+  "RULES:",
+  "- Comment on the ARGUMENTS only — logic, structure, framing, momentum.",
+  "- NEVER insult the fighters as people, the wallet addresses, or the",
+  "  topic itself. Roast the logic, not the identity.",
+  "- No political, religious, or otherwise polarizing takes.",
+  "- Refer to fighters as 'Fighter A' / 'Fighter B' or by their handle.",
+  "  Never reference wallet addresses or external identities.",
+  "- Don't quote the fighters verbatim. Summarize the move.",
+  "- Skip 'as an AI' / 'I think' framing. Be direct.",
+].join("\n");
+
+function buildCommentatorUser(params: {
+  roundNo: number;
+  maxRounds: number;
+  topic: string;
+  fighterAName: string;
+  fighterBName: string;
+  argA: string;
+  argB: string;
+}): string {
+  const { roundNo, maxRounds, topic, fighterAName, fighterBName, argA, argB } =
+    params;
+  return `Topic: "${topic}"
+Round ${roundNo} of ${maxRounds} just wrapped.
+
+Fighter A (${fighterAName}) said:
+${argA}
+
+Fighter B (${fighterBName}) said:
+${argB}
+
+Give one or two sentences of color commentary on what just happened. Highlight the strongest move or call out a weak claim. Stay focused on the arguments.`;
+}
+
+function setRoundCommentary(
+  rounds: BattleRound[],
+  number: number,
+  commentary: BattleRound["commentary"],
+): BattleRound[] {
+  return rounds.map((r) =>
+    r.number === number ? { ...r, commentary } : r,
+  );
+}
+
+function findCommentaryStartedAt(
+  rounds: BattleRound[],
+  roundNo: number,
+): number | undefined {
+  return rounds.find((r) => r.number === roundNo)?.commentary?.startedAt;
 }
 
 // ─── Prompts ─────────────────────────────────────────────────────────────
