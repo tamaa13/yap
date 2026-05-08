@@ -19,6 +19,14 @@ export interface FighterSnapshot {
   id: number;
   name: string;
   archetype: string;
+  /** On-chain reputation stats threaded into the judge prompt as a
+   *  soft prior. HP tracks win rate, Logic tracks ELO, Wit tracks
+   *  battles fought — see `lib/on-chain.ts` for derivation. The judge
+   *  is told these are reputation hints, not damage values, so the
+   *  outcome is still argument-driven. */
+  hp?: number;
+  logic?: number;
+  wit?: number;
 }
 
 export interface RoundArgument {
