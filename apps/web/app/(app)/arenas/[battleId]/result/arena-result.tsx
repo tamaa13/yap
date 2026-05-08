@@ -129,7 +129,7 @@ export function ArenaResult({
   const doSettle = async () => {
     try {
       await settle.write(battle.id);
-      push({ kind: "success", text: "Settle submitted" });
+      push({ kind: "success", text: "Settle on its way to the chain." });
     } catch (e) {
       push({ kind: "error", text: e instanceof Error ? e.message : "Settle failed" });
     }
@@ -138,7 +138,7 @@ export function ArenaResult({
   const doClaim = async () => {
     try {
       await claim.write(battle.id);
-      push({ kind: "success", text: "Payout claimed" });
+      push({ kind: "success", text: "Purse claimed. Check your wallet." });
     } catch (e) {
       push({ kind: "error", text: e instanceof Error ? e.message : "Claim failed" });
     }
@@ -184,7 +184,7 @@ export function ArenaResult({
                   {winner.name}
                 </div>
                 <div style={{ fontSize: 13, color: "var(--tx-secondary)" }}>
-                  Defeats {loser.name} · {battle.round} rounds
+                  Beats {loser.name} in {battle.round} round{battle.round === 1 ? "" : "s"}.
                 </div>
               </div>
             </div>
@@ -297,18 +297,18 @@ export function ArenaResult({
               }
               title={
                 awaitingDispute
-                  ? `Dispute window active — ${fmtDuration(secondsRemaining)} remaining`
+                  ? `Dispute window open — ${fmtDuration(secondsRemaining)} left`
                   : undefined
               }
             >
               {isSettled
                 ? "Escrow settled"
                 : awaitingDispute
-                  ? `Settle in ${fmtDuration(secondsRemaining)}`
+                  ? `Open in ${fmtDuration(secondsRemaining)}`
                   : settle.isPending
-                    ? "Confirm in wallet…"
+                    ? "Sign in your wallet…"
                     : settle.isConfirming
-                      ? "Settling…"
+                      ? "Landing on-chain…"
                       : "Settle escrow"}
             </Button>
             {myWonBet && (
@@ -322,17 +322,17 @@ export function ArenaResult({
                 }
                 title={
                   !isSettled
-                    ? "Payout available after escrow is settled"
+                    ? "Settle the escrow first; the purse opens after."
                     : undefined
                 }
               >
                 {claim.isPending
-                  ? "Confirm in wallet…"
+                  ? "Sign in your wallet…"
                   : claim.isConfirming
-                    ? "Claiming…"
+                    ? "Pulling the purse…"
                     : !isSettled
-                      ? "Waiting for settle"
-                      : "Claim payout"}
+                      ? "Waiting on settle"
+                      : "Claim purse"}
               </Button>
             )}
             <Button
@@ -352,8 +352,8 @@ export function ArenaResult({
               }}
               title={
                 verdictTxHash
-                  ? "Open the on-chain submitVerdict transaction"
-                  : "Verdict tx not found — battle may not be settled yet"
+                  ? "Open the submitVerdict tx on 0G Explorer"
+                  : "Verdict tx not on-chain yet."
               }
             >
               0G Explorer
@@ -457,8 +457,8 @@ export function ArenaResult({
               }}
             >
               {isSettled
-                ? "Settled. Bettors on the winning side can claim a proportional share of the winners pool."
-                : "Breakdown is derived from on-chain poolA / poolB at verdict time. Fee applies only if the winning side has stakes."}
+                ? "Settled. Winners claim pro-rata."
+                : "Numbers from on-chain poolA / poolB at verdict time. Fee only kicks in if the winning side had stakes."}
             </div>
           </Card>
         </div>

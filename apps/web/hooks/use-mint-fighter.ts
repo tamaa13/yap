@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { parseEventLogs } from "viem";
 import type { Address } from "viem";
 import { useReadContract, useWalletClient } from "wagmi";
@@ -13,15 +13,11 @@ export interface MintFighterArgs {
   name: string;
   archetype: string;
   avatar?: number;
-  styleSeed: string; // JSONL or freeform text
-  baseModel?: string;
+  styleSeed: string;
 }
 
 export interface MintSteps {
   seedRoot: string;
-  fineTuneTaskId: string | null;
-  fineTuneProvider: string | null;
-  fineTuneBypassed: boolean;
   weightsRoot: string;
 }
 
@@ -36,22 +32,12 @@ export interface MintResult {
 export type MintPhase =
   | "idle"
   | "seed"
-  | "training"
   | "encrypting"
   | "signing"
   | "minting"
   | "committing"
   | "done"
   | "error";
-
-// Prepare-phase timeline. The server runs seed upload → fine-tune → encrypt +
-// weight upload synchronously; we advance the spinner through stages using
-// elapsed time so users see movement during the multi-minute fine-tune.
-const PREPARE_TIMELINE: Array<[MintPhase, number]> = [
-  ["seed", 0],
-  ["training", 5_000],
-  ["encrypting", 4 * 60 * 1000],
-];
 
 interface PrepareResponse {
   mint: {
@@ -68,7 +54,6 @@ interface PrepareResponse {
     seedRoot: string;
     weightsRoot: string;
     signatureStyle: string[];
-    fineTuneBypassed: boolean;
   };
   steps: MintSteps;
 }
@@ -77,7 +62,6 @@ export function useMintFighter() {
   const [phase, setPhase] = useState<MintPhase>("idle");
   const [error, setError] = useState<Error | null>(null);
   const [result, setResult] = useState<MintResult | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
 
@@ -88,13 +72,6 @@ export function useMintFighter() {
     functionName: "mintFee",
     query: { enabled: FIGHTER_INFT_ADDRESS !== "" },
   });
-
-  const stopTimer = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  };
 
   const write = useCallback(
     async (args: MintFighterArgs): Promise<MintResult> => {
@@ -110,11 +87,9 @@ export function useMintFighter() {
       setPhase("seed");
 
       try {
-        // 1. Open an async mint job. /start returns in <2 s with a jobId;
-        //    the 9-minute fine-tune runs in background. Poll /status until
-        //    the job carries a `result`. Server-driven status drives the
-        //    phase indicator instead of the wall-clock timeline we used to
-        //    fake during the synchronous request.
+        // 1. Open mint job. /start returns the jobId; pipeline finishes
+        //    in ~5 s post-pivot (no fine-tune). Same async polling shape
+        //    is preserved so the UI's status indicator works unchanged.
         const startRes = await fetch("/api/mint/start", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -127,31 +102,16 @@ export function useMintFighter() {
         const { jobId } = (await startRes.json()) as { jobId: string };
 
         const prep = await pollMintJob(jobId, (status) => {
-          // Map server status → the legacy MintPhase enum so the existing
-          // step indicator UI works without changes.
           switch (status) {
             case "uploading-seed":
               setPhase("seed");
               break;
-            case "training":
-            // "retrying" lives in the same conceptual slot as training —
-            // the server picked a fresh provider after the previous one
-            // timed out. UI step label updates via the job.step field
-            // surfaced by /status, so we keep the spinner anchored on
-            // the training stage rather than bouncing back.
-            case "retrying":
-              setPhase("training");
-              break;
-            case "decrypting":
-            case "encrypting-weights":
-              setPhase("encrypting");
-              break;
-            case "uploading-weights":
+            case "encrypting":
+            case "uploading-encrypted":
               setPhase("encrypting");
               break;
           }
         });
-        stopTimer();
 
         // 2. User signs the mint transaction from their own wallet.
         setPhase("signing");
@@ -171,12 +131,9 @@ export function useMintFighter() {
 
         // 3. Wait for receipt + parse Minted event for tokenId.
         //
-        // viem's defaults (~6 retries, 200 ms apart) give up well before
-        // Galileo testnet propagates a fresh tx — the receipt then surfaces
-        // as "transaction not found" even though the mint has succeeded
-        // on-chain. Override with a longer poll window (5 min, 4-second
-        // interval, 60 retries on transient lookup failures) so we don't
-        // false-alarm the user.
+        // viem's defaults give up well before Galileo testnet propagates
+        // a fresh tx. Override with a longer poll window (5 min, 4-second
+        // interval) so we don't false-alarm the user.
         setPhase("minting");
         const receipt = await publicClient.waitForTransactionReceipt({
           hash: txHash,
@@ -233,7 +190,6 @@ export function useMintFighter() {
         setPhase("done");
         return payload;
       } catch (e) {
-        stopTimer();
         const err = e instanceof Error ? e : new Error("mint failed");
         setError(err);
         setPhase("error");
@@ -244,7 +200,6 @@ export function useMintFighter() {
   );
 
   const reset = useCallback(() => {
-    stopTimer();
     setPhase("idle");
     setError(null);
     setResult(null);
@@ -264,16 +219,11 @@ interface MintJobShape {
   status:
     | "queued"
     | "uploading-seed"
-    | "training"
-    | "retrying"
-    | "decrypting"
-    | "encrypting-weights"
-    | "uploading-weights"
+    | "encrypting"
+    | "uploading-encrypted"
     | "ready"
     | "failed";
   step?: string;
-  attempt?: number;
-  lastRetryReason?: string;
   result?: PrepareResponse;
   error?: string;
 }
@@ -288,10 +238,10 @@ async function pollMintJob(
   jobId: string,
   onStatus: (status: MintJobShape["status"]) => void,
 ): Promise<PrepareResponse> {
-  const pollIntervalMs = 3_000;
-  // 12-minute hard cap — comfortably above the 9-minute happy-path
-  // mint while still surfacing genuine stalls instead of polling forever.
-  const deadline = Date.now() + 12 * 60_000;
+  const pollIntervalMs = 1_500;
+  // 2-minute hard cap — generous buffer above the ~5 s happy-path
+  // post-pivot, surfacing genuine 0G Storage stalls without polling forever.
+  const deadline = Date.now() + 2 * 60_000;
   let lastStatus: MintJobShape["status"] | "" = "";
   while (Date.now() < deadline) {
     const res = await fetch(`/api/mint/status/${jobId}`);
@@ -310,5 +260,5 @@ async function pollMintJob(
     }
     await new Promise((r) => setTimeout(r, pollIntervalMs));
   }
-  throw new Error("mint job timed out (>12 min); check server logs");
+  throw new Error("mint job timed out (>2 min); check 0G Storage indexer");
 }

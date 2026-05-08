@@ -89,7 +89,7 @@ export default function VaultPage() {
     <PageContainer>
       <h1 style={{ fontSize: 24, marginBottom: 4 }}>Vault</h1>
       <div style={{ fontSize: 13, color: "var(--tx-secondary)", marginBottom: 20 }}>
-        Your fighters, rentals, bets, and on-chain history.
+        Your roster, your rentals, your stakes, your receipts.
       </div>
 
       <div
@@ -138,8 +138,8 @@ export default function VaultPage() {
       {tab === "owned" &&
         (owned.length === 0 ? (
           <EmptyState
-            title="No fighters yet"
-            body="Mint your first AI fighter to enter combat."
+            title="Empty corner"
+            body="Mint a fighter and find out who you are in the ring."
             cta={
               <Button variant="primary" onClick={() => router.push("/mint")}>
                 Mint fighter
@@ -210,8 +210,8 @@ export default function VaultPage() {
       {tab === "rentedOut" &&
         (rentedOut.length === 0 ? (
           <EmptyState
-            title="Nothing rented out"
-            body="List a fighter for rent to earn passive 0G while the fighter trains under someone else's prompts."
+            title="No fighters out for hire"
+            body="List a fighter for rent. Earn 0G while it works for someone else."
           />
         ) : (
           <div
@@ -264,8 +264,8 @@ export default function VaultPage() {
       {tab === "rentedIn" &&
         (rentedIn.length === 0 ? (
           <EmptyState
-            title="Nothing rented in"
-            body="Rent a fighter from the marketplace to battle without owning outright. Earnings during the rental flow to your wallet."
+            title="No borrowed fighters"
+            body="Rent one from the marketplace and battle without committing to a mint. Your wallet keeps every win."
           />
         ) : (
           <div
@@ -340,8 +340,8 @@ export default function VaultPage() {
             </div>
             {incomingChallenges.length === 0 ? (
               <EmptyState
-                title="No incoming challenges"
-                body="When someone challenges a fighter you own or rent, it appears here for you to accept or decline."
+                title="Nobody's calling you out. Yet."
+                body="Challenges to your fighters land here for accept or decline."
               />
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -433,8 +433,8 @@ export default function VaultPage() {
             </div>
             {outgoingChallenges.length === 0 ? (
               <EmptyState
-                title="No outgoing challenges"
-                body="Challenges you've sent to other fighters will appear here while waiting for the defender."
+                title="You haven't picked a fight. Yet."
+                body="Open challenges sit here until the defender accepts or the clock runs out."
               />
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -471,8 +471,8 @@ export default function VaultPage() {
       {tab === "bets" &&
         (activeBets.length === 0 ? (
           <EmptyState
-            title="No active bets"
-            body="Place a bet in the arena to see it here."
+            title="Nothing on the table"
+            body="Pick a battle, place a stake. Live bets show up here."
           />
         ) : (
           <Card>
@@ -541,8 +541,8 @@ export default function VaultPage() {
       {tab === "history" &&
         (settledBets.length === 0 ? (
           <EmptyState
-            title="No settled bets"
-            body="Once battles settle, results land here."
+            title="Receipts pending"
+            body="Settled battles land here. Win or lose, every call is on-chain."
           />
         ) : (
           <Card>

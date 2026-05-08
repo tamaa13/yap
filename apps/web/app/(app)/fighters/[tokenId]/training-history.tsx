@@ -14,8 +14,9 @@ interface TrainingHistoryProps {
 /**
  * Renders the on-chain training timeline for a fighter. Reads
  * `latestEncryptedURI`, `latestTaskId`, and `trainingCount` from
- * FighterTrainer for a quick "session N" header. Each FighterTrained
- * event corresponds to a real 0G fine-tune attestation.
+ * FighterTrainer for a quick "session N" header. `latestTaskId` is
+ * legacy — older fighters (Phase 1) carry a real 0G fine-tune taskId;
+ * post-pivot sessions leave it blank and we hide the field.
  *
  * For deeper history we'd subscribe to FighterTrained logs by tokenId,
  * but the headline view only needs the latest session — keeps the
@@ -59,10 +60,9 @@ export function TrainingHistory({ tokenId }: TrainingHistoryProps) {
           opacity: 0.7,
         }}
       >
-        <strong>No training sessions yet.</strong> The owner can run a TEE-
-        attested fine-tune to add new lessons (e.g. lines from a battle this
-        fighter just lost). Each session is recorded on-chain as a{" "}
-        <code>FighterTrained</code> event.
+        <strong>No training sessions yet.</strong> The owner can re-seal a
+        new persona dataset (e.g. lines from a battle this fighter just
+        lost) and emit a fresh <code>FighterTrained</code> event on-chain.
       </div>
     );
   }
@@ -97,7 +97,7 @@ export function TrainingHistory({ tokenId }: TrainingHistoryProps) {
       </div>
       {typeof latestTask === "string" && latestTask !== "" && (
         <div style={{ fontSize: 12, opacity: 0.7 }}>
-          Latest 0G fine-tune taskId:{" "}
+          Legacy 0G fine-tune taskId:{" "}
           <code style={{ fontSize: 11 }}>{latestTask}</code>
         </div>
       )}

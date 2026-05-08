@@ -1,19 +1,20 @@
-// Shared mint pipeline used by both the legacy synchronous /api/mint
-// route and the new async /api/mint/start + /api/mint/status flow.
+// Shared mint preparation pipeline.
 //
-// The async flow runs `runMintPipeline` as fire-and-forget against the
-// in-memory mint-jobs tracker so the HTTP request returns in <2 s while
-// the 9-minute fine-tune happens in the background.
+// Phase 2 pivot (2026-05-08): fine-tune dropped. The pipeline now seals
+// the user's style seed directly — encrypt the JSONL, upload to 0G
+// Storage, return the (encryptedURI, metadataHash, sealedKey) payload
+// the client needs to call `YapFighter.mint(...)` from their wallet.
+// Same shape is reused by `FighterTrainer.train(...)` for continuous
+// learning sessions; the contract event log is the source of truth for
+// the fighter's evolution timeline.
 
 import "server-only";
 import { keccak256, toUtf8Bytes, hexlify } from "ethers";
-import { fineTune, FineTuneProviderError } from "@/lib/0g/compute";
 import { encryptWithRandomKey } from "@/lib/0g/encrypt";
 import { uploadBuffer } from "@/lib/0g/storage";
 import {
   setMintJobError,
   setMintJobResult,
-  setMintJobRetrying,
   setMintJobStatus,
   type MintJobResult,
 } from "@/lib/mint-jobs";
@@ -24,17 +25,13 @@ export interface MintPipelineArgs {
   archetype: string;
   avatar: number;
   seed: string;
-  baseModel?: string;
-  bypassFineTune: boolean;
-  /** Provider addresses to skip during this run's fine-tune auto-pick.
-   *  Populated by the retry wrapper after a provider-level failure. */
-  excludeProviders?: ReadonlySet<string>;
 }
 
 /**
- * Run the full mint preparation pipeline (seed upload → fine-tune →
- * decrypt → encrypt → weights upload → metadataHash). Returns the same
- * payload shape the synchronous route used to.
+ * Run the mint preparation pipeline: upload seed → encrypt seed →
+ * upload encrypted blob → derive metadataHash + sealedKey. Returns the
+ * payload the client signs into `YapFighter.mint(...)` (or
+ * `FighterTrainer.train(...)` for continuous training sessions).
  *
  * If `jobId` is provided, advances that job's status as each phase
  * completes and writes the final result back via setMintJobResult /
@@ -44,68 +41,41 @@ export async function runMintPipeline(
   args: MintPipelineArgs,
   jobId?: string,
 ): Promise<MintJobResult> {
-  const {
-    owner,
-    name,
-    archetype,
-    avatar,
-    seed,
-    baseModel,
-    bypassFineTune,
-    excludeProviders,
-  } = args;
+  const { owner, name, archetype, avatar, seed } = args;
   const tStart = Date.now();
   const log = (msg: string) =>
     console.log(`[mint${jobId ? ` ${jobId}` : ""} +${Date.now() - tStart}ms] ${msg}`);
 
   try {
-    // 1. Upload raw seed.
+    // 1. Upload raw seed (auditable fingerprint of the persona inputs).
     if (jobId) setMintJobStatus(jobId, "uploading-seed");
     log("upload seed start");
     const seedBytes = new TextEncoder().encode(seed);
     const seedUpload = await uploadBuffer(seedBytes);
     log(`upload seed done — root=${seedUpload.rootHash.slice(0, 12)}`);
 
-    // 2. Real fine-tune (or bypass).
-    let weightsBytes: Uint8Array = seedBytes;
-    let fineTuneTaskId: string | null = null;
-    let fineTuneProvider: string | null = null;
-    let attestationSig: string | undefined;
-    if (!bypassFineTune) {
-      if (jobId) setMintJobStatus(jobId, "training");
-      log("fineTune start");
-      const ft = await fineTune({
-        datasetHash: seedUpload.rootHash,
-        baseModel,
-        excludeProviders,
-      });
-      log(`fineTune done — task=${ft.taskId.slice(0, 8)} weights=${ft.weightsBytes.byteLength}B`);
-      weightsBytes = ft.weightsBytes;
-      fineTuneTaskId = ft.taskId;
-      fineTuneProvider = ft.providerAddress;
-      attestationSig = ft.attestationSig;
-    }
+    // 2. Encrypt the seed bytes with a fresh AES-GCM key. The persona
+    //    *is* the encrypted payload — there are no separate weights to
+    //    seal anymore.
+    if (jobId) setMintJobStatus(jobId, "encrypting");
+    log("encrypt start");
+    const { ciphertext, key, iv } = await encryptWithRandomKey(seedBytes);
+    log(`encrypt done — ${ciphertext.byteLength}B`);
 
-    // 3. Encrypt weights.
-    if (jobId) setMintJobStatus(jobId, "encrypting-weights");
-    log("encrypt weights start");
-    const { ciphertext, key, iv } = await encryptWithRandomKey(weightsBytes);
-    log(`encrypt weights done — ${ciphertext.byteLength}B`);
-
-    // 4. Upload encrypted weights.
-    if (jobId) setMintJobStatus(jobId, "uploading-weights");
-    log("upload weights start");
+    // 3. Upload encrypted payload.
+    if (jobId) setMintJobStatus(jobId, "uploading-encrypted");
+    log("upload encrypted start");
     const weightsUpload = await uploadBuffer(ciphertext);
-    log(`upload weights done — root=${weightsUpload.rootHash.slice(0, 12)}`);
+    log(`upload encrypted done — root=${weightsUpload.rootHash.slice(0, 12)}`);
     const encryptedURI = `0g://${weightsUpload.rootHash}`;
 
-    // 5. Pack iv || key as sealedKey envelope.
+    // 4. Pack iv || key as sealedKey envelope (ERC-7857 sealed-key shape).
     const sealedKeyBytes = new Uint8Array(iv.byteLength + key.byteLength);
     sealedKeyBytes.set(iv, 0);
     sealedKeyBytes.set(key, iv.byteLength);
     const sealedKey = hexlify(sealedKeyBytes);
 
-    // 6. metadataHash = keccak(public provenance JSON).
+    // 5. metadataHash = keccak(public provenance JSON).
     const metadataHash = keccak256(
       toUtf8Bytes(
         JSON.stringify({
@@ -114,10 +84,6 @@ export async function runMintPipeline(
           owner,
           seedRoot: seedUpload.rootHash,
           weightsRoot: weightsUpload.rootHash,
-          fineTuneTaskId,
-          fineTuneProvider,
-          attestationSig,
-          fineTuneBypassed: bypassFineTune,
         }),
       ),
     ) as `0x${string}`;
@@ -134,13 +100,9 @@ export async function runMintPipeline(
         seedRoot: seedUpload.rootHash,
         weightsRoot: weightsUpload.rootHash,
         signatureStyle,
-        fineTuneBypassed: bypassFineTune,
       },
       steps: {
         seedRoot: seedUpload.rootHash,
-        fineTuneTaskId,
-        fineTuneProvider,
-        fineTuneBypassed: bypassFineTune,
         weightsRoot: weightsUpload.rootHash,
       },
     };
@@ -180,48 +142,4 @@ function extractSignatureQuotes(seed: string): string[] {
     picked.push(quotes[Math.floor(i * step)]);
   }
   return picked;
-}
-
-/**
- * Resilience wrapper: runs `runMintPipeline` with up to `maxAttempts`
- * tries, growing an exclude-set of providers that just failed so the
- * next attempt picks a different one. Anima-style in spirit — when the
- * counterparty (here: a TEE provider) is uncooperative, we route around
- * them rather than blocking the user.
- *
- * Surfaces "retrying" status to the UI between attempts so the polling
- * client can show a meaningful intermediate state instead of 10 minutes
- * of opaque "training" before a terminal failure.
- *
- * Only retries on FineTuneProviderError — other errors (storage upload,
- * decrypt) bubble up directly since retrying with a different provider
- * wouldn't help.
- */
-export async function runMintPipelineWithRetry(
-  args: MintPipelineArgs,
-  jobId: string,
-  opts: { maxAttempts?: number } = {},
-): Promise<MintJobResult> {
-  const maxAttempts = opts.maxAttempts ?? 3;
-  const excluded = new Set<string>();
-  let lastError: Error | undefined;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      return await runMintPipeline({ ...args, excludeProviders: excluded }, jobId);
-    } catch (e) {
-      lastError = e instanceof Error ? e : new Error(String(e));
-      if (e instanceof FineTuneProviderError && attempt < maxAttempts) {
-        excluded.add(e.providerAddress);
-        setMintJobRetrying(jobId, attempt + 1, lastError.message);
-        continue;
-      }
-      // Non-provider error or last attempt — bubble up. The inner
-      // `runMintPipeline` already wrote setMintJobError on its way out.
-      throw e;
-    }
-  }
-
-  // Loop fell through without returning — defensive.
-  throw lastError ?? new Error("mint pipeline exhausted retries");
 }

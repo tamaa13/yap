@@ -75,7 +75,7 @@ export function FighterDetail({
   const [tab, setTab] = useState<DetailTab>("overview");
   const [listOpen, setListOpen] = useState(false);
   const [rentOpen, setRentOpen] = useState(false); // owner: list for rent
-  const [trainOpen, setTrainOpen] = useState(false); // owner: continuous-learning fine-tune
+  const [trainOpen, setTrainOpen] = useState(false); // owner: continuous-learning re-seal session
   const [rentNowOpen, setRentNowOpen] = useState(false); // non-owner: rent duration
   const [rentDurationInput, setRentDurationInput] = useState(3); // for renter
   const [listPrice, setListPrice] = useState<string>("0.1");
@@ -398,7 +398,7 @@ export function FighterDetail({
                   <Button
                     leading={<Icon name="zap" size={14} />}
                     onClick={() => setTrainOpen(true)}
-                    title="Run another TEE-attested fine-tune session against new style data"
+                    title="Re-seal this fighter's persona with new style lines and emit a FighterTrained event"
                   >
                     Train fighter
                   </Button>
@@ -816,10 +816,11 @@ export function FighterDetail({
           </Card>
           <Card style={{ padding: 18 }}>
             <div className="label" style={{ marginBottom: 10, color: "var(--success)" }}>
-              TEE attestation
+              On-chain attestation
             </div>
             <div style={{ fontSize: 12, color: "var(--tx-secondary)", marginBottom: 12 }}>
-              Weights + metadata sealed and attested at mint.
+              Persona sealed at mint. Verdicts on this fighter are
+              TEE-attested per battle (see arena page).
             </div>
             <div style={{ marginBottom: 14 }}>
               <Hash value={fighter.attest} copy />

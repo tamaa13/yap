@@ -1,13 +1,9 @@
 import { NextResponse } from "next/server";
 import { createMintJob } from "@/lib/mint-jobs";
-import { runMintPipelineWithRetry } from "@/lib/mint-pipeline";
+import { runMintPipeline } from "@/lib/mint-pipeline";
 import { FIGHTER_INFT_ADDRESS } from "@/lib/contracts";
 
 export const runtime = "nodejs";
-// Each /start request only opens the pipeline; the long fine-tune runs
-// in background. This handler returns in <2 s, so the standard timeout
-// is plenty — keep maxDuration low so a stuck handler doesn't sit on
-// the request slot.
 export const maxDuration = 30;
 
 interface StartBody {
@@ -16,7 +12,6 @@ interface StartBody {
   archetype?: string;
   avatar?: number;
   styleSeed?: string;
-  baseModel?: string;
 }
 
 /**
@@ -33,7 +28,6 @@ export async function POST(req: Request) {
   const name = body.name?.trim() ?? "";
   const archetype = body.archetype?.trim() ?? "";
   const avatar = typeof body.avatar === "number" ? body.avatar : 0;
-  const baseModel = body.baseModel?.trim() || undefined;
 
   if (!owner || !/^0x[0-9a-fA-F]{40}$/.test(owner)) {
     return NextResponse.json(
@@ -50,16 +44,13 @@ export async function POST(req: Request) {
     );
   }
 
-  const bypassFineTune = process.env.ZG_FINE_TUNE_BYPASS === "true";
   const job = createMintJob();
 
   // Fire-and-forget. Errors are captured into the job state by
   // runMintPipeline itself, so a logged warning is the most we want
   // here — the client will see status: "failed" via /status polling.
-  // The Retry wrapper rotates around providers that timeout (anima
-  // pattern: when the counterparty is uncooperative, route around).
-  runMintPipelineWithRetry(
-    { owner, name, archetype, avatar, seed, baseModel, bypassFineTune },
+  runMintPipeline(
+    { owner, name, archetype, avatar, seed },
     job.id,
   ).catch((e) => {
     console.warn(`[api/mint/start] job ${job.id} failed (already in state):`, e);

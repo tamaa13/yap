@@ -14,19 +14,16 @@ interface TrainModalProps {
   fighterName: string;
   archetype: string;
   /** Existing signature lines from the fighter's prior training. Combined
-   *  with the user's new lines into the seed for the next fine-tune. */
+   *  with the user's new lines into the next training session's seed. */
   priorSignature: string[];
 }
 
 const PHASE_LABEL: Record<TrainPhase, string> = {
   idle: "",
   queued: "Queued",
-  "uploading-seed": "Uploading style seed to 0G Storage",
-  training: "Training on TEE GPU (the long part)",
-  retrying: "Last provider was slow — routing to a different one",
-  decrypting: "Verifying TEE attestation + decrypting",
-  "encrypting-weights": "Sealing weights with fresh AES key",
-  "uploading-weights": "Publishing encrypted INFT to 0G Storage",
+  "uploading-seed": "Uploading new lines to 0G Storage",
+  encrypting: "Sealing the updated persona",
+  "uploading-encrypted": "Publishing encrypted INFT to 0G Storage",
   signing: "Sign FighterTrainer.train() in your wallet",
   minting: "Waiting for on-chain confirmation",
   done: "Done — new training session recorded",
@@ -55,9 +52,9 @@ export function TrainModal({
     if (newLines.length === 0) return;
 
     // Server pipeline expects JSONL — wrap raw lines in {prompt, completion}
-    // shape, mirroring how /api/mint feeds the fine-tune dataset. Combine
-    // prior signature lines (from earlier training sessions) so the
-    // fighter's accumulated personality persists.
+    // shape, mirroring /api/mint. Combine prior signature lines (from
+    // earlier training sessions) so the fighter's accumulated personality
+    // persists into the next sealed payload.
     const combined = [
       ...priorSignature.map((line) =>
         JSON.stringify({
@@ -132,8 +129,9 @@ export function TrainModal({
         <p style={{ fontSize: 14, opacity: 0.8, lineHeight: 1.5 }}>
           Add new lines in your fighter&apos;s voice — quotes from a recent
           battle, lessons from a defeat, sharper one-liners. Each training
-          session triggers a real TEE-attested fine-tune on 0G Compute and
-          records a new <code>FighterTrained</code> event on-chain.
+          session re-seals the persona on 0G Storage and records a new{" "}
+          <code>FighterTrained</code> event on-chain so the evolution
+          timeline is independently verifiable.
         </p>
 
         <textarea
@@ -163,7 +161,7 @@ export function TrainModal({
           {extraLines.split("\n").filter((l) => l.trim()).length === 1
             ? ""
             : "s"}{" "}
-          for the next fine-tune.
+          for the next training session.
         </div>
 
         {train.phase !== "idle" && (
@@ -178,13 +176,6 @@ export function TrainModal({
             <div style={{ fontWeight: 600, marginBottom: 4 }}>
               {PHASE_LABEL[train.phase]}
             </div>
-            {train.phase === "training" && (
-              <div style={{ opacity: 0.7 }}>
-                Provider is training the model on a TDX-attested H100. This
-                normally takes 5-7 minutes; you can close this modal and
-                check back — the job runs server-side.
-              </div>
-            )}
             {train.error && (
               <div style={{ color: "#ff6b6b", marginTop: 6 }}>
                 {train.error.message}
