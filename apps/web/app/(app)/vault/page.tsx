@@ -14,6 +14,7 @@ import { PageContainer } from "@/components/shell/page-container";
 import { GateScreen } from "@/components/wallet/gate-screen";
 import { useFighters } from "@/hooks/use-fighters";
 import { useMyBets } from "@/hooks/use-my-bets";
+import { useSubnameBatch } from "@/hooks/use-subname";
 import { useDeclineBattle } from "@/hooks/use-accept-battle";
 import { usePendingChallenges } from "@/hooks/use-pending-challenges";
 import { useToast } from "@/components/ui/toast";
@@ -84,6 +85,11 @@ export default function VaultPage() {
   const activeBets = myBets.filter((b) => b.status === "active");
   const settledBets = myBets.filter((b) => b.status !== "active");
   const pnl = settledBets.reduce((s, b) => s + (b.pnl ?? 0), 0);
+
+  // Batch-resolve subnames for everything in the vault. One on-chain
+  // multicall instead of one RPC per card.
+  const allTokenIds = mine.map((f) => f.id);
+  const { labels: subnameLabels } = useSubnameBatch(allTokenIds);
 
   return (
     <PageContainer>
@@ -169,6 +175,19 @@ export default function VaultPage() {
                     >
                       {f.arch}
                     </div>
+                    {subnameLabels[f.id] && (
+                      <div
+                        className="mono"
+                        style={{
+                          fontSize: 10,
+                          color: "var(--accent)",
+                          marginTop: 2,
+                          letterSpacing: 0.04,
+                        }}
+                      >
+                        {subnameLabels[f.id]}.yap.0g
+                      </div>
+                    )}
                     <div
                       style={{
                         display: "flex",

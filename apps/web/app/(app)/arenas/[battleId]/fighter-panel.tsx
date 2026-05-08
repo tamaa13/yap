@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { HPBar } from "@/components/ui/hp-bar";
 import { Icon } from "@/components/ui/icon";
 import { Sigil } from "@/components/ui/sigil";
+import { useSubname } from "@/hooks/use-subname";
 import type { Fighter } from "@/lib/types";
 
 export function FighterPanel({
@@ -18,6 +19,7 @@ export function FighterPanel({
   compact?: boolean;
 }) {
   const cornerColor = corner === "a" ? "var(--fighter-a)" : "var(--fighter-b)";
+  const { fullName: subnameFullName } = useSubname(fighter.id);
   return (
     <Card style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -37,6 +39,19 @@ export function FighterPanel({
           <div style={{ fontSize: 12, color: "var(--tx-tertiary)", textTransform: "capitalize" }}>
             {fighter.arch}
           </div>
+          {subnameFullName && (
+            <div
+              className="mono"
+              style={{
+                fontSize: 11,
+                color: "var(--accent)",
+                marginTop: 4,
+                letterSpacing: 0.04,
+              }}
+            >
+              {subnameFullName}
+            </div>
+          )}
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>

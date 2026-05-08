@@ -26,6 +26,7 @@ import {
   BATTLE_ESCROW_ABI,
   BATTLE_ESCROW_ADDRESS,
 } from "@/lib/contracts";
+import { useSubname } from "@/hooks/use-subname";
 import type { Battle, Fighter } from "@/lib/types";
 
 const CHALLENGE_EXPIRY_MS = 24 * 3600 * 1000;
@@ -319,6 +320,7 @@ function FighterCol({
   highlight?: boolean;
   align?: "left" | "right";
 }) {
+  const { fullName: subnameFullName } = useSubname(fighter.id);
   return (
     <div
       style={{
@@ -356,6 +358,14 @@ function FighterCol({
           }}
         >
           <div style={{ fontSize: 15, fontWeight: 600 }}>{fighter.name}</div>
+          {subnameFullName && (
+            <div
+              className="mono"
+              style={{ fontSize: 10, color: "var(--accent)", marginTop: 2 }}
+            >
+              {subnameFullName}
+            </div>
+          )}
           <div
             className="num"
             style={{ fontSize: 11, color: "var(--tx-tertiary)" }}
