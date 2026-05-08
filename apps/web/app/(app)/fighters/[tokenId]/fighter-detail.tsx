@@ -80,6 +80,7 @@ export function FighterDetail({
   const [listPrice, setListPrice] = useState<string>("0.1");
   const [rentPricePerDay, setRentPricePerDay] = useState<string>("0.01");
   const [rentMaxDays, setRentMaxDays] = useState<number>(7);
+  const [rentDisputable, setRentDisputable] = useState<boolean>(false);
   const listFighter = useListFighter();
   const cancelListing = useCancelListing();
   const buyFighter = useBuyFighter();
@@ -188,6 +189,7 @@ export function FighterDetail({
         tokenId: fighter.id,
         pricePerDayEth: ppd,
         maxDurationDays: rentMaxDays,
+        disputable: rentDisputable,
       });
       push({
         kind: "success",
@@ -941,6 +943,38 @@ export function FighterDetail({
               Renters can rent any length up to this cap.
             </div>
           </div>
+          <label
+            style={{
+              display: "flex",
+              gap: 10,
+              alignItems: "flex-start",
+              padding: 12,
+              background: "var(--bg-elevated, #161616)",
+              borderRadius: 6,
+              border: "1px solid var(--border, #2a2a2a)",
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={rentDisputable}
+              onChange={(e) => setRentDisputable(e.target.checked)}
+              style={{ marginTop: 2 }}
+            />
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>
+                Enable disputable escrow
+              </span>
+              <span
+                style={{ fontSize: 11, color: "var(--tx-tertiary)" }}
+              >
+                Funds are held in escrow until the rental ends. Renter has
+                24h to accept or dispute; if disputed, parties propose a
+                co-signed split. After 7d with no resolution, renter is
+                refunded. Untoggled = funds release on rent (default).
+              </span>
+            </div>
+          </label>
           {listForRent.error && (
             <div
               style={{
