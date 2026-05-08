@@ -2,13 +2,17 @@
 
 import {
   forwardRef,
-  useState,
   type ButtonHTMLAttributes,
   type CSSProperties,
   type ReactNode,
 } from "react";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "destructive";
+export type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "ghost"
+  | "destructive"
+  | "gold";
 export type ButtonSize = "sm" | "md" | "lg";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -20,17 +24,23 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   fullWidth?: boolean;
 }
 
-const sizes: Record<ButtonSize, CSSProperties> = {
-  sm: { height: 28, padding: "0 10px", fontSize: 12 },
-  md: { height: 34, padding: "0 14px", fontSize: 13 },
-  lg: { height: 42, padding: "0 20px", fontSize: 14 },
+// Map React variants to .btn-family CSS classes (defined in globals.css
+// under the BUTTONS section). Geometry, palette, hover translate, and
+// reduced-motion guard all live in CSS — the component composes class
+// names so the press feel is identical wherever .btn is used (including
+// any non-React surface that opts in).
+const VARIANT_CLASS: Record<ButtonVariant, string> = {
+  primary: "", // crimson default — no extra class
+  secondary: "btn--secondary",
+  ghost: "btn--ghost",
+  destructive: "btn--danger",
+  gold: "btn--gold",
 };
 
-const variants: Record<ButtonVariant, CSSProperties> = {
-  primary: { background: "var(--accent)", color: "var(--yap-ink-50)", borderColor: "var(--accent)" },
-  secondary: { background: "transparent", color: "var(--tx-primary)", borderColor: "var(--bd-strong)" },
-  ghost: { background: "transparent", color: "var(--tx-secondary)", borderColor: "transparent" },
-  destructive: { background: "transparent", color: "var(--danger)", borderColor: "rgba(232,107,107,0.40)" },
+const SIZE_CLASS: Record<ButtonSize, string> = {
+  sm: "btn--sm",
+  md: "", // base
+  lg: "btn--lg",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
@@ -43,66 +53,47 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     loading,
     disabled,
     fullWidth,
+    className,
     style,
     ...rest
   },
   ref,
 ) {
-  const [hover, setHover] = useState(false);
-  const base: CSSProperties = {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    fontFamily: "inherit",
-    fontWeight: 500,
-    letterSpacing: 0,
-    borderRadius: 4,
-    border: "1px solid transparent",
-    cursor: "pointer",
-    transition: "background 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out",
-    whiteSpace: "nowrap",
-    userSelect: "none",
-    width: fullWidth ? "100%" : undefined,
-  };
-
   const isDisabled = disabled || loading;
-  const disabledStyle: CSSProperties = isDisabled
-    ? { opacity: 0.4, cursor: "not-allowed", pointerEvents: "none" }
-    : {};
 
-  const hoverStyle: CSSProperties =
-    hover && !isDisabled
-      ? variant === "primary"
-        ? { background: "var(--accent-hover)" }
-        : variant === "secondary"
-          ? { background: "rgba(255,255,255,0.04)" }
-          : variant === "ghost"
-            ? { background: "rgba(255,255,255,0.04)", color: "var(--tx-primary)" }
-            : variant === "destructive"
-              ? { background: "rgba(232,107,107,0.08)" }
-              : {}
-      : {};
+  const cls = [
+    "btn",
+    VARIANT_CLASS[variant],
+    SIZE_CLASS[size],
+    fullWidth ? "btn--full" : "",
+    isDisabled ? "is-disabled" : "",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  // Inline overrides only — caller-supplied `style` still wins for
+  // edge cases (positioning, custom widths). Loading uses the existing
+  // skeleton block so the press dimensions don't shift between idle
+  // and loading states.
+  const inlineStyle: CSSProperties = {
+    ...style,
+  };
 
   return (
     <button
       ref={ref}
       type={rest.type ?? "button"}
       disabled={isDisabled}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        ...base,
-        ...sizes[size],
-        ...variants[variant],
-        ...hoverStyle,
-        ...disabledStyle,
-        ...style,
-      }}
+      className={cls}
+      style={inlineStyle}
       {...rest}
     >
       {loading ? (
-        <span className="al-skel" style={{ width: 12, height: 12, borderRadius: 2 }} />
+        <span
+          className="al-skel"
+          style={{ width: 12, height: 12, borderRadius: 0 }}
+        />
       ) : (
         leading
       )}
