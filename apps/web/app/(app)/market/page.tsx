@@ -99,7 +99,7 @@ export default function MarketPage() {
     <PageContainer>
       <h1 style={{ fontSize: 24, marginBottom: 4 }}>Marketplace</h1>
       <div style={{ fontSize: 13, color: "var(--tx-secondary)", marginBottom: 20 }}>
-        Browse INFT fighters. Buy, rent, and auction flows land in Phase B.
+        Buy a fighter outright, hire one for a stretch, or scout the field.
       </div>
 
       <Tabs
@@ -191,7 +191,7 @@ export default function MarketPage() {
               {tab === "rent" ? "Max rent/day" : "Max price"}
             </div>
             <div style={{ fontSize: 11, color: "var(--tx-tertiary)", marginBottom: 8 }}>
-              Hide listings above this 0G amount.
+              Hides anything above this 0G ceiling.
             </div>
             <Input
               type="number"
@@ -297,11 +297,11 @@ export default function MarketPage() {
             </div>
           ) : list.length === 0 ? (
             <EmptyState
-              title={anyFilterActive ? "No matches" : "No listings"}
+              title={anyFilterActive ? "No matches under those filters" : "Empty market"}
               body={
                 anyFilterActive
-                  ? "Try clearing filters or widening the range."
-                  : "Marketplace fills once fighters mint and list. Be the first."
+                  ? "Loosen a filter or wipe them all and try again."
+                  : "Nobody's listed yet. Be the first to put one on the block."
               }
               cta={
                 anyFilterActive ? (

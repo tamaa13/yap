@@ -29,8 +29,8 @@ export function ArenaLiveClient({ battleId }: { battleId: string }) {
       <PageContainer>
         <EmptyState
           icon="alert"
-          title="Battle not found"
-          body="This battle doesn't exist on-chain yet, or the contracts aren't deployed."
+          title="Battle's a ghost"
+          body="No record on-chain — either it's not propagated yet, or the contracts aren't deployed on this network."
           cta={
             <Link href="/arenas">
               <Button variant="primary">Back to arenas</Button>

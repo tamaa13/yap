@@ -107,8 +107,8 @@ export default function LeaderboardPage() {
         <TableSkel rows={10} cols={8} />
       ) : filtered.length === 0 ? (
         <EmptyState
-          title="Leaderboard forming"
-          body="Be the first fighter. Once battles resolve, the leaderboard fills."
+          title="No champions yet"
+          body="The board fills as battles settle. Get your fighter in early and write the first line."
         />
       ) : (
         <Card>

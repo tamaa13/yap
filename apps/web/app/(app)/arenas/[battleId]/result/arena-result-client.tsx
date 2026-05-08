@@ -39,7 +39,8 @@ export function ArenaResultClient({ battleId }: { battleId: string }) {
       <PageContainer>
         <EmptyState
           icon="alert"
-          title="Battle not found"
+          title="Battle's a ghost"
+          body="No record on-chain — either it's not propagated yet, or this battle ID is bogus."
           cta={
             <Link href="/arenas">
               <Button variant="primary">Back to arenas</Button>

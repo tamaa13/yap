@@ -11,11 +11,11 @@ export default function NotFound() {
       <PageContainer>
         <EmptyState
           icon="alert"
-          title="404 · Page not found"
-          body="The route you're looking for doesn't exist."
+          title="404 · Off the map"
+          body="Whatever you were chasing isn't here. Head back."
           cta={
             <Link href="/">
-              <Button variant="primary">Back home</Button>
+              <Button variant="primary">Back to the arena</Button>
             </Link>
           }
         />

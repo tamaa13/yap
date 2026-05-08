@@ -102,12 +102,12 @@ export function ArenaPending({
       const tx = await accept.write(battleIdNum, {
         stakeEth: defenderStake || "0",
       });
-      push({ kind: "success", text: `Accepted · tx ${tx.slice(0, 10)}…` });
+      push({ kind: "success", text: `Accepted. The bell rings shortly · tx ${tx.slice(0, 10)}…` });
       setTimeout(() => router.refresh(), 1500);
     } catch (e) {
       push({
         kind: "error",
-        text: e instanceof Error ? e.message : "Accept failed",
+        text: e instanceof Error ? e.message : "Couldn't accept",
       });
     }
   };
@@ -115,12 +115,12 @@ export function ArenaPending({
   const onDecline = async () => {
     try {
       const tx = await decline.write(battleIdNum);
-      push({ kind: "default", text: `Declined · tx ${tx.slice(0, 10)}…` });
+      push({ kind: "default", text: `Declined. Stake refunded · tx ${tx.slice(0, 10)}…` });
       setTimeout(() => router.push("/arenas"), 1500);
     } catch (e) {
       push({
         kind: "error",
-        text: e instanceof Error ? e.message : "Decline failed",
+        text: e instanceof Error ? e.message : "Couldn't decline",
       });
     }
   };
@@ -224,8 +224,8 @@ export function ArenaPending({
                   }}
                 >
                   {stakeBelowMin
-                    ? `Stake must be at least ${minDefenderStakeEth.toFixed(4)} 0G to accept this challenge. Zero-stake accept is disabled to prevent free-option play.`
-                    : `Challenger staked ${challengerStakeEth.toFixed(4)} 0G. You must match at least 75% to accept — skin-in-the-game combat, not a lottery.`}
+                    ? `Need ${minDefenderStakeEth.toFixed(4)} 0G or more to step in. No zero-stake free options.`
+                    : `Challenger staked ${challengerStakeEth.toFixed(4)} 0G. Match at least 75% — skin in the game, not a lottery.`}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -241,21 +241,21 @@ export function ArenaPending({
                   onClick={onAccept}
                 >
                   {accept.isPending
-                    ? "Confirm in wallet…"
+                    ? "Sign in your wallet…"
                     : accept.isConfirming
-                      ? "Accepting…"
+                      ? "Locking the stake…"
                       : stakeBelowMin
                         ? "Stake too low"
-                        : "Accept challenge"}
+                        : "Step in"}
                 </Button>
                 <Button
                   disabled={decline.isPending || decline.isConfirming}
                   onClick={onDecline}
                 >
                   {decline.isPending
-                    ? "Confirm in wallet…"
+                    ? "Sign in your wallet…"
                     : decline.isConfirming
-                      ? "Declining…"
+                      ? "Backing out…"
                       : "Decline"}
                 </Button>
               </div>
@@ -278,15 +278,15 @@ export function ArenaPending({
                   marginBottom: 4,
                 }}
               >
-                Waiting for the defender to respond
+                Defender's on the clock
               </div>
-              Ownership of Fighter #{fighterB.id} is{" "}
-              <Hash value={fighterB.owner} /> — they need to accept in their
-              Vault → Challenges tab. If they don't respond before the expiry,
-              the challenge cancels automatically and no fees are lost.
+              Fighter #{fighterB.id} belongs to{" "}
+              <Hash value={fighterB.owner} /> — they accept from Vault →
+              Challenges. If the timer runs out first, the challenge auto-
+              cancels and your stake comes home.
               <div style={{ marginTop: 10 }}>
                 <Link href="/vault">
-                  <Button size="sm">Go to my Vault</Button>
+                  <Button size="sm">Open Vault</Button>
                 </Link>
               </div>
             </div>
@@ -299,8 +299,7 @@ export function ArenaPending({
                 color: "var(--tx-secondary)",
               }}
             >
-              Awaiting acceptance by the defender. Betting opens once the
-              challenge is accepted.
+              Defender hasn't stepped in yet. Bets open the second they do.
             </div>
           )}
         </div>

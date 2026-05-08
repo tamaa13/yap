@@ -86,7 +86,7 @@ export function ArenaLive({
     } catch (e) {
       push({
         kind: "error",
-        text: e instanceof Error ? e.message : "Bet failed",
+        text: e instanceof Error ? e.message : "Bet didn't land",
       });
     }
   };
@@ -97,7 +97,7 @@ export function ArenaLive({
     const fighterName = pendingBet.side === "a" ? fighterA.name : fighterB.name;
     push({
       kind: "success",
-      text: `Bet locked: ${pendingBet.amount} 0G on ${fighterName}`,
+      text: `${pendingBet.amount} 0G on ${fighterName}. Skin in the game.`,
     });
     const id = setTimeout(() => {
       setConfirmOpen(false);
@@ -455,12 +455,12 @@ function RunBattleButton({
       }
       push({
         kind: "default",
-        text: "Battle running on 0G Compute — watch it live below.",
+        text: "Bell's ringing. Battle's live on 0G Compute below.",
       });
     } catch (e) {
       push({
         kind: "error",
-        text: e instanceof Error ? e.message : "Start failed",
+        text: e instanceof Error ? e.message : "Couldn't start the battle",
       });
     } finally {
       setStarting(false);
@@ -475,14 +475,14 @@ function RunBattleButton({
   const disabled = starting || isRunning || isSettled;
 
   const label = starting
-    ? "Starting…"
+    ? "Ringing the bell…"
     : isSettled
       ? "Battle settled"
       : isFailed
-        ? "Retry battle"
+        ? "Run it back"
         : isRunning
           ? phaseLabel(phase)
-          : "Run battle";
+          : "Ring the bell";
 
   return (
     <Button size="sm" onClick={onClick} disabled={disabled}>

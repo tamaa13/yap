@@ -26,8 +26,8 @@ export function FighterDetailClient({ tokenId }: { tokenId: number }) {
       <PageContainer>
         <EmptyState
           icon="alert"
-          title="Fighter not found"
-          body="This tokenId doesn't exist on-chain, or contracts aren't deployed."
+          title="No fighter at that ID"
+          body="That tokenId isn't on-chain — either it never minted, or contracts aren't deployed on this network."
           cta={
             <Link href="/market">
               <Button variant="primary">Back to market</Button>

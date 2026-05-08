@@ -89,8 +89,8 @@ export default function WalletPage() {
         Transaction history
       </div>
       <EmptyState
-        title="No on-chain activity yet"
-        body="Mint, bet, or claim to see transactions here. Full indexed history lands in Phase D."
+        title="Clean ledger"
+        body="Mint a fighter, stake on a battle, claim a purse — your moves show up here."
       />
     </PageContainer>
   );

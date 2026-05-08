@@ -119,7 +119,7 @@ export function FighterDetail({
     const price = listPrice.trim();
     const priceNum = Number(price);
     if (!Number.isFinite(priceNum) || priceNum <= 0) {
-      push({ kind: "error", text: "Enter a valid price in 0G." });
+      push({ kind: "error", text: "Price needs to be a positive 0G amount." });
       return;
     }
     try {
@@ -127,7 +127,7 @@ export function FighterDetail({
         tokenId: fighter.id,
         priceEth: price,
       });
-      push({ kind: "success", text: `Listed for ${price} 0G · tx ${txHash.slice(0, 10)}…` });
+      push({ kind: "success", text: `On the block at ${price} 0G · tx ${txHash.slice(0, 10)}…` });
       setListOpen(false);
       setTimeout(() => refetchListing(), 2000);
     } catch (e) {
@@ -141,7 +141,7 @@ export function FighterDetail({
   const submitUnlist = async () => {
     try {
       const txHash = await cancelListing.write(fighter.id);
-      push({ kind: "success", text: `Listing cancelled · tx ${txHash.slice(0, 10)}…` });
+      push({ kind: "success", text: `Pulled the listing · tx ${txHash.slice(0, 10)}…` });
       setTimeout(() => refetchListing(), 2000);
     } catch (e) {
       push({
@@ -153,7 +153,7 @@ export function FighterDetail({
 
   const submitBuy = async () => {
     if (!isListedOnChain) {
-      push({ kind: "error", text: "Fighter not listed." });
+      push({ kind: "error", text: "Listing's gone — someone beat you to it." });
       return;
     }
     try {
@@ -163,7 +163,7 @@ export function FighterDetail({
       });
       push({
         kind: "success",
-        text: `Purchase confirmed · tx ${txHash.slice(0, 10)}…`,
+        text: `Fighter is yours · tx ${txHash.slice(0, 10)}…`,
       });
       setTimeout(() => refetchListing(), 2000);
     } catch (e) {
@@ -178,11 +178,11 @@ export function FighterDetail({
     const ppd = rentPricePerDay.trim();
     const ppdNum = Number(ppd);
     if (!Number.isFinite(ppdNum) || ppdNum <= 0) {
-      push({ kind: "error", text: "Enter a valid price per day." });
+      push({ kind: "error", text: "Daily rate needs to be a positive 0G amount." });
       return;
     }
     if (!Number.isFinite(rentMaxDays) || rentMaxDays <= 0 || rentMaxDays > 365) {
-      push({ kind: "error", text: "Max duration must be 1–365 days." });
+      push({ kind: "error", text: "Max rental window has to be 1–365 days." });
       return;
     }
     try {
@@ -194,7 +194,7 @@ export function FighterDetail({
       });
       push({
         kind: "success",
-        text: `Listed for rent · ${ppd} 0G/day · tx ${tx.slice(0, 10)}…`,
+        text: `Out for hire at ${ppd} 0G/day · tx ${tx.slice(0, 10)}…`,
       });
       setRentOpen(false);
       setTimeout(() => refetchRental(), 2000);
@@ -211,7 +211,7 @@ export function FighterDetail({
       const tx = await cancelRentListing.write(fighter.id);
       push({
         kind: "success",
-        text: `Rent listing cancelled · tx ${tx.slice(0, 10)}…`,
+        text: `Pulled the rental · tx ${tx.slice(0, 10)}…`,
       });
       setTimeout(() => refetchRental(), 2000);
     } catch (e) {
@@ -224,7 +224,7 @@ export function FighterDetail({
 
   const submitRent = async () => {
     if (!isListedForRent) {
-      push({ kind: "error", text: "Fighter not listed for rent." });
+      push({ kind: "error", text: "Rental's gone — someone beat you to it." });
       return;
     }
     if (
@@ -234,7 +234,7 @@ export function FighterDetail({
     ) {
       push({
         kind: "error",
-        text: `Duration must be 1–${rentMaxDuration} days.`,
+        text: `Pick 1–${rentMaxDuration} days. Owner caps it there.`,
       });
       return;
     }
@@ -247,7 +247,7 @@ export function FighterDetail({
       });
       push({
         kind: "success",
-        text: `Rented ${rentDurationInput} day(s) · tx ${tx.slice(0, 10)}…`,
+        text: `Fighter under your command for ${rentDurationInput} day${rentDurationInput === 1 ? "" : "s"} · tx ${tx.slice(0, 10)}…`,
       });
       setTimeout(() => refetchRental(), 2000);
     } catch (e) {
@@ -344,7 +344,7 @@ export function FighterDetail({
                     leading={<Icon name="sword" size={14} />}
                     onClick={() => router.push(`/battle/new?fighter=${fighter.id}`)}
                   >
-                    Send to battle
+                    Into the ring
                   </Button>
                   {isListedOnChain ? (
                     <Button
@@ -353,10 +353,10 @@ export function FighterDetail({
                       disabled={listingBusy}
                     >
                       {cancelListing.isPending
-                        ? "Cancel in wallet…"
+                        ? "Sign in your wallet…"
                         : cancelListing.isConfirming
-                          ? "Cancelling…"
-                          : `Unlist · ${fmtNum(chainPrice, 2)} 0G`}
+                          ? "Pulling the listing…"
+                          : `Pull listing · ${fmtNum(chainPrice, 2)} 0G`}
                     </Button>
                   ) : (
                     <Button
@@ -441,9 +441,9 @@ export function FighterDetail({
                       }
                     >
                       {buyFighter.isPending
-                        ? "Confirm in wallet…"
+                        ? "Sign in your wallet…"
                         : buyFighter.isConfirming
-                          ? "Buying…"
+                          ? "Locking the buy…"
                           : `Buy · ${fmtNum(chainPrice, 2)} 0G`}
                     </Button>
                   )}
@@ -456,10 +456,10 @@ export function FighterDetail({
                       }
                     >
                       {rentFighter.isPending
-                        ? "Confirm in wallet…"
+                        ? "Sign in your wallet…"
                         : rentFighter.isConfirming
-                          ? "Renting…"
-                          : `Rent · ${fmtNum(rentPriceDisplay, 2)} 0G/day`}
+                          ? "Locking the rental…"
+                          : `Hire · ${fmtNum(rentPriceDisplay, 2)} 0G/day`}
                     </Button>
                   )}
                 </>
@@ -768,8 +768,8 @@ export function FighterDetail({
               ) : (
                 <EmptyState
                   icon="trend"
-                  title="No earnings yet"
-                  body="This fighter hasn't won any battles. Earnings accrue on-chain via BattleRegistry when it wins and bettors claim payouts."
+                  title="Empty purse, for now"
+                  body="No wins, no winnings. Earnings stack up on-chain via BattleRegistry once this fighter takes a round and the bettors claim out."
                 />
               )}
             </Card>
@@ -853,20 +853,20 @@ export function FighterDetail({
       <Modal
         open={listOpen}
         onClose={() => !listingBusy && setListOpen(false)}
-        title="List fighter for sale"
+        title="Put this fighter on the block"
         footer={
           <>
             <Button onClick={() => setListOpen(false)} disabled={listingBusy}>
-              Cancel
+              Back out
             </Button>
             <Button variant="primary" onClick={submitListing} disabled={listingBusy}>
               {listFighter.phase === "approving"
                 ? "Approving marketplace…"
                 : listFighter.phase === "listing"
-                  ? "Listing…"
+                  ? "Posting…"
                   : listFighter.isConfirming
-                    ? "Confirming tx…"
-                    : "List"}
+                    ? "Landing on-chain…"
+                    : "Post the listing"}
             </Button>
           </>
         }
@@ -884,8 +884,8 @@ export function FighterDetail({
             />
           </div>
           <div style={{ fontSize: 12, color: "var(--tx-tertiary)" }}>
-            2.5% platform fee applies on sale. Funds held in escrow by the Marketplace
-            contract; proceeds are claimable via Wallet after settlement.
+            2.5% platform fee on sale. Marketplace escrow holds funds;
+            you claim proceeds from the Wallet page once it settles.
           </div>
         </div>
       </Modal>
@@ -893,11 +893,11 @@ export function FighterDetail({
       <Modal
         open={rentOpen}
         onClose={() => !listingBusy && setRentOpen(false)}
-        title="List fighter for rent"
+        title="Put this fighter up for hire"
         footer={
           <>
             <Button onClick={() => setRentOpen(false)} disabled={listingBusy}>
-              Cancel
+              Back out
             </Button>
             <Button
               variant="primary"
@@ -907,10 +907,10 @@ export function FighterDetail({
               {listForRent.phase === "approving"
                 ? "Approving escrow…"
                 : listForRent.phase === "listing"
-                  ? "Listing…"
+                  ? "Posting…"
                   : listForRent.isConfirming
-                    ? "Confirming tx…"
-                    : "List for rent"}
+                    ? "Landing on-chain…"
+                    : "Post the rental"}
             </Button>
           </>
         }
@@ -928,9 +928,9 @@ export function FighterDetail({
           >
             <strong style={{ color: "var(--tx-primary)" }}>How rentals work</strong>
             <br />
-            Your fighter goes into RentalEscrow custody. Anyone can rent it
-            by paying your rate — up to your max duration. Fighter returns to your
-            Vault automatically when the rental expires. 2.5% platform fee on rent proceeds.
+            Your fighter goes into RentalEscrow custody. Anyone can hire it at
+            your rate up to the cap you set. It returns to your Vault the
+            instant the rental expires. 2.5% platform fee on the take.
           </div>
           <div>
             <div className="label" style={{ marginBottom: 6 }}>Price per day</div>
@@ -982,10 +982,10 @@ export function FighterDetail({
               <span
                 style={{ fontSize: 11, color: "var(--tx-tertiary)" }}
               >
-                Funds are held in escrow until the rental ends. Renter has
-                24h to accept or dispute; if disputed, parties propose a
-                co-signed split. After 7d with no resolution, renter is
-                refunded. Untoggled = funds release on rent (default).
+                Funds stay in escrow until the rental wraps. Renter has 24h
+                to accept or dispute. Disputes settle with a co-signed split;
+                no resolution in 7d refunds the renter. Off = funds release
+                on rent (default).
               </span>
             </div>
           </label>
@@ -1012,14 +1012,14 @@ export function FighterDetail({
         onClose={() =>
           !rentFighter.isPending && !rentFighter.isConfirming && setRentNowOpen(false)
         }
-        title={`Rent ${fighter.name}`}
+        title={`Hire ${fighter.name}`}
         footer={
           <>
             <Button
               onClick={() => setRentNowOpen(false)}
               disabled={rentFighter.isPending || rentFighter.isConfirming}
             >
-              Cancel
+              Back out
             </Button>
             <Button
               variant="primary"
@@ -1030,9 +1030,9 @@ export function FighterDetail({
               }}
             >
               {rentFighter.isPending
-                ? "Confirm in wallet…"
+                ? "Sign in your wallet…"
                 : rentFighter.isConfirming
-                  ? "Renting…"
+                  ? "Locking the rental…"
                   : `Pay ${fmtNum(
                       rentPriceDisplay * Math.max(1, rentDurationInput),
                       3,
@@ -1052,11 +1052,11 @@ export function FighterDetail({
               lineHeight: 1.5,
             }}
           >
-            <strong style={{ color: "var(--tx-primary)" }}>How renting works</strong>
+            <strong style={{ color: "var(--tx-primary)" }}>How hiring works</strong>
             <br />
-            You pay upfront for your chosen duration. During the rental you can send
-            this fighter to battle — earnings flow to your wallet. When the rental
-            ends, it returns to the owner's vault automatically.
+            Pay upfront for your window. While it's yours, send the fighter
+            into battle and the winnings hit your wallet. The moment the
+            window closes, the fighter snaps back to the owner's vault.
           </div>
           <div>
             <div className="label" style={{ marginBottom: 6 }}>
