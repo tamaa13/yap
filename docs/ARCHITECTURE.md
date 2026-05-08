@@ -316,6 +316,24 @@ session 0 in the timeline.
   download, macOS storage fallback) on the SDK roadmap. We avoid the path
   in production by downloading via 0G Storage natively (which is also
   faster); the TEE fallback is only used on macOS dev.
+- **Bug #8 (FT provider models registry empties spontaneously).** On
+  2026-05-08 ~08:03–11:52 UTC the Galileo fine-tune provider
+  `0xA02b95Aa…E31A09` (the only one on Galileo) transitioned from healthy
+  to a state where `listService()` returns `models: []`. After the
+  transition every `createTask` accepts and returns task IDs but provider
+  marks them `progress: Failed` (no error message) within ~10 minutes —
+  symptom matches the provider being unable to load any base model.
+  Aristotle mainnet's lone FT provider `0x940b4a10…0B0d` was in the
+  same state at the same time, so the bug spans both networks. Reported
+  to 0G team via Telegram. Local mitigation: `compute.ts` provider
+  picker filters out providers with `models: []` upfront — fail-fast in
+  ~1 second with an actionable error ("operator should ping 0G team")
+  instead of submitting and waiting 10 minutes for the provider-side
+  Failed status. Reference task IDs:
+  `d4e997f7-fce5-46c2-9485-8ebef1c38a39`,
+  `92fa3fc6-40c2-4b91-8320-4c53f8b272e3`,
+  `d41bd0f1-18cb-4c5b-bb35-942901750506`. Last successful run on the
+  same wallet+provider before the regression: `61cd3fe8-…` at 08:03 UTC.
 - **Mainnet deploy.** Galileo testnet path is live and verified; mainnet
   Aristotle (chainId 16661) deploy is gated on (1) two-key blast-radius
   separation for ZG_BROKER_KEY and ZG_RELAYER_KEY, (2) a recorded provider

@@ -192,13 +192,34 @@ export async function fineTune(call: FineTuneCall): Promise<FineTuneResult> {
     // Spread into a real array first; filter/find then behave as expected.
     const services = Array.from(await ft.listService());
     const excluded = call.excludeProviders;
+
+    // Bug #8 mitigation: a provider with `models: []` is in a degraded
+    // state — it accepts createTask but every task returns Failed within
+    // ~10 minutes (provider can't load any base model). Filter these out
+    // up-front so we fail-fast (~1s) instead of submitting + polling for
+    // 10 minutes. Reported to 0G team 2026-05-08; both Galileo and
+    // Aristotle's lone FT providers were affected at report time.
+    const withModels = services.filter((s) => (s.models?.length ?? 0) > 0);
     const eligible = excluded
-      ? services.filter((s) => !excluded.has(s.provider))
-      : services;
+      ? withModels.filter((s) => !excluded.has(s.provider))
+      : withModels;
     if (eligible.length === 0) {
-      const reason = excluded?.size
-        ? `no remaining fine-tune providers (excluded ${excluded.size})`
-        : "no fine-tune providers available on 0G Compute";
+      const totalProviders = services.length;
+      const degraded = totalProviders - withModels.length;
+      let reason: string;
+      if (totalProviders === 0) {
+        reason = "no fine-tune providers available on 0G Compute";
+      } else if (degraded === totalProviders) {
+        reason =
+          `all ${totalProviders} fine-tune provider(s) report empty models ` +
+          `list — provider degraded state. Operator should ping 0G team ` +
+          `(see bug catalog #8). Affected: ` +
+          services.map((s) => s.provider).join(", ");
+      } else if (excluded?.size) {
+        reason = `no remaining fine-tune providers (excluded ${excluded.size}, degraded ${degraded})`;
+      } else {
+        reason = `no eligible fine-tune providers (degraded ${degraded}/${totalProviders})`;
+      }
       throw new Error(reason);
     }
     const match = eligible.find(
