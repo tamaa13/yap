@@ -189,6 +189,78 @@ a { color: inherit; text-decoration: none; }
 
 *:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; border-radius: 2px; }
 
+/* ──────────────────────────────────────────────────────────────
+   BUTTONS — Voltage cut-corner + chunky condensed display.
+   Source: docs/design/project/design-system.html § buttons.
+   The React Button component (components/ui/button.tsx) composes
+   `.btn` + variant + size classes; CSS owns geometry, palette, and
+   hover/active translate so the press feel is identical for any
+   non-React surface (e.g. RainbowKit injected buttons) that opts in.
+   ────────────────────────────────────────────────────────────── */
+.btn {
+  --btn-bg: var(--yap-crimson);
+  --btn-fg: var(--yap-ink-50);
+  --btn-bd: transparent;
+  --btn-pad-y: 12px; --btn-pad-x: 22px;
+  --btn-fs: 14px; --btn-gap: 8px;
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  border: 1.5px solid var(--btn-bd);
+  padding: var(--btn-pad-y) var(--btn-pad-x);
+  font-family: var(--yap-font-display);
+  font-weight: 400;
+  font-size: var(--btn-fs);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--btn-gap);
+  clip-path: var(--yap-cut-md);
+  transition:
+    transform var(--yap-t-fast) var(--yap-ease-out),
+    background var(--yap-t-fast) var(--yap-ease-out),
+    color var(--yap-t-fast) var(--yap-ease-out);
+  text-decoration: none;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+}
+.btn:hover { transform: translate(-1px, -1px); }
+.btn:active { transform: translate(1px, 1px); }
+.btn[disabled], .btn.is-disabled {
+  background: var(--yap-ink-700);
+  color: var(--yap-ink-400);
+  cursor: not-allowed;
+  border-color: transparent;
+}
+.btn[disabled]:hover, .btn.is-disabled:hover { transform: none; }
+
+.btn--secondary { --btn-bg: transparent; --btn-fg: var(--yap-ink-50); --btn-bd: var(--yap-ink-50); }
+.btn--secondary:hover { --btn-bg: var(--yap-ink-50); --btn-fg: var(--yap-ink-900); }
+.btn--ghost { --btn-bg: transparent; --btn-fg: var(--yap-ink-200); --btn-bd: var(--yap-ink-500); }
+.btn--ghost:hover { --btn-fg: var(--yap-ink-50); --btn-bd: var(--yap-ink-200); }
+.btn--danger { --btn-bg: var(--yap-danger); --btn-fg: var(--yap-ink-50); }
+.btn--gold { --btn-bg: var(--yap-gold); --btn-fg: var(--yap-ink-900); }
+
+.btn--sm {
+  --btn-pad-y: 8px; --btn-pad-x: 14px; --btn-fs: 12px;
+  clip-path: var(--yap-cut-sm);
+}
+.btn--lg {
+  --btn-pad-y: 16px; --btn-pad-x: 28px; --btn-fs: 18px;
+  clip-path: var(--yap-cut-lg);
+  letter-spacing: 2.5px;
+}
+.btn--full { width: 100%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .btn:hover,
+  .btn:active { transform: none; transition: none; }
+}
+
 /* Card hover lift — used by interactive cards (marketplace, vault).
    Earned tactile response: translateY + tilt + shadow expand. NOT a
    1.05 scale (template Framer pattern). Pure CSS for hover micro-state
