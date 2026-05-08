@@ -25,9 +25,9 @@ Foundry project for the Yap AI combat arena on 0G:
 | `YapMarketplace` | `0x076e42a64e4ba43700ebb0830086138468dfa275` |
 | `RentalEscrow` | `0xe5Df2d51ef75A268daAd122038D94cEA9c3111EA` |
 | `YapInbox` (CREATE2) | `0xe92dB21A770c32a19795556C46D5c6a274955DBD` |
-| `MomentINFT` (CREATE2) | _broadcast pending_ |
-| `MomentMarketplace` (CREATE2) | _broadcast pending_ |
-| `YapSubnameRegistrar` (CREATE2) | _broadcast pending_ |
+| `MomentINFT` (CREATE2) | `0xf6cadAb5276A16b7C8213CD7B6BBB547f55be4AC` |
+| `MomentMarketplace` (CREATE2) | `0x18653aa16a4ffc7093be0270ab427688dfd2fb81` |
+| `YapSubnameRegistrar` (CREATE2) | `0xb84c024c3456b7c82ad8a08bf4b7c69804bbd56f` |
 
 ## Toolchain
 
