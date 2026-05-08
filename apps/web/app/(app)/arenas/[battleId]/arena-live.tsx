@@ -1,6 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import {
+  AnimatePresence,
+  animate,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useTransform,
+} from "motion/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -773,6 +781,12 @@ function ArgumentBubble({
   const hasContent = arg.content.length > 0;
   const sigState =
     arg.sigValid === true ? "valid" : arg.sigValid === false ? "invalid" : "pending";
+  const reduced = useReducedMotion();
+  // Combat vocab: speech bubble "breathes" while the fighter streams.
+  // Tiny scale loop synced to the round's voice — feels alive, not
+  // random. Breathing stops the moment the stream ends; the bubble
+  // settles back to 1.0 with a quick ease-out.
+  const breathe = streaming && hasContent && !reduced;
   return (
     <div
       style={{
@@ -812,7 +826,17 @@ function ArgumentBubble({
           <span title={arg.chatID}>chat {arg.chatID.slice(0, 12)}…</span>
         )}
       </div>
-      <div
+      <motion.div
+        animate={
+          breathe
+            ? { scale: [1, 1.005, 1] }
+            : { scale: 1 }
+        }
+        transition={
+          breathe
+            ? { duration: 0.45, repeat: Infinity, ease: "easeInOut" }
+            : { duration: 0.18, ease: [0.32, 0.72, 0, 1] }
+        }
         style={{
           maxWidth: "82%",
           padding: hasContent ? 12 : 8,
@@ -825,11 +849,13 @@ function ArgumentBubble({
           color: "var(--tx-primary)",
           whiteSpace: "pre-wrap",
           minHeight: 32,
+          // Hint compositor for the scale loop.
+          willChange: breathe ? "transform" : undefined,
         }}
       >
         {hasContent ? arg.content : streaming ? "…" : "(waiting)"}
         {streaming && hasContent && <span className="al-caret" style={{ marginLeft: 2 }}></span>}
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -904,9 +930,18 @@ function ReactionsBar({
               color: "var(--tx-secondary)",
             }}
           >
-            <button
+            <motion.button
               onClick={() => react(key)}
               disabled={disabled || pending === key}
+              // Combat vocab: tactile press depth on tap. The sub-pixel
+              // translateY is enough to register physically without
+              // looking like a cheap CSS hover.
+              whileTap={
+                disabled || pending === key
+                  ? undefined
+                  : { scale: 0.95, y: 1 }
+              }
+              transition={{ duration: 0.08, ease: [0.32, 0.72, 0, 1] }}
               style={{
                 padding: "3px 8px",
                 background:
@@ -924,17 +959,66 @@ function ReactionsBar({
               }}
             >
               {label}
-            </button>
-            <span
-              className="num"
-              style={{ fontSize: 11, color: "var(--tx-tertiary)" }}
-            >
-              {reactions[key] ?? 0}
-            </span>
+            </motion.button>
+            <ReactionCount value={reactions[key] ?? 0} />
           </div>
         ),
       )}
     </div>
+  );
+}
+
+/**
+ * Combat vocab: count slams up on each increment, then settles. Mortal
+ * Kombat damage-counter feel — the user *acted*, the counter feels it.
+ * Reduced-motion users get the bare integer without the slam.
+ */
+function ReactionCount({ value }: { value: number }) {
+  const reduced = useReducedMotion();
+  const display = useMotionValue(value);
+  const formatted = useTransform(display, (v) => Math.round(v).toString());
+  const scale = useMotionValue(1);
+  const prev = useRef(value);
+
+  useEffect(() => {
+    if (prev.current === value) return;
+    if (reduced) {
+      display.set(value);
+      prev.current = value;
+      return;
+    }
+    // Numeric tween (short — count is small) + a quick scale slam in
+    // parallel. Both land within ~250ms so a fast clicker doesn't queue
+    // animations.
+    const tween = animate(display, value, {
+      duration: 0.18,
+      ease: [0.25, 0.46, 0.45, 0.94],
+    });
+    const slam = animate(scale, [1, 1.25, 1], {
+      duration: 0.24,
+      times: [0, 0.4, 1],
+      ease: [0.34, 1.56, 0.64, 1],
+    });
+    prev.current = value;
+    return () => {
+      tween.stop();
+      slam.stop();
+    };
+  }, [value, reduced, display, scale]);
+
+  return (
+    <motion.span
+      className="num"
+      style={{
+        fontSize: 11,
+        color: "var(--tx-tertiary)",
+        display: "inline-block",
+        scale,
+        transformOrigin: "center",
+      }}
+    >
+      {formatted}
+    </motion.span>
   );
 }
 
@@ -1014,69 +1098,82 @@ function CommentatorTicker({
     }
   }, [tts, latest?.number, latest?.commentary?.done, latest?.commentary?.content]);
 
-  if (!latest?.commentary?.content) return null;
-
   return (
-    <div
-      style={{
-        borderTop: "1px solid var(--bd-default)",
-        background:
-          "linear-gradient(90deg, rgba(255,184,0,0.06), rgba(255,184,0,0.02))",
-        padding: "10px 20px",
-        display: "flex",
-        alignItems: "center",
-        gap: 14,
-        flexShrink: 0,
-      }}
-    >
-      <div
-        style={{
-          fontFamily: "var(--mono)",
-          fontSize: 10,
-          letterSpacing: 0.12,
-          textTransform: "uppercase",
-          color: "var(--accent)",
-          flexShrink: 0,
-        }}
-      >
-        R{latest.number} · color
-      </div>
-      <div
-        style={{
-          flex: 1,
-          fontSize: 13,
-          lineHeight: 1.45,
-          color: "var(--tx-primary)",
-          fontStyle: "italic",
-          minWidth: 0,
-        }}
-      >
-        {latest.commentary.content}
-        {!latest.commentary.done && (
-          <span
+    <AnimatePresence mode="wait">
+      {latest?.commentary?.content ? (
+        <motion.div
+          // Re-mount per round so each commentary chunk slides in
+          // ESPN-style. AnimatePresence handles the exit when the
+          // round number rolls forward.
+          key={`commentator-${latest.number}`}
+          initial={{ x: "100%", opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: "-30%", opacity: 0 }}
+          transition={{
+            duration: 0.32,
+            ease: [0.32, 0.72, 0, 1],
+          }}
+          style={{
+            borderTop: "1px solid var(--bd-default)",
+            background:
+              "linear-gradient(90deg, rgba(255,184,0,0.06), rgba(255,184,0,0.02))",
+            padding: "10px 20px",
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            flexShrink: 0,
+          }}
+        >
+          <div
             style={{
-              display: "inline-block",
-              marginLeft: 4,
-              width: 6,
-              height: 12,
-              background: "var(--accent)",
-              verticalAlign: "text-bottom",
-              animation: "al-caret 0.8s steps(2) infinite",
+              fontFamily: "var(--mono)",
+              fontSize: 10,
+              letterSpacing: 0.12,
+              textTransform: "uppercase",
+              color: "var(--accent)",
+              flexShrink: 0,
             }}
-          />
-        )}
-      </div>
-      <div
-        style={{
-          fontFamily: "var(--mono)",
-          fontSize: 10,
-          color: "var(--tx-tertiary)",
-          flexShrink: 0,
-        }}
-      >
-        entertainment · not part of verdict
-      </div>
-    </div>
+          >
+            R{latest.number} · color
+          </div>
+          <div
+            style={{
+              flex: 1,
+              fontSize: 13,
+              lineHeight: 1.45,
+              color: "var(--tx-primary)",
+              fontStyle: "italic",
+              minWidth: 0,
+            }}
+          >
+            {latest.commentary.content}
+            {!latest.commentary.done && (
+              <span
+                style={{
+                  display: "inline-block",
+                  marginLeft: 4,
+                  width: 6,
+                  height: 12,
+                  background: "var(--accent)",
+                  verticalAlign: "text-bottom",
+                  animation: "al-caret 0.8s steps(2) infinite",
+                }}
+              />
+            )}
+          </div>
+          <div
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: 10,
+              color: "var(--tx-tertiary)",
+              flexShrink: 0,
+            }}
+          >
+            entertainment · not part of verdict
+          </div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
   );
 }
 

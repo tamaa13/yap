@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState, type DragEvent } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Hash } from "@/components/ui/hash";
@@ -764,59 +765,21 @@ Crypto is a slot machine with footnotes.
                   const myIdx = PHASE_ORDER.indexOf(p);
                   const status =
                     activeIdx === myIdx ? "active" : activeIdx > myIdx ? "done" : "pending";
-                  const color =
-                    status === "active"
-                      ? "var(--accent)"
-                      : status === "done"
-                        ? "var(--success)"
-                        : "var(--tx-disabled)";
                   return (
-                    <div
+                    <MintPhaseRow
                       key={p}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                        marginBottom: 14,
-                      }}
-                    >
-                      <Icon
-                        name={status === "done" ? "check" : "dot"}
-                        size={14}
-                        style={{ color }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 500 }}>
-                          {PHASE_LABELS[p]}
-                        </div>
-                        {status === "active" && <Skel w="100%" h={4} style={{ marginTop: 6 }} />}
-                      </div>
-                    </div>
+                      label={PHASE_LABELS[p]}
+                      status={status}
+                    />
                   );
                 })}
               </div>
             )}
             {mint.phase === "done" && mint.result && (
-              <div style={{ padding: 32, textAlign: "center" }}>
-                <Icon
-                  name="check"
-                  size={40}
-                  style={{
-                    color: "var(--success)",
-                    margin: "0 auto 10px",
-                    display: "block",
-                  }}
-                />
-                <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
-                  Fighter #{mint.result.tokenId}. Locked on-chain.
-                </div>
-                <div style={{ fontSize: 13, color: "var(--tx-secondary)" }}>
-                  Pulling up the profile…
-                </div>
-                <div style={{ marginTop: 12 }}>
-                  <Hash value={mint.result.txHash} copy />
-                </div>
-              </div>
+              <MintCompleteReveal
+                tokenId={mint.result.tokenId}
+                txHash={mint.result.txHash}
+              />
             )}
             {mint.phase === "error" && (
               <div
@@ -858,5 +821,137 @@ Crypto is a slot machine with footnotes.
         </div>
       )}
     </PageContainer>
+  );
+}
+
+/**
+ * Phase indicator row — when a phase becomes active, the icon does a
+ * brief overshoot punch (combat vocab — the work is *advancing*).
+ * "done" rows tint to success and stay still. "pending" rows are quiet.
+ */
+function MintPhaseRow({
+  label,
+  status,
+}: {
+  label: string;
+  status: "active" | "done" | "pending";
+}) {
+  const reduced = useReducedMotion();
+  const color =
+    status === "active"
+      ? "var(--accent)"
+      : status === "done"
+        ? "var(--success)"
+        : "var(--tx-disabled)";
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        marginBottom: 14,
+      }}
+    >
+      <motion.span
+        // Re-mount the icon when status flips so the overshoot fires
+        // exactly once per transition.
+        key={status}
+        initial={
+          reduced || status === "pending"
+            ? false
+            : { scale: 0.7, opacity: 0.6 }
+        }
+        animate={
+          reduced
+            ? { scale: 1, opacity: 1 }
+            : status === "active"
+              ? { scale: [0.8, 1.18, 1], opacity: 1 }
+              : status === "done"
+                ? { scale: [0.85, 1.08, 1], opacity: 1 }
+                : { scale: 1, opacity: 1 }
+        }
+        transition={{
+          duration: status === "active" ? 0.4 : 0.32,
+          ease: [0.34, 1.56, 0.64, 1],
+        }}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Icon
+          name={status === "done" ? "check" : "dot"}
+          size={14}
+          style={{ color }}
+        />
+      </motion.span>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 13, fontWeight: 500 }}>{label}</div>
+        {status === "active" && <Skel w="100%" h={4} style={{ marginTop: 6 }} />}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Mint complete reveal — combat vocab. The fighter just *became real*.
+ * Icon scales in with overshoot, label and Hash stagger after with quiet
+ * fades so the moment lands as one beat, not three.
+ */
+function MintCompleteReveal({
+  tokenId,
+  txHash,
+}: {
+  tokenId: number;
+  txHash: string;
+}) {
+  const reduced = useReducedMotion();
+  return (
+    <div style={{ padding: 32, textAlign: "center" }}>
+      <motion.div
+        initial={reduced ? false : { scale: 0.85, opacity: 0 }}
+        animate={
+          reduced
+            ? { scale: 1, opacity: 1 }
+            : { scale: [0.85, 1.08, 1], opacity: 1 }
+        }
+        transition={{
+          duration: 0.5,
+          ease: [0.34, 1.56, 0.64, 1],
+        }}
+        style={{ display: "inline-block", marginBottom: 10 }}
+      >
+        <Icon
+          name="check"
+          size={40}
+          style={{ color: "var(--success)", display: "block" }}
+        />
+      </motion.div>
+      <motion.div
+        initial={reduced ? false : { opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.28, delay: 0.18, ease: [0.32, 0.72, 0, 1] }}
+        style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}
+      >
+        Fighter #{tokenId}. Locked on-chain.
+      </motion.div>
+      <motion.div
+        initial={reduced ? false : { opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.32, delay: 0.32, ease: "easeOut" }}
+        style={{ fontSize: 13, color: "var(--tx-secondary)" }}
+      >
+        Pulling up the profile…
+      </motion.div>
+      <motion.div
+        initial={reduced ? false : { opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.32, delay: 0.4, ease: "easeOut" }}
+        style={{ marginTop: 12 }}
+      >
+        <Hash value={txHash} copy />
+      </motion.div>
+    </div>
   );
 }
