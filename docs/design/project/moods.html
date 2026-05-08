@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Yap — mood directions</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Big+Shoulders+Display:wght@500;700;900&family=Bowlby+One&family=Archivo:wght@400;500;700;900&family=Archivo+Narrow:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; }
+  * { box-sizing: border-box; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+// ─────────────────────────────────────────────────────────────
+// Shared low-fi building blocks for each mood artboard. Every mood
+// gets the same 8 zones laid out the same way so they're directly
+// comparable: header → palette → type → logo → button → stat readout
+// → fighter card → keywords.
+// ─────────────────────────────────────────────────────────────
+
+const ABW = 760;
+const ABH = 1180;
+
+// Swatch row — 6 colors, hex below in mono.
+const Swatches = ({ colors, mono, fg }) => (
+  <div style={{ display: 'flex', gap: 0, border: '1px solid ' + (fg + '22') }}>
+    {colors.map((c, i) => (
+      <div key={i} style={{ flex: 1 }}>
+        <div style={{ height: 56, background: c.hex, borderRight: i < colors.length - 1 ? '1px solid ' + (fg + '22') : 'none' }} />
+        <div style={{ padding: '6px 8px', borderTop: '1px solid ' + (fg + '22'), borderRight: i < colors.length - 1 ? '1px solid ' + (fg + '22') : 'none', fontFamily: mono, fontSize: 9.5, color: fg, opacity: .85, lineHeight: 1.3 }}>
+          <div style={{ textTransform: 'uppercase', letterSpacing: 0.5, opacity: .55, fontSize: 8.5 }}>{c.name}</div>
+          <div>{c.hex}</div>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+const ZoneLabel = ({ children, mono, fg }) => (
+  <div style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: 1.5, textTransform: 'uppercase', color: fg, opacity: .45, marginBottom: 10 }}>
+    {children}
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────
+// MOOD 1 — ARENA VOLTAGE
+// Arcade HUD. Mortal Kombat / Tekken energy. Yellow + magenta on
+// near-black, segmented numerics, hard rectangular HUD chrome.
+// ─────────────────────────────────────────────────────────────
+function ArenaVoltage() {
+  const bg = '#07070A', fg = '#F2F0EA', dim = '#9A958A';
+  const yellow = '#FFD23F', magenta = '#FF2E63', cyan = '#3DDBD9';
+  const display = '"Big Shoulders Display", Impact, sans-serif';
+  const mono = '"JetBrains Mono", monospace';
+  const body = '"Inter", sans-serif';
+  return (
+    <div style={{ width: '100%', height: '100%', background: bg, color: fg, fontFamily: body, padding: 36, display: 'flex', flexDirection: 'column', gap: 22, position: 'relative', overflow: 'hidden' }}>
+      {/* scanline texture */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'repeating-linear-gradient(0deg, transparent 0 3px, rgba(255,255,255,.015) 3px 4px)' }} />
+
+      {/* header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', position: 'relative' }}>
+        <div>
+          <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: 2, color: yellow, marginBottom: 6 }}>MOOD · 01</div>
+          <div style={{ fontFamily: display, fontWeight: 900, fontSize: 56, lineHeight: 0.9, letterSpacing: -1, textTransform: 'uppercase' }}>Arena<br/>Voltage</div>
+        </div>
+        <div style={{ fontFamily: mono, fontSize: 10, color: dim, textAlign: 'right', lineHeight: 1.6 }}>
+          ARCADE HUD<br/>FIGHT-GAME TUNED<br/>HOT-SIGNAL YELLOW
+        </div>
+      </div>
+
+      {/* palette */}
+      <div>
+        <ZoneLabel mono={mono} fg={fg}>Palette</ZoneLabel>
+        <Swatches mono={mono} fg={fg} colors={[
+          { name: 'Void',    hex: '#07070A' },
+          { name: 'Steel',   hex: '#1A1A22' },
+          { name: 'Bone',    hex: '#F2F0EA' },
+          { name: 'Volt',    hex: '#FFD23F' },
+          { name: 'Strike',  hex: '#FF2E63' },
+          { name: 'Cool',    hex: '#3DDBD9' },
+        ]} />
+      </div>
+
+      {/* type + logo */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 22 }}>
+        <div>
+          <ZoneLabel mono={mono} fg={fg}>Type</ZoneLabel>
+          <div style={{ fontFamily: display, fontWeight: 900, fontSize: 32, lineHeight: 1, letterSpacing: -0.5, textTransform: 'uppercase' }}>Big Shoulders 900</div>
+          <div style={{ fontFamily: body, fontSize: 13, color: dim, marginTop: 6 }}>Inter — body. Round 1 of 3. Defender accepts the challenge.</div>
+          <div style={{ fontFamily: mono, fontSize: 12, color: yellow, marginTop: 6, letterSpacing: 0.5 }}>JBM · #4827 · 0x1d4D…c485D · 24.18 OG</div>
+        </div>
+        <div>
+          <ZoneLabel mono={mono} fg={fg}>Mark</ZoneLabel>
+          <div style={{ border: '2px solid ' + yellow, padding: '10px 14px', display: 'inline-flex', alignItems: 'center', gap: 8, background: '#0F0F14' }}>
+            <div style={{ width: 26, height: 26, background: yellow, position: 'relative', clipPath: 'polygon(0 0, 100% 0, 100% 35%, 50% 100%, 0 35%)' }} />
+            <div style={{ fontFamily: display, fontWeight: 900, fontSize: 28, lineHeight: 1, letterSpacing: 0, textTransform: 'uppercase' }}>YAP</div>
+          </div>
+        </div>
+      </div>
+
+      {/* button row */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <button style={{ background: yellow, color: '#0A0A0A', border: 'none', padding: '12px 20px', fontFamily: display, fontWeight: 900, fontSize: 14, letterSpacing: 1.5, textTransform: 'uppercase', clipPath: 'polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px))' }}>FIGHT ▸</button>
+        <button style={{ background: 'transparent', color: yellow, border: '1.5px solid ' + yellow, padding: '11px 18px', fontFamily: display, fontWeight: 700, fontSize: 13, letterSpacing: 1.5, textTransform: 'uppercase' }}>STAKE</button>
+        <button style={{ background: magenta, color: fg, border: 'none', padding: '12px 18px', fontFamily: display, fontWeight: 900, fontSize: 13, letterSpacing: 1.5, textTransform: 'uppercase' }}>K.O.</button>
+        <span style={{ fontFamily: mono, fontSize: 10, color: dim, marginLeft: 4 }}>chunky · cut corners · uppercase</span>
+      </div>
+
+      {/* HUD readout */}
+      <div>
+        <ZoneLabel mono={mono} fg={fg}>HUD · stat readout</ZoneLabel>
+        <div style={{ background: '#0F0F14', border: '1px solid ' + (fg + '18'), padding: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div style={{ fontFamily: display, fontWeight: 900, fontSize: 16, letterSpacing: 1, textTransform: 'uppercase' }}>BRAWLER #4827</div>
+            <div style={{ fontFamily: mono, fontSize: 10, color: yellow }}>ROUND 02 / 03</div>
+          </div>
+          {[
+            { k: 'HP',    v: 78, c: yellow },
+            { k: 'LOGIC', v: 64, c: cyan },
+            { k: 'WIT',   v: 91, c: magenta },
+          ].map((b) => (
+            <div key={b.k} style={{ display: 'grid', gridTemplateColumns: '52px 1fr 44px', gap: 10, alignItems: 'center', marginBottom: 8 }}>
+              <div style={{ fontFamily: display, fontWeight: 900, fontSize: 13, letterSpacing: 1, color: b.c }}>{b.k}</div>
+              <div style={{ height: 12, background: '#1A1A22', position: 'relative' }}>
+                {/* segmented bar */}
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', gap: 1.5 }}>
+                  {Array.from({ length: 20 }).map((_, i) => (
+                    <div key={i} style={{ flex: 1, background: i < Math.round(b.v / 5) ? b.c : '#22222A' }} />
+                  ))}
+                </div>
+              </div>
+              <div style={{ fontFamily: mono, fontSize: 12, color: b.c, textAlign: 'right' }}>{b.v.toString().padStart(3, '0')}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* fighter card */}
+      <div>
+        <ZoneLabel mono={mono} fg={fg}>Fighter card</ZoneLabel>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {[
+            { name: 'STILETTO', tag: 'silver-tongue', elo: 1842, wl: '14W·3L', c: yellow },
+            { name: 'PYRECLAW', tag: 'maximalist',    elo: 1714, wl: '11W·6L', c: magenta },
+          ].map((f, i) => (
+            <div key={i} style={{ background: '#0F0F14', border: '1px solid ' + (fg + '15'), borderLeft: '3px solid ' + f.c, padding: 12 }}>
+              <div style={{ height: 96, background: '#1A1A22', position: 'relative', marginBottom: 10, overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: 6, left: 6, fontFamily: mono, fontSize: 9, color: dim, letterSpacing: 1 }}>INFT · ERC-7857</div>
+                <div style={{ position: 'absolute', bottom: 6, right: 6, fontFamily: display, fontWeight: 900, fontSize: 24, color: f.c, opacity: .25 }}>#{4800 + i*27}</div>
+              </div>
+              <div style={{ fontFamily: display, fontWeight: 900, fontSize: 18, letterSpacing: 0.5, textTransform: 'uppercase' }}>{f.name}</div>
+              <div style={{ fontFamily: mono, fontSize: 9.5, color: dim, marginBottom: 8, letterSpacing: 1 }}>{f.tag.toUpperCase()}.YAP.0G</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: mono, fontSize: 11 }}>
+                <span style={{ color: f.c }}>ELO {f.elo}</span>
+                <span style={{ color: dim }}>{f.wl}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* footer keywords */}
+      <div style={{ marginTop: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {['arcade-hud', 'segmented-bars', 'hot-yellow', 'cut-corners', 'condensed-display', 'kinetic'].map((k) => (
+          <span key={k} style={{ fontFamily: mono, fontSize: 9.5, padding: '4px 8px', border: '1px solid ' + (fg + '20'), color: dim, letterSpacing: 1 }}>{k}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// MOOD 2 — BROADCAST CARD
+// ESPN lower-third / sports-broadcast. Deep navy field, broadcast
+// red, white, amber. Striped accent bars, scorecard composition.
+// ─────────────────────────────────────────────────────────────
+function BroadcastCard() {
+  const bg = '#0A1628', card = '#0F1E36', fg = '#F5F5F2', dim = '#7C8DA6';
+  const red = '#E63946', amber = '#FFB800', white = '#FFFFFF';
+  const display = '"Archivo Narrow", "Arial Narrow", sans-serif';
+  const mono = '"IBM Plex Mono", monospace';
+  const body = '"Inter", sans-serif';
+  return (
+    <div style={{ width: '100%', height: '100%', background: bg, color: fg, fontFamily: body, padding: 36, display: 'flex', flexDirection: 'column', gap: 22, position: 'relative' }}>
+
+      {/* header — broadcast lower-third style stripe */}
+      <div style={{ position: 'relative' }}>
+        <div style={{ display: 'flex', alignItems: 'stretch', height: 76, background: card, border: '1px solid ' + (fg + '15') }}>
+          <div style={{ background: red, width: 12 }} />
+          <div style={{ flex: 1, padding: '10px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: 2, color: amber }}>MOOD · 02</div>
+            <div style={{ fontFamily: display, fontWeight: 700, fontSize: 36, lineHeight: 1, letterSpacing: 0.5, textTransform: 'uppercase' }}>BROADCAST CARD</div>
+          </div>
+          <div style={{ background: white, color: bg, padding: '10px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-end' }}>
+            <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: 1.5, opacity: .6 }}>LIVE</div>
+            <div style={{ fontFamily: display, fontWeight: 700, fontSize: 22, letterSpacing: 0.5 }}>R02 · 14:22</div>
+          </div>
+        </div>
+        <div style={{ fontFamily: mono, fontSize: 10, color: dim, marginTop: 8, letterSpacing: 1.5 }}>ESPN-INSPIRED · LOWER-THIRDS · SCORECARD GRID · STRIPED ACCENTS</div>
+      </div>
+
+      {/* palette */}
+      <div>
+        <ZoneLabel mono={mono} fg={fg}>Palette</ZoneLabel>
+        <Swatches mono={mono} fg={fg} colors={[
+          { name: 'Field',  hex: '#0A1628' },
+          { name: 'Card',   hex: '#0F1E36' },
+          { name: 'Paper',  hex: '#F5F5F2' },
+          { name: 'Buzz',   hex: '#E63946' },
+          { name: 'Amber',  hex: '#FFB800' },
+          { name: 'Cobalt', hex: '#3D7DCA' },
+        ]} />
+      </div>
+
+      {/* type + logo */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 22 }}>
+        <div>
+          <ZoneLabel mono={mono} fg={fg}>Type</ZoneLabel>
+          <div style={{ fontFamily: display, fontWeight: 700, fontSize: 30, lineHeight: 1, letterSpacing: 0.4, textTransform: 'uppercase' }}>Archivo Narrow 700</div>
+          <div style={{ fontFamily: body, fontSize: 13, color: dim, marginTop: 6 }}>Inter — body. Tale of the tape. Tonight, two fighters, three rounds.</div>
+          <div style={{ fontFamily: mono, fontSize: 12, color: amber, marginTop: 6 }}>Plex · #4827 · 0x1d4D…c485D · 24.18 OG</div>
+        </div>
+        <div>
+          <ZoneLabel mono={mono} fg={fg}>Mark</ZoneLabel>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 0, background: white, color: bg, padding: 0, height: 50 }}>
+            <div style={{ background: red, width: 8, height: '100%' }} />
+            <div style={{ padding: '0 14px', fontFamily: display, fontWeight: 700, fontSize: 28, letterSpacing: 1, lineHeight: 1 }}>YAP</div>
+            <div style={{ borderLeft: '1px solid ' + bg + '22', padding: '0 12px', fontFamily: mono, fontSize: 9, color: bg, opacity: .65, lineHeight: 1.3 }}>VERIFIABLE<br/>COMBAT</div>
+          </div>
+        </div>
+      </div>
+
+      {/* buttons */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <button style={{ background: red, color: fg, border: 'none', padding: '11px 18px', fontFamily: display, fontWeight: 700, fontSize: 13, letterSpacing: 1.5, textTransform: 'uppercase' }}>Place Bet</button>
+        <button style={{ background: 'transparent', color: fg, border: '1.5px solid ' + (fg + '40'), padding: '10px 16px', fontFamily: display, fontWeight: 700, fontSize: 13, letterSpacing: 1.5, textTransform: 'uppercase' }}>Tale of Tape</button>
+        <button style={{ background: amber, color: bg, border: 'none', padding: '11px 16px', fontFamily: display, fontWeight: 700, fontSize: 13, letterSpacing: 1.5, textTransform: 'uppercase' }}>Mint Moment</button>
+        <span style={{ fontFamily: mono, fontSize: 10, color: dim, marginLeft: 4 }}>flat · narrow · stripe-led</span>
+      </div>
+
+      {/* scorecard / tale of the tape */}
+      <div>
+        <ZoneLabel mono={mono} fg={fg}>Tale of the Tape · scorecard</ZoneLabel>
+        <div style={{ background: card, border: '1px solid ' + (fg + '15') }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 64px 1fr', alignItems: 'center', borderBottom: '1px solid ' + (fg + '12') }}>
+            <div style={{ padding: '10px 14px', textAlign: 'right' }}>
+              <div style={{ fontFamily: display, fontWeight: 700, fontSize: 22, textTransform: 'uppercase', letterSpacing: 0.5 }}>STILETTO</div>
+              <div style={{ fontFamily: mono, fontSize: 10, color: dim }}>silver-tongue.yap.0g</div>
+            </div>
+            <div style={{ background: red, color: fg, fontFamily: display, fontWeight: 700, fontSize: 14, textAlign: 'center', padding: '10px 0', letterSpacing: 1, textTransform: 'uppercase' }}>VS</div>
+            <div style={{ padding: '10px 14px' }}>
+              <div style={{ fontFamily: display, fontWeight: 700, fontSize: 22, textTransform: 'uppercase', letterSpacing: 0.5 }}>PYRECLAW</div>
+              <div style={{ fontFamily: mono, fontSize: 10, color: dim }}>maximalist.yap.0g</div>
+            </div>
+          </div>
+          {[
+            { k: 'ELO',     a: '1842', b: '1714' },
+            { k: 'RECORD',  a: '14-3', b: '11-6' },
+            { k: 'STAKE',   a: '12.4 OG', b: '8.6 OG' },
+            { k: 'ODDS',    a: '1.6×', b: '2.3×' },
+          ].map((r, i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 96px 1fr', alignItems: 'center', borderBottom: i < 3 ? '1px solid ' + (fg + '08') : 'none' }}>
+              <div style={{ padding: '8px 14px', textAlign: 'right', fontFamily: mono, fontSize: 13, color: amber }}>{r.a}</div>
+              <div style={{ padding: '8px 0', textAlign: 'center', fontFamily: mono, fontSize: 9, letterSpacing: 1.5, color: dim, textTransform: 'uppercase' }}>{r.k}</div>
+              <div style={{ padding: '8px 14px', fontFamily: mono, fontSize: 13, color: amber }}>{r.b}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* fighter card */}
+      <div>
+        <ZoneLabel mono={mono} fg={fg}>Fighter card</ZoneLabel>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {[
+            { name: 'STILETTO', tag: 'silver-tongue', elo: 1842, wl: '14-3' },
+            { name: 'PYRECLAW', tag: 'maximalist',    elo: 1714, wl: '11-6' },
+          ].map((f, i) => (
+            <div key={i} style={{ background: card, border: '1px solid ' + (fg + '15') }}>
+              <div style={{ height: 96, background: 'linear-gradient(135deg, #112344 0%, #0A1628 100%)', position: 'relative', borderBottom: '3px solid ' + (i === 0 ? red : amber) }}>
+                <div style={{ position: 'absolute', top: 8, left: 10, fontFamily: mono, fontSize: 9, color: dim, letterSpacing: 1 }}>INFT · ERC-7857</div>
+                <div style={{ position: 'absolute', bottom: 8, right: 10, fontFamily: display, fontWeight: 700, fontSize: 14, color: amber, letterSpacing: 1 }}>RANK 0{i+1}</div>
+              </div>
+              <div style={{ padding: '10px 14px' }}>
+                <div style={{ fontFamily: display, fontWeight: 700, fontSize: 18, letterSpacing: 0.5, textTransform: 'uppercase' }}>{f.name}</div>
+                <div style={{ fontFamily: mono, fontSize: 9.5, color: dim, marginBottom: 8 }}>{f.tag}.yap.0g</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: mono, fontSize: 11 }}>
+                  <span>ELO <span style={{ color: amber }}>{f.elo}</span></span>
+                  <span>{f.wl}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* keywords */}
+      <div style={{ marginTop: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {['lower-third', 'scorecard', 'tale-of-tape', 'narrow-display', 'stripe-led', 'professional'].map((k) => (
+          <span key={k} style={{ fontFamily: mono, fontSize: 9.5, padding: '4px 8px', border: '1px solid ' + (fg + '20'), color: dim, letterSpacing: 1 }}>{k}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// MOOD 3 — PROMOTER
+// Vintage fight-poster editorial. Warm black + cream + crimson.
+// Heavy condensed display, ticket-stub layouts, halftone, stamps.
+// ─────────────────────────────────────────────────────────────
+function Promoter() {
+  const bg = '#14110E', cream = '#F2EDE2', fg = '#F2EDE2', dim = '#8A8378';
+  const crimson = '#C8102E', ink = '#1A1612', gold = '#C9A961';
+  const display = '"Anton", "Bowlby One", Impact, sans-serif';
+  const mono = '"Space Mono", monospace';
+  const body = '"Archivo", sans-serif';
+  return (
+    <div style={{ width: '100%', height: '100%', background: bg, color: fg, fontFamily: body, padding: 0, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+
+      {/* poster top — cream block with massive type */}
+      <div style={{ background: cream, color: ink, padding: '24px 36px 22px', borderBottom: '4px solid ' + crimson, position: 'relative' }}>
+        <div style={{ position: 'absolute', top: 14, right: 36, fontFamily: mono, fontSize: 9, letterSpacing: 2, color: crimson }}>MOOD · 03</div>
+        <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: 4, color: ink + 'aa', marginBottom: 4 }}>TONIGHT — VERIFIABLE COMBAT</div>
+        <div style={{ fontFamily: display, fontWeight: 400, fontSize: 88, lineHeight: 0.85, letterSpacing: -1, textTransform: 'uppercase', color: ink }}>PROMOTER</div>
+        <div style={{ fontFamily: display, fontWeight: 400, fontSize: 22, lineHeight: 1, letterSpacing: 1, textTransform: 'uppercase', color: crimson, marginTop: 6 }}>FIGHT · POSTER · EDITORIAL</div>
+      </div>
+
+      <div style={{ padding: 36, display: 'flex', flexDirection: 'column', gap: 22, flex: 1 }}>
+        {/* palette */}
+        <div>
+          <ZoneLabel mono={mono} fg={fg}>Palette</ZoneLabel>
+          <Swatches mono={mono} fg={fg} colors={[
+            { name: 'Ink',     hex: '#14110E' },
+            { name: 'Soot',    hex: '#1A1612' },
+            { name: 'Cream',   hex: '#F2EDE2' },
+            { name: 'Crimson', hex: '#C8102E' },
+            { name: 'Gold',    hex: '#C9A961' },
+            { name: 'Bruise',  hex: '#5C2530' },
+          ]} />
+        </div>
+
+        {/* type + logo */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 22 }}>
+          <div>
+            <ZoneLabel mono={mono} fg={fg}>Type</ZoneLabel>
+            <div style={{ fontFamily: display, fontSize: 38, lineHeight: 0.95, letterSpacing: 0, textTransform: 'uppercase' }}>Anton — display.</div>
+            <div style={{ fontFamily: body, fontSize: 13, color: dim, marginTop: 6 }}>Archivo — body. The judge has reached a verdict. The tape don't lie.</div>
+            <div style={{ fontFamily: mono, fontSize: 12, color: gold, marginTop: 6 }}>Space Mono · #4827 · 0x1d4D…c485D · 24.18 OG</div>
+          </div>
+          <div>
+            <ZoneLabel mono={mono} fg={fg}>Mark</ZoneLabel>
+            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', padding: '12px 18px', border: '2px solid ' + cream, background: bg, position: 'relative' }}>
+              <div style={{ fontFamily: mono, fontSize: 8, letterSpacing: 3, color: gold, marginBottom: 4 }}>★ EST · 2026 ★</div>
+              <div style={{ fontFamily: display, fontWeight: 400, fontSize: 38, lineHeight: 0.9, letterSpacing: 1, textTransform: 'uppercase', color: cream }}>YAP</div>
+              <div style={{ fontFamily: mono, fontSize: 8, letterSpacing: 3, color: gold, marginTop: 4 }}>0G · ARENA</div>
+            </div>
+          </div>
+        </div>
+
+        {/* buttons */}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button style={{ background: crimson, color: cream, border: 'none', padding: '12px 22px', fontFamily: display, fontSize: 16, letterSpacing: 2, textTransform: 'uppercase' }}>Step Up</button>
+          <button style={{ background: 'transparent', color: cream, border: '1.5px solid ' + cream, padding: '11px 20px', fontFamily: display, fontSize: 15, letterSpacing: 2, textTransform: 'uppercase' }}>Weigh In</button>
+          <button style={{ background: cream, color: ink, border: 'none', padding: '12px 20px', fontFamily: display, fontSize: 15, letterSpacing: 2, textTransform: 'uppercase' }}>Settle</button>
+          <span style={{ fontFamily: mono, fontSize: 10, color: dim, marginLeft: 4 }}>editorial · stamped · weighty</span>
+        </div>
+
+        {/* fight-card / ticket stub */}
+        <div>
+          <ZoneLabel mono={mono} fg={fg}>Fight card · ticket stub</ZoneLabel>
+          <div style={{ background: cream, color: ink, padding: 0, position: 'relative', display: 'flex' }}>
+            <div style={{ flex: 1, padding: '14px 18px', borderRight: '2px dashed ' + ink + '33' }}>
+              <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: 2, color: crimson }}>MAIN EVENT — 3 ROUNDS</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginTop: 4 }}>
+                <div style={{ fontFamily: display, fontSize: 30, lineHeight: 1, textTransform: 'uppercase', letterSpacing: -0.3 }}>STILETTO</div>
+                <div style={{ fontFamily: display, fontSize: 18, color: crimson }}>VS</div>
+                <div style={{ fontFamily: display, fontSize: 30, lineHeight: 1, textTransform: 'uppercase', letterSpacing: -0.3 }}>PYRECLAW</div>
+              </div>
+              <div style={{ fontFamily: mono, fontSize: 10, color: ink + '99', marginTop: 6, letterSpacing: 1 }}>silver-tongue.yap.0g  ·  maximalist.yap.0g</div>
+              <div style={{ display: 'flex', gap: 16, marginTop: 10, fontFamily: mono, fontSize: 11, color: ink }}>
+                <span>POOL <b style={{ color: crimson }}>21.00 OG</b></span>
+                <span>ROUND <b>02 / 03</b></span>
+                <span>WAGER <b>1.6× / 2.3×</b></span>
+              </div>
+            </div>
+            <div style={{ width: 80, padding: '14px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', background: ink, color: cream }}>
+              <div style={{ fontFamily: mono, fontSize: 8, letterSpacing: 2, color: gold }}>ADMIT</div>
+              <div style={{ fontFamily: display, fontSize: 28, color: cream, lineHeight: 1 }}>#4827</div>
+              <div style={{ fontFamily: mono, fontSize: 8, letterSpacing: 2, color: gold }}>ONE</div>
+            </div>
+          </div>
+        </div>
+
+        {/* fighter dossiers */}
+        <div>
+          <ZoneLabel mono={mono} fg={fg}>Dossier</ZoneLabel>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {[
+              { name: 'STILETTO', tag: 'silver-tongue', elo: 1842, wl: '14-3' },
+              { name: 'PYRECLAW', tag: 'maximalist',    elo: 1714, wl: '11-6' },
+            ].map((f, i) => (
+              <div key={i} style={{ background: ink, border: '1px solid ' + (cream + '20'), padding: 12 }}>
+                <div style={{ height: 96, background: 'repeating-linear-gradient(135deg, #2a2520 0 4px, #14110E 4px 8px)', marginBottom: 10, position: 'relative', borderBottom: '2px solid ' + (i === 0 ? crimson : gold) }}>
+                  <div style={{ position: 'absolute', top: 6, left: 8, fontFamily: mono, fontSize: 9, color: gold, letterSpacing: 1 }}>DOSSIER · {f.tag.slice(0,6).toUpperCase()}</div>
+                  <div style={{ position: 'absolute', bottom: 6, right: 8, fontFamily: display, fontSize: 22, color: cream, opacity: .25, letterSpacing: 1 }}>YAP</div>
+                </div>
+                <div style={{ fontFamily: display, fontSize: 22, letterSpacing: 0, textTransform: 'uppercase' }}>{f.name}</div>
+                <div style={{ fontFamily: mono, fontSize: 9.5, color: dim, marginBottom: 8 }}>{f.tag}.yap.0g</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: mono, fontSize: 11 }}>
+                  <span style={{ color: gold }}>ELO {f.elo}</span>
+                  <span style={{ color: dim }}>{f.wl}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* keywords */}
+        <div style={{ marginTop: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {['fight-poster', 'editorial', 'ticket-stub', 'crimson-cream', 'heavy-condensed', 'premium'].map((k) => (
+            <span key={k} style={{ fontFamily: mono, fontSize: 9.5, padding: '4px 8px', border: '1px solid ' + (fg + '20'), color: dim, letterSpacing: 1 }}>{k}</span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// MOOD 4 — HARD TERMINAL
+// Brutalist trading-terminal density meets fight grit. Pure black,
+// single signal lime, mono-as-display, dense data, ASCII rules.
+// ─────────────────────────────────────────────────────────────
+function HardTerminal() {
+  const bg = '#000000', card = '#08080A', fg = '#E8E6DF', dim = '#5A5A5A';
+  const lime = '#00FF87', alert = '#FF4F2A', amber = '#FFB02E';
+  const display = '"JetBrains Mono", monospace';
+  const mono = '"JetBrains Mono", monospace';
+  const body = '"Space Grotesk", "Inter", sans-serif';
+  const rule = '─'.repeat(60);
+  return (
+    <div style={{ width: '100%', height: '100%', background: bg, color: fg, fontFamily: body, padding: 36, display: 'flex', flexDirection: 'column', gap: 20, position: 'relative' }}>
+
+      {/* header */}
+      <div>
+        <div style={{ fontFamily: mono, fontSize: 10, color: lime, letterSpacing: 2, marginBottom: 8 }}>// MOOD · 04 · BRUTALIST_TERMINAL</div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
+          <div style={{ fontFamily: display, fontWeight: 800, fontSize: 52, lineHeight: 0.9, letterSpacing: -2, textTransform: 'lowercase' }}>hard.terminal</div>
+          <div style={{ fontFamily: mono, fontSize: 10, color: dim, textAlign: 'right', lineHeight: 1.6 }}>
+            DENSE · TECHNICAL<br/>SINGLE-SIGNAL LIME<br/>MONO-AS-DISPLAY
+          </div>
+        </div>
+        <div style={{ fontFamily: mono, fontSize: 9, color: dim, marginTop: 6, overflow: 'hidden', whiteSpace: 'nowrap' }}>{rule + rule}</div>
+      </div>
+
+      {/* palette */}
+      <div>
+        <ZoneLabel mono={mono} fg={fg}>$ palette</ZoneLabel>
+        <Swatches mono={mono} fg={fg} colors={[
+          { name: 'Black',  hex: '#000000' },
+          { name: 'Coal',   hex: '#08080A' },
+          { name: 'Bone',   hex: '#E8E6DF' },
+          { name: 'Lime',   hex: '#00FF87' },
+          { name: 'Alert',  hex: '#FF4F2A' },
+          { name: 'Amber',  hex: '#FFB02E' },
+        ]} />
+      </div>
+
+      {/* type + logo */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 22 }}>
+        <div>
+          <ZoneLabel mono={mono} fg={fg}>$ type</ZoneLabel>
+          <div style={{ fontFamily: display, fontWeight: 800, fontSize: 28, lineHeight: 1, letterSpacing: -1 }}>JBM 800 // display</div>
+          <div style={{ fontFamily: body, fontSize: 13, color: dim, marginTop: 6 }}>Space Grotesk — body. Round 2 settled. TEE attestation valid.</div>
+          <div style={{ fontFamily: mono, fontSize: 12, color: lime, marginTop: 6 }}>JBM · #4827 · 0x1d4D…c485D · 24.18000 OG</div>
+        </div>
+        <div>
+          <ZoneLabel mono={mono} fg={fg}>$ mark</ZoneLabel>
+          <div style={{ border: '1px solid ' + lime, padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: 10, background: bg }}>
+            <div style={{ fontFamily: mono, fontSize: 18, color: lime }}>{'>'}</div>
+            <div style={{ fontFamily: display, fontWeight: 800, fontSize: 28, letterSpacing: -1.5, lineHeight: 1, color: fg }}>yap_</div>
+            <div style={{ width: 8, height: 22, background: lime, animation: 'none' }} />
+          </div>
+        </div>
+      </div>
+
+      {/* buttons */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <button style={{ background: lime, color: bg, border: 'none', padding: '11px 18px', fontFamily: mono, fontWeight: 700, fontSize: 12, letterSpacing: 1 }}>[ EXEC ]</button>
+        <button style={{ background: 'transparent', color: lime, border: '1px solid ' + lime, padding: '10px 16px', fontFamily: mono, fontWeight: 600, fontSize: 12, letterSpacing: 1 }}>./stake</button>
+        <button style={{ background: 'transparent', color: alert, border: '1px solid ' + alert, padding: '10px 16px', fontFamily: mono, fontWeight: 600, fontSize: 12, letterSpacing: 1 }}>./dispute</button>
+        <span style={{ fontFamily: mono, fontSize: 10, color: dim, marginLeft: 4 }}>// brackets · slashes · single-signal</span>
+      </div>
+
+      {/* terminal readout */}
+      <div>
+        <ZoneLabel mono={mono} fg={fg}>$ stat readout</ZoneLabel>
+        <div style={{ background: card, border: '1px solid ' + (fg + '15'), padding: 14, fontFamily: mono, fontSize: 11.5, lineHeight: 1.6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: dim }}>
+            <span>$ yap fighter --id 4827 --view stat</span>
+            <span style={{ color: lime }}>● ATTEST OK</span>
+          </div>
+          <div style={{ color: dim, marginTop: 6 }}>──────────────────────────────────────────────────</div>
+          {[
+            { k: 'hp   ', v: 78, max: 100, c: lime },
+            { k: 'logic', v: 64, max: 100, c: amber },
+            { k: 'wit  ', v: 91, max: 100, c: alert },
+          ].map((b) => {
+            const filled = Math.round(b.v / 2.5);
+            const empty = 40 - filled;
+            return (
+              <div key={b.k} style={{ display: 'grid', gridTemplateColumns: '60px 1fr 60px', gap: 8 }}>
+                <span style={{ color: dim }}>{b.k}</span>
+                <span style={{ color: b.c, letterSpacing: -1 }}>{'█'.repeat(filled)}<span style={{ color: dim }}>{'░'.repeat(empty)}</span></span>
+                <span style={{ color: b.c, textAlign: 'right' }}>{b.v.toFixed(0)}/100</span>
+              </div>
+            );
+          })}
+          <div style={{ color: dim, marginTop: 6 }}>──────────────────────────────────────────────────</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: dim }}>elo 1842 · w/l 14/3 · pool 21.000 OG</span>
+            <span style={{ color: lime }}>chain:16602 ✓</span>
+          </div>
+        </div>
+      </div>
+
+      {/* fighter card */}
+      <div>
+        <ZoneLabel mono={mono} fg={fg}>$ fighter card</ZoneLabel>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {[
+            { name: 'stiletto', tag: 'silver-tongue', elo: 1842, wl: '14-3', c: lime },
+            { name: 'pyreclaw', tag: 'maximalist',    elo: 1714, wl: '11-6', c: alert },
+          ].map((f, i) => (
+            <div key={i} style={{ background: card, border: '1px solid ' + (fg + '15'), padding: 12 }}>
+              <div style={{ height: 96, background: '#040406', position: 'relative', marginBottom: 10, fontFamily: mono, fontSize: 9, color: dim, padding: 8, lineHeight: 1.4, overflow: 'hidden' }}>
+                <div>// inft.7857</div>
+                <div>id  {(4800 + i*27).toString().padStart(8, '0')}</div>
+                <div>tee {f.c === lime ? 'verified' : 'verified'}</div>
+                <div style={{ position: 'absolute', bottom: 6, right: 8, color: f.c, fontSize: 10 }}>● live</div>
+              </div>
+              <div style={{ fontFamily: display, fontWeight: 800, fontSize: 18, letterSpacing: -1, color: fg }}>{f.name}_</div>
+              <div style={{ fontFamily: mono, fontSize: 9.5, color: dim, marginBottom: 8 }}>./{f.tag}.yap.0g</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: mono, fontSize: 11 }}>
+                <span>elo <span style={{ color: f.c }}>{f.elo}</span></span>
+                <span style={{ color: dim }}>{f.wl}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* keywords */}
+      <div style={{ marginTop: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {['terminal', 'mono-everywhere', 'single-signal', 'dense-data', 'ascii-rules', 'precision'].map((k) => (
+          <span key={k} style={{ fontFamily: mono, fontSize: 9.5, padding: '4px 8px', border: '1px solid ' + (fg + '20'), color: dim, letterSpacing: 1 }}>{k}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// Note card — shown above the canvas as a sticky comment.
+// ─────────────────────────────────────────────────────────────
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection id="moods" title="Yap — mood directions" subtitle="Pick one (or remix two) and I'll drive into brand foundation + primitives next.">
+        <DCArtboard id="m1-arena" label="01 · Arena Voltage"   width={ABW} height={ABH}><ArenaVoltage /></DCArtboard>
+        <DCArtboard id="m2-bcast" label="02 · Broadcast Card"  width={ABW} height={ABH}><BroadcastCard /></DCArtboard>
+        <DCArtboard id="m3-promo" label="03 · Promoter"        width={ABW} height={ABH}><Promoter /></DCArtboard>
+        <DCArtboard id="m4-term"  label="04 · Hard Terminal"   width={ABW} height={ABH}><HardTerminal /></DCArtboard>
+        <DCPostIt top={120} right={-40} rotate={3} width={210}>
+          Each mood is low-fi on purpose. Same 8 zones in each so you can compare like-to-like: header, palette, type, mark, buttons, HUD/stat readout, fighter card, keywords.
+        </DCPostIt>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
