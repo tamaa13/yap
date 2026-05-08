@@ -6,7 +6,6 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Hash } from "@/components/ui/hash";
 import { Sigil } from "@/components/ui/sigil";
-import { Sparkline } from "@/components/ui/sparkline";
 import { TableSkel } from "@/components/ui/skeleton";
 import { Tabs } from "@/components/ui/tabs";
 import { PageContainer } from "@/components/shell/page-container";
@@ -115,7 +114,7 @@ export default function LeaderboardPage() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr style={{ background: "var(--bg-sunken)" }}>
-                {["#", "Fighter", "Archetype", "ELO", "Win %", "Earnings", "Trend", "Owner"].map(
+                {["#", "Fighter", "Archetype", "ELO", "Win %", "Earnings", "Owner"].map(
                   (h) => (
                     <th
                       key={h}
@@ -179,16 +178,6 @@ export default function LeaderboardPage() {
                     </td>
                     <td style={{ padding: "10px 14px" }} className="num">
                       {fmtNum(f.earnings, 2)} 0G
-                    </td>
-                    <td style={{ padding: "10px 14px" }}>
-                      <Sparkline
-                        data={Array.from(
-                          { length: 8 },
-                          (_, j) => f.elo + Math.sin(j + f.id) * 20 + j * 3,
-                        )}
-                        width={80}
-                        height={20}
-                      />
                     </td>
                     <td style={{ padding: "10px 14px" }}>
                       <Hash value={f.owner} />
