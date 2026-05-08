@@ -12,11 +12,15 @@ import { Sigil } from "@/components/ui/sigil";
 import { useToast } from "@/components/ui/toast";
 import { Breadcrumbs } from "@/components/shell/breadcrumbs";
 import { PageContainer } from "@/components/shell/page-container";
+import { useBattleState } from "@/hooks/use-battle-state";
 import { useClaimPayout } from "@/hooks/use-claim-payout";
+import { useMintMoment, useMomentClaimed } from "@/hooks/use-mint-moment";
 import { useSettleBattle } from "@/hooks/use-settle-battle";
+import { useWallet } from "@/hooks/use-wallet";
 import {
   BATTLE_ESCROW_ABI,
   BATTLE_ESCROW_ADDRESS,
+  MOMENT_INFT_ADDRESS,
 } from "@/lib/contracts";
 import { activeChain } from "@/lib/chains";
 import { fmtNum } from "@/lib/format";
@@ -51,8 +55,19 @@ export function ArenaResult({
   const { push } = useToast();
   const settle = useSettleBattle();
   const claim = useClaimPayout();
+  const { addr: viewerAddr } = useWallet();
   const winner = battle.winner === "a" ? fighterA : fighterB;
   const loser = battle.winner === "a" ? fighterB : fighterA;
+
+  // Subscribe to live battle state — this is where the per-round
+  // arguments + commentary live. Used for Moment minting (need real
+  // transcript bytes) and to surface real per-round content if/when
+  // the runner exposes it. Falls through to the legacy hardcoded
+  // round display if the state has been GC'd from the store.
+  const battleIdNum = parseBattleId(battle.id);
+  const battleIdNumber = battleIdNum !== null ? Number(battleIdNum) : null;
+  const { state: liveState } = useBattleState(battleIdNumber);
+  const realRounds = liveState?.rounds ?? [];
 
   // Read dispute window + battle struct from the contract so the UI can
   // disable Settle until the window elapses + show a live countdown. Avoids
@@ -277,6 +292,67 @@ export function ArenaResult({
             </div>
           </Card>
 
+          {MOMENT_INFT_ADDRESS !== "" && realRounds.length > 0 && (
+            <Card style={{ padding: 20, marginBottom: 16 }}>
+              <div
+                className="label"
+                style={{
+                  marginBottom: 4,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                Mint a moment
+                <Badge mono tone="success">
+                  <Icon name="zap" size={10} />
+                  &nbsp;new
+                </Badge>
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "var(--tx-tertiary)",
+                  marginBottom: 12,
+                  lineHeight: 1.5,
+                }}
+              >
+                Pin this round's argument as an ERC-7857 collectible.
+                Side ownership gates each button — fighter owners only.
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                }}
+              >
+                {realRounds.map((round) => (
+                  <Fragment key={round.number}>
+                    <MomentMintRow
+                      battleId={battle.id}
+                      battleIdNum={battleIdNumber}
+                      roundNo={round.number}
+                      side="a"
+                      fighter={fighterA}
+                      argumentContent={round.argumentA.content}
+                      viewerAddr={viewerAddr ?? null}
+                    />
+                    <MomentMintRow
+                      battleId={battle.id}
+                      battleIdNum={battleIdNumber}
+                      roundNo={round.number}
+                      side="b"
+                      fighter={fighterB}
+                      argumentContent={round.argumentB.content}
+                      viewerAddr={viewerAddr ?? null}
+                    />
+                  </Fragment>
+                ))}
+              </div>
+            </Card>
+          )}
+
           <div
             style={{
               display: "flex",
@@ -464,5 +540,140 @@ export function ArenaResult({
         </div>
       </div>
     </PageContainer>
+  );
+}
+
+function MomentMintRow({
+  battleId,
+  battleIdNum,
+  roundNo,
+  side,
+  fighter,
+  argumentContent,
+  viewerAddr,
+}: {
+  battleId: string;
+  battleIdNum: number | null;
+  roundNo: number;
+  side: "a" | "b";
+  fighter: Fighter;
+  argumentContent: string;
+  viewerAddr: string | null;
+}) {
+  const { push } = useToast();
+  const mint = useMintMoment();
+  const isOwner =
+    !!viewerAddr &&
+    fighter.owner.toLowerCase() === viewerAddr.toLowerCase();
+  const args =
+    battleIdNum !== null
+      ? { battleId: battleIdNum, roundNo, side }
+      : null;
+  const { claimed, isLoading: claimedLoading } = useMomentClaimed(args);
+
+  const previewSnippet = argumentContent
+    ? argumentContent.length > 90
+      ? argumentContent.slice(0, 88) + "…"
+      : argumentContent
+    : "(no content)";
+
+  const onMint = async () => {
+    if (!args) return;
+    try {
+      const result = await mint.write(args);
+      push({
+        kind: "success",
+        text: `Moment #${result.tokenId} minted. Round ${roundNo} on lock.`,
+      });
+    } catch (e) {
+      push({
+        kind: "error",
+        text: e instanceof Error ? e.message : "Couldn't mint the moment",
+      });
+    }
+  };
+
+  const busy =
+    mint.phase === "preparing" ||
+    mint.phase === "signing" ||
+    mint.phase === "minting";
+
+  const buttonLabel = (() => {
+    if (mint.phase === "done") return "Minted";
+    if (mint.phase === "preparing") return "Pinning to 0G…";
+    if (mint.phase === "signing") return "Sign in your wallet…";
+    if (mint.phase === "minting") return "Landing on-chain…";
+    if (claimedLoading) return "Checking…";
+    if (claimed) return "Already minted";
+    if (!isOwner) return "Owner only";
+    return `Mint R${roundNo}/${side.toUpperCase()}`;
+  })();
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: 10,
+        background: "var(--bg-sunken)",
+        border: "1px solid var(--bd-subtle)",
+        borderRadius: 4,
+      }}
+    >
+      <div
+        className="mono"
+        style={{
+          fontSize: 11,
+          color: "var(--tx-tertiary)",
+          flexShrink: 0,
+          width: 56,
+        }}
+      >
+        R{roundNo} · {side.toUpperCase()}
+      </div>
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          fontSize: 12,
+          color: "var(--tx-secondary)",
+          lineHeight: 1.5,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+        title={argumentContent}
+      >
+        <span style={{ color: "var(--tx-primary)", fontWeight: 500 }}>
+          {fighter.name}
+        </span>
+        : {previewSnippet}
+      </div>
+      <Button
+        size="sm"
+        variant={isOwner && !claimed && mint.phase !== "done" ? "primary" : undefined}
+        onClick={onMint}
+        disabled={
+          busy ||
+          !isOwner ||
+          claimed === true ||
+          mint.phase === "done" ||
+          !argumentContent ||
+          battleIdNum === null
+        }
+        title={
+          !isOwner
+            ? `Only ${fighter.name}'s owner can mint this side.`
+            : claimed
+              ? "This round/side already lives as a Moment."
+              : !argumentContent
+                ? "Round content not in store — battle state may have been GC'd."
+                : undefined
+        }
+      >
+        {buttonLabel}
+      </Button>
+    </div>
   );
 }
