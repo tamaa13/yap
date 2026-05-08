@@ -1,16 +1,38 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Anton, Archivo, Space_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Promoter design direction — fight-poster editorial. Anton handles
+// display caps (hero, section heads, card titles, KO stamps); Archivo
+// is the body workhorse with full weight range for label/heading
+// hierarchy; Space Mono lands on numerics and IDs (token addresses,
+// 0G amounts, ELO) where the slab letterforms read as "data".
+//
+// Display weight is locked at 400 — Anton ships a single weight by
+// design; loading more would 404. Archivo carries 400-900 because
+// data-rich pages call for serious heading weight headroom. Space
+// Mono pulls 400 and 700 — bold mono lands on stamp serials + table
+// emphasis cells.
+const archivo = Archivo({
+  variable: "--font-archivo",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const anton = Anton({
+  variable: "--font-anton",
   subsets: ["latin"],
+  weight: ["400"],
+  display: "swap",
+});
+
+const spaceMono = Space_Mono({
+  variable: "--font-space-mono",
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -27,7 +49,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable}`}
+      className={`${archivo.variable} ${anton.variable} ${spaceMono.variable}`}
       suppressHydrationWarning
     >
       <body>

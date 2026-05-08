@@ -4,7 +4,10 @@ export interface YapMarkProps {
   bg?: string;
 }
 
-export function YapMark({ size = 22, color = "var(--accent)", bg = "#0A0B0F" }: YapMarkProps) {
+// Defaults sourced from Promoter palette: --yap-crimson and --yap-ink-950.
+// Hex literals because SVG attributes don't accept CSS vars; passers can
+// override with hex strings if a different ground/figure pair is needed.
+export function YapMark({ size = 22, color = "#C8102E", bg = "#0E0B08" }: YapMarkProps) {
   return (
     <svg
       width={size}

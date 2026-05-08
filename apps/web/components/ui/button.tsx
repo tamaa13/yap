@@ -27,7 +27,7 @@ const sizes: Record<ButtonSize, CSSProperties> = {
 };
 
 const variants: Record<ButtonVariant, CSSProperties> = {
-  primary: { background: "var(--accent)", color: "#0A0B0F", borderColor: "var(--accent)" },
+  primary: { background: "var(--accent)", color: "var(--yap-ink-50)", borderColor: "var(--accent)" },
   secondary: { background: "transparent", color: "var(--tx-primary)", borderColor: "var(--bd-strong)" },
   ghost: { background: "transparent", color: "var(--tx-secondary)", borderColor: "transparent" },
   destructive: { background: "transparent", color: "var(--danger)", borderColor: "rgba(232,107,107,0.40)" },

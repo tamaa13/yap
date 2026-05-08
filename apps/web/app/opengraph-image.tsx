@@ -11,9 +11,9 @@ export default function OgImage() {
         style={{
           width: "100%",
           height: "100%",
-          background: "#0A0B0F",
+          background: "#0E0B08",
           backgroundImage:
-            "radial-gradient(ellipse 800px 400px at 50% 20%, rgba(255,184,0,0.08), transparent)",
+            "radial-gradient(ellipse 800px 400px at 50% 20%, rgba(200,16,46,0.10), transparent)",
           display: "flex",
           flexDirection: "column",
           padding: 72,
@@ -21,13 +21,13 @@ export default function OgImage() {
           fontFamily: "sans-serif",
         }}
       >
-        {/* Top: Logo lockup */}
+        {/* Top: Logo lockup — Promoter palette: crimson mark on cream figure. */}
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <div
             style={{
               width: 72,
               height: 72,
-              background: "#FFB800",
+              background: "#C8102E",
               borderRadius: 14,
               display: "flex",
               alignItems: "center",
@@ -37,9 +37,9 @@ export default function OgImage() {
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
               <path
                 d="M6 8.5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-4.5L8 18v-2.5H8a2 2 0 0 1-2-2v-5Z"
-                fill="#0A0B0F"
+                fill="#0E0B08"
               />
-              <circle cx="12" cy="11" r="1.5" fill="#FFB800" />
+              <circle cx="12" cy="11" r="1.5" fill="#F2EDE2" />
             </svg>
           </div>
           <div
@@ -48,7 +48,7 @@ export default function OgImage() {
               fontSize: 64,
               fontWeight: 800,
               letterSpacing: "-0.05em",
-              color: "#E8E9ED",
+              color: "#F2EDE2",
             }}
           >
             yap
@@ -64,7 +64,7 @@ export default function OgImage() {
             fontWeight: 600,
             letterSpacing: "-0.03em",
             lineHeight: 1.05,
-            color: "#E8E9ED",
+            color: "#F2EDE2",
             maxWidth: 1000,
           }}
         >
@@ -85,7 +85,7 @@ export default function OgImage() {
               display: "flex",
               flexDirection: "column",
               fontSize: 24,
-              color: "#A0A2AB",
+              color: "#B8B0A2",
               lineHeight: 1.4,
               maxWidth: 700,
             }}
@@ -101,7 +101,7 @@ export default function OgImage() {
             style={{
               display: "flex",
               fontSize: 16,
-              color: "#6B6D76",
+              color: "#8A8378",
               fontFamily: "monospace",
               letterSpacing: "0.1em",
               textTransform: "uppercase",

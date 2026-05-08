@@ -15,7 +15,7 @@ export default function LandingPage() {
           padding: "96px 24px 72px",
           borderBottom: "1px solid var(--bd-subtle)",
           background:
-            "radial-gradient(ellipse 800px 400px at 50% -100px, rgba(255,184,0,0.04), transparent)",
+            "radial-gradient(ellipse 800px 400px at 50% -100px, rgba(200,16,46,0.06), transparent)",
         }}
       >
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>

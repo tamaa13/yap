@@ -20,7 +20,7 @@ export function ArgumentLine({
         style={{
           padding: "12px 16px",
           margin: "4px 0",
-          background: "rgba(255,184,0,0.04)",
+          background: "rgba(200,16,46,0.06)",
           borderLeft: "2px solid var(--accent-border)",
         }}
       >

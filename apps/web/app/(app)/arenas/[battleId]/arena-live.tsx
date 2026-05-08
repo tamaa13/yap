@@ -1116,7 +1116,7 @@ function CommentatorTicker({
           style={{
             borderTop: "1px solid var(--bd-default)",
             background:
-              "linear-gradient(90deg, rgba(255,184,0,0.06), rgba(255,184,0,0.02))",
+              "linear-gradient(90deg, rgba(200,16,46,0.10), rgba(200,16,46,0.02))",
             padding: "10px 20px",
             display: "flex",
             alignItems: "center",
