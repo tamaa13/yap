@@ -139,7 +139,7 @@ pnpm dev
 | BattleEscrow | `0x4bd214fdfe925124c9e145e577ac860c0d93fb2e` | [chainscan](https://chainscan-galileo.0g.ai/address/0x4bd214fdfe925124c9e145e577ac860c0d93fb2e) |
 | BattleRegistry | `0x755ef230d456b6cc991ccfff38ec5c6b0133d37b` | [chainscan](https://chainscan-galileo.0g.ai/address/0x755ef230d456b6cc991ccfff38ec5c6b0133d37b) |
 | YapMarketplace | `0x076e42a64e4ba43700ebb0830086138468dfa275` | [chainscan](https://chainscan-galileo.0g.ai/address/0x076e42a64e4ba43700ebb0830086138468dfa275) |
-| RentalEscrow | `0x952aa5fc5a19638b2a4943823cd8273e797c85ed` | [chainscan](https://chainscan-galileo.0g.ai/address/0x952aa5fc5a19638b2a4943823cd8273e797c85ed) |
+| RentalEscrow | `0xe5Df2d51ef75A268daAd122038D94cEA9c3111EA` | [chainscan](https://chainscan-galileo.0g.ai/address/0xe5Df2d51ef75A268daAd122038D94cEA9c3111EA) |
 
 `oracleKey` = `0x83df4B8EbA7c0B3B740019b8c9a77ffF77D508cF` — the TEE-derived signing address registered by 0G Compute provider `0xa48f01287233509FD694a22Bf840225062E67836`.
 
