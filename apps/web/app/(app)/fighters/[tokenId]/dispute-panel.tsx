@@ -95,13 +95,13 @@ export function DisputePanel({
       renterWei = parseEther(renterShareEth || "0");
       ownerWei = parseEther(ownerShareEth || "0");
     } catch {
-      push({ kind: "error", text: "Invalid amounts" });
+      push({ kind: "error", text: "Numbers don't parse — check the inputs." });
       return;
     }
     if (renterWei + ownerWei !== dispute.escrowed) {
       push({
         kind: "error",
-        text: `Split must sum to ${formatEther(dispute.escrowed)} 0G (escrowed amount)`,
+        text: `Renter + owner must add up to ${formatEther(dispute.escrowed)} 0G — the full escrow.`,
       });
       return;
     }
@@ -250,16 +250,16 @@ export function DisputePanel({
       <Modal
         open={splitOpen}
         onClose={() => !ctl.isPending && setSplitOpen(false)}
-        title="Propose split"
+        title="Propose a split"
         footer={
           <div style={{ display: "flex", gap: 8 }}>
             <Button onClick={() => setSplitOpen(false)} disabled={ctl.isPending}>
-              Cancel
+              Back out
             </Button>
             <Button onClick={submitSplit} disabled={ctl.isPending}>
               {ctl.pendingAction === "proposeRentalSplit"
-                ? "Submitting…"
-                : "Propose"}
+                ? "Sending it on-chain…"
+                : "Send proposal"}
             </Button>
           </div>
         }

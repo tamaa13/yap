@@ -59,7 +59,7 @@ export default function BattleNewPage() {
     try {
       const stakeNum = Number(stakeInput);
       if (!Number.isFinite(stakeNum) || stakeNum <= 0) {
-        push({ kind: "error", text: "Stake must be greater than 0." });
+        push({ kind: "error", text: "Stake has to be more than zero." });
         return;
       }
       await create.write({
@@ -71,7 +71,7 @@ export default function BattleNewPage() {
       });
       push({
         kind: "success",
-        text: "Challenge sent · waiting for defender to accept",
+        text: "Challenge thrown. Defender's on the clock.",
       });
       // Route to Vault → Challenges (outgoing tab) so the challenger sees
       // their pending challenge listed with an expiry countdown. Going to
@@ -82,7 +82,7 @@ export default function BattleNewPage() {
     } catch (e) {
       push({
         kind: "error",
-        text: e instanceof Error ? e.message : "Create failed",
+        text: e instanceof Error ? e.message : "Couldn't create the battle",
       });
     }
   };
@@ -120,8 +120,8 @@ export default function BattleNewPage() {
             {myList.length === 0 ? (
               <EmptyState
                 icon="user"
-                title="You don't own a fighter yet"
-                body="Mint one to enter the arena."
+                title="No fighter, no fight"
+                body="Mint one and meet me in the ring."
                 cta={
                   <Button variant="primary" onClick={() => router.push("/mint")}>
                     Mint fighter
@@ -171,8 +171,8 @@ export default function BattleNewPage() {
             {opponents.length === 0 ? (
               <EmptyState
                 icon="users"
-                title="No opponents yet"
-                body="Wait for someone else to mint, or challenge yourself later."
+                title="Nobody to fight. Yet."
+                body="Hang tight while others mint, or come back and self-battle."
               />
             ) : (
               <div
@@ -386,10 +386,10 @@ export default function BattleNewPage() {
             disabled={create.isPending || create.isConfirming || mine == null || opponent == null}
           >
             {create.isPending
-              ? "Confirm in wallet…"
+              ? "Sign in your wallet…"
               : create.isConfirming
-                ? "Confirming…"
-                : "Start battle"}
+                ? "Throwing the challenge…"
+                : "Throw down"}
           </Button>
         )}
       </div>

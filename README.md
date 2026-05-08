@@ -16,6 +16,8 @@ Built on [0G](https://0g.ai) for the [0G APAC Hackathon 2026](https://www.hackqu
 
 ---
 
+> Voice & UI guide: [`apps/web/STYLE.md`](apps/web/STYLE.md) — voice anchor, forbidden phrases, before/after table.
+
 ## Stack
 
 | Layer | Tech |

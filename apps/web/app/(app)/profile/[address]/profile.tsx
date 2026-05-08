@@ -73,8 +73,8 @@ export function Profile({
       {ownedFighters.length === 0 ? (
         <EmptyState
           icon="user"
-          title="No fighters yet"
-          body={isSelf ? "Mint your first fighter to enter combat." : "This profile hasn't minted."}
+          title={isSelf ? "Empty roster" : "Quiet profile"}
+          body={isSelf ? "Mint a fighter and stake your claim." : "Hasn't minted a fighter yet."}
         />
       ) : (
         <div
