@@ -27,6 +27,10 @@ export interface FighterSnapshot {
   hp?: number;
   logic?: number;
   wit?: number;
+  /** Style tags derived from the fighter's seed (e.g. "punchy",
+   *  "logical", "chaotic"). Threaded into the per-round persona prompt
+   *  as personality cues — same tags shown on the fighter card. */
+  tags?: string[];
 }
 
 export interface RoundArgument {
