@@ -11,7 +11,6 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Sigil } from "@/components/ui/sigil";
-import { Sparkline } from "@/components/ui/sparkline";
 import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { Breadcrumbs } from "@/components/shell/breadcrumbs";
@@ -33,7 +32,7 @@ import { fmtNum, fmtRemaining, fmtTime } from "@/lib/format";
 import type { Address } from "viem";
 import type { Battle, Fighter, FighterArchetype } from "@/lib/types";
 
-type DetailTab = "overview" | "history" | "earnings" | "lineage";
+type DetailTab = "overview" | "history" | "earnings";
 
 // Map a 0-100 trait value to one of the app's semantic colors. Low = danger,
 // mid = warning, upper-mid = accent (amber), high = success.
@@ -511,7 +510,6 @@ export function FighterDetail({
               { value: "overview", label: "Overview" },
               { value: "history", label: "Battle history", count: fighter.battles },
               { value: "earnings", label: "Earnings" },
-              { value: "lineage", label: "Lineage" },
             ]}
             style={{ marginBottom: 16 }}
           />
@@ -733,48 +731,25 @@ export function FighterDetail({
 
           {tab === "earnings" && (
             <Card style={{ padding: 20 }}>
-              <div className="label" style={{ marginBottom: 12 }}>Earnings over time</div>
+              <div className="label" style={{ marginBottom: 12 }}>Lifetime earnings</div>
               {fighter.earnings > 0 ? (
-                <>
-                  <Sparkline
-                    data={[0, 0, 0, 0, 0, 0, 0, fighter.earnings]}
-                    width={600}
-                    height={120}
-                  />
+                <div>
+                  <div
+                    className="num"
+                    style={{ fontSize: 28, fontWeight: 700 }}
+                  >
+                    {fmtNum(fighter.earnings)} 0G
+                  </div>
                   <div
                     style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(3, 1fr)",
-                      gap: 12,
-                      marginTop: 16,
+                      fontSize: 12,
+                      color: "var(--tx-secondary)",
+                      marginTop: 6,
                     }}
                   >
-                    <div>
-                      <div className="label">Lifetime</div>
-                      <div className="num" style={{ fontSize: 18, fontWeight: 600 }}>
-                        {fmtNum(fighter.earnings)} 0G
-                      </div>
-                    </div>
-                    <div>
-                      <div className="label">This month</div>
-                      <div className="num" style={{ fontSize: 18, fontWeight: 600 }}>
-                        —
-                      </div>
-                      <div style={{ fontSize: 11, color: "var(--tx-tertiary)" }}>
-                        historical breakdown pending
-                      </div>
-                    </div>
-                    <div>
-                      <div className="label">Last 7d</div>
-                      <div className="num" style={{ fontSize: 18, fontWeight: 600 }}>
-                        —
-                      </div>
-                      <div style={{ fontSize: 11, color: "var(--tx-tertiary)" }}>
-                        historical breakdown pending
-                      </div>
-                    </div>
+                    Settled on-chain via BattleRegistry on every won battle.
                   </div>
-                </>
+                </div>
               ) : (
                 <EmptyState
                   icon="trend"
@@ -783,14 +758,6 @@ export function FighterDetail({
                 />
               )}
             </Card>
-          )}
-
-          {tab === "lineage" && (
-            <EmptyState
-              icon="user"
-              title="No derivatives yet"
-              body="This fighter has not been forked or remixed."
-            />
           )}
         </div>
 
