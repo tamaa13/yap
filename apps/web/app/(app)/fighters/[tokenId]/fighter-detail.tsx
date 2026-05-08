@@ -27,6 +27,8 @@ import { useWalletGate, useWallet } from "@/hooks/use-wallet";
 import { parseEther } from "viem";
 import { activeChain } from "@/lib/chains";
 import { FIGHTER_INFT_ADDRESS } from "@/lib/contracts";
+import { TrainModal } from "./train-modal";
+import { TrainingHistory } from "./training-history";
 import { fmtNum, fmtRemaining, fmtTime } from "@/lib/format";
 import type { Address } from "viem";
 import type { Battle, Fighter, FighterArchetype } from "@/lib/types";
@@ -73,6 +75,7 @@ export function FighterDetail({
   const [tab, setTab] = useState<DetailTab>("overview");
   const [listOpen, setListOpen] = useState(false);
   const [rentOpen, setRentOpen] = useState(false); // owner: list for rent
+  const [trainOpen, setTrainOpen] = useState(false); // owner: continuous-learning fine-tune
   const [rentNowOpen, setRentNowOpen] = useState(false); // non-owner: rent duration
   const [rentDurationInput, setRentDurationInput] = useState(3); // for renter
   const [listPrice, setListPrice] = useState<string>("0.1");
@@ -390,6 +393,13 @@ export function FighterDetail({
                       Rent out
                     </Button>
                   )}
+                  <Button
+                    leading={<Icon name="zap" size={14} />}
+                    onClick={() => setTrainOpen(true)}
+                    title="Run another TEE-attested fine-tune session against new style data"
+                  >
+                    Train fighter
+                  </Button>
                 </>
               ) : (
                 <>
@@ -508,6 +518,7 @@ export function FighterDetail({
 
           {tab === "overview" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <TrainingHistory tokenId={fighter.id} />
               <Card style={{ padding: 20 }}>
                 <div
                   style={{
@@ -1082,6 +1093,16 @@ export function FighterDetail({
           )}
         </div>
       </Modal>
+
+      <TrainModal
+        open={trainOpen}
+        onClose={() => setTrainOpen(false)}
+        tokenId={fighter.id}
+        owner={fighter.owner as Address}
+        fighterName={fighter.name}
+        archetype={fighter.arch}
+        priorSignature={fighter.style ?? []}
+      />
     </PageContainer>
   );
 }
