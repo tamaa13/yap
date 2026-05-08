@@ -150,8 +150,21 @@ export function useMintFighter() {
         });
 
         // 3. Wait for receipt + parse Minted event for tokenId.
+        //
+        // viem's defaults (~6 retries, 200 ms apart) give up well before
+        // Galileo testnet propagates a fresh tx — the receipt then surfaces
+        // as "transaction not found" even though the mint has succeeded
+        // on-chain. Override with a longer poll window (5 min, 4-second
+        // interval, 60 retries on transient lookup failures) so we don't
+        // false-alarm the user.
         setPhase("minting");
-        const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+        const receipt = await publicClient.waitForTransactionReceipt({
+          hash: txHash,
+          pollingInterval: 4_000,
+          retryCount: 60,
+          retryDelay: 4_000,
+          timeout: 5 * 60_000,
+        });
         if (receipt.status !== "success") throw new Error("Mint tx reverted");
 
         const events = parseEventLogs({
