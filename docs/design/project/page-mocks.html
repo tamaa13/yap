@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Yap — page mocks v1</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800;900&family=Archivo+Narrow:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  html, body { margin: 0; padding: 0; background: #0E0B08; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="page-shared.jsx"></script>
+<script type="text/babel" src="page-landing.jsx"></script>
+<script type="text/babel" src="page-mint.jsx"></script>
+<script type="text/babel" src="page-arena.jsx"></script>
+<script type="text/babel" src="page-market.jsx"></script>
+<script type="text/babel" src="page-result.jsx"></script>
+
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const { LandingDesktop, LandingMobile, LandingNotes } = window;
+const { MintDesktop, MintMobile, MintNotes } = window;
+const { ArenaDesktop, ArenaMobile, ArenaNotes } = window;
+const { MarketDesktop, MarketMobile, MarketNotes } = window;
+const { ResultDesktop, ResultMobile, ResultNotes } = window;
+
+function PageRow({ id, title, subtitle, Desktop, Mobile, Notes }) {
+  return (
+    <DCSection id={id} title={title} subtitle={subtitle}>
+      <DCArtboard id={id+"-desktop"} label="Desktop · 1440 × 900" width={1440} height={900}>
+        <Desktop />
+      </DCArtboard>
+      <DCArtboard id={id+"-mobile"} label="Mobile · 375 × 812" width={375} height={812}>
+        <Mobile />
+      </DCArtboard>
+      <DCArtboard id={id+"-notes"} label="Notes · components & motion" width={420} height={900}>
+        <Notes />
+      </DCArtboard>
+    </DCSection>
+  );
+}
+
+function App() {
+  return (
+    <DesignCanvas
+      title="Yap — page mocks"
+      subtitle="Promoter direction · 5 pages · desktop + mobile + annotation per row"
+    >
+      <PageRow id="landing" title="01 · Marketing landing"
+        subtitle="The first impression — fight-poster hero, stat strip, featured battle, how it works, fighter card row."
+        Desktop={LandingDesktop} Mobile={LandingMobile} Notes={LandingNotes} />
+      <PageRow id="mint" title="02 · Mint wizard — review step"
+        subtitle="Step 4 of 4. The on-chain commit moment. Fighter preview ↔ review pane."
+        Desktop={MintDesktop} Mobile={MintMobile} Notes={MintNotes} />
+      <PageRow id="arena" title="03 · Battle live arena"
+        subtitle="Mid-round. Two corners · transcript · reactions · commentator ticker · viewer chrome."
+        Desktop={ArenaDesktop} Mobile={ArenaMobile} Notes={ArenaNotes} />
+      <PageRow id="market" title="04 · Marketplace"
+        subtitle="Browse fighters & moments. Filter bar · 4-up grid · empty state · volume strip."
+        Desktop={MarketDesktop} Mobile={MarketMobile} Notes={MarketNotes} />
+      <PageRow id="result" title="05 · Battle result · verdict"
+        subtitle="Verdict reveal · winner card · TEE attestation strip · per-round transcripts · mint-a-moment."
+        Desktop={ResultDesktop} Mobile={ResultMobile} Notes={ResultNotes} />
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
