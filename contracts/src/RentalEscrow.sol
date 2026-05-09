@@ -27,11 +27,12 @@ contract RentalEscrow is AccessControl, ReentrancyGuard, Pausable, IERC721Receiv
     uint256 public constant MAX_DURATION_DAYS = 365;
     uint256 public constant MAX_PAGE_SIZE = 100;
 
-    /// @notice Dispute timing — mirrors AnimaMarket. After expiresAt the
-    ///         renter has DISPUTE_ACCEPTANCE_PERIOD to either accept the
-    ///         rental (release funds to owner) or open a dispute. After
-    ///         DISPUTE_MAX_LIFETIME, anyone can force-close: settle to
-    ///         owner if no dispute opened, refund renter if disputed.
+    /// @notice Dispute timing for the co-signed split lifecycle. After
+    ///         expiresAt the renter has DISPUTE_ACCEPTANCE_PERIOD to
+    ///         either accept the rental (release funds to owner) or
+    ///         open a dispute. After DISPUTE_MAX_LIFETIME, anyone can
+    ///         force-close: settle to owner if no dispute opened,
+    ///         refund renter if disputed.
     uint256 public constant DISPUTE_ACCEPTANCE_PERIOD = 1 days;
     uint256 public constant DISPUTE_MAX_LIFETIME = 7 days;
 
@@ -51,9 +52,9 @@ contract RentalEscrow is AccessControl, ReentrancyGuard, Pausable, IERC721Receiv
         uint64 listedAt;
         bool active;
         /// @notice When true, rental funds are held in escrow until
-        ///         the dispute window closes (per anima-style co-signed
-        ///         split). Listings default to false for backwards
-        ///         compatibility with the original instant-credit path.
+        ///         the dispute window closes (co-signed split lifecycle).
+        ///         Listings default to false for backwards compatibility
+        ///         with the original instant-credit path.
         bool disputable;
     }
 
@@ -112,7 +113,7 @@ contract RentalEscrow is AccessControl, ReentrancyGuard, Pausable, IERC721Receiv
     event PlatformFeeUpdated(uint16 oldBps, uint16 newBps);
     event RentalPermissionsUpdated(bytes permissions);
 
-    // Dispute lifecycle events (anima-style)
+    // Dispute lifecycle events
     event RentalAccepted(uint256 indexed tokenId, address indexed renter);
     event RentalDisputed(uint256 indexed tokenId, address indexed renter);
     event RentalSplitProposed(
@@ -180,7 +181,7 @@ contract RentalEscrow is AccessControl, ReentrancyGuard, Pausable, IERC721Receiv
         _listForRent(tokenId, pricePerDay, maxDurationDays, false);
     }
 
-    /// @notice List a fighter for rent with anima-style dispute resolution.
+    /// @notice List a fighter for rent with co-signed dispute resolution.
     ///         Funds are held in escrow until the rental expires plus a
     ///         24h acceptance window; renter may dispute within that
     ///         window and parties co-sign a split, otherwise force-close
@@ -328,7 +329,7 @@ contract RentalEscrow is AccessControl, ReentrancyGuard, Pausable, IERC721Receiv
     }
 
     // --------------------------------------------------------------------------------------------
-    // Dispute lifecycle (anima-style co-signed split)
+    // Dispute lifecycle — co-signed split
     //
     // Only used for listings created via `listForRentDisputable`. Funds
     // sit in `disputeOf[tokenId].escrowed` until acceptance, timeout,
@@ -365,8 +366,8 @@ contract RentalEscrow is AccessControl, ReentrancyGuard, Pausable, IERC721Receiv
 
     /// @notice Anyone can release escrowed funds to the owner once the
     ///         24h acceptance window passes without a dispute being
-    ///         opened. Mirrors anima's `claimTimeout` — permissionless
-    ///         so neither party can grief by going silent.
+    ///         opened. Permissionless so neither party can grief by
+    ///         going silent.
     function claimRentalTimeout(uint256 tokenId) external nonReentrant {
         DisputeState storage d = disputeOf[tokenId];
         if (d.status != 1) revert AlreadySettled();

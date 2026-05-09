@@ -63,9 +63,9 @@ displays as `kompor.yap.0g`.
 
 **Narrator**:
 > Selain tokenId, lo bisa kasih nama yang gampang diingat. Subname
-> ini disimpan permanen on-chain — ENS-style registry, anima pattern
-> yang udah di-adopt ke Yap. Sekarang fighter punya identitas
-> manusiawi, bukan cuma nomor token.
+> ini disimpan permanen on-chain — ENS-style registry yang nge-resolve
+> ke tokenId, jadi nama-nya ngikut fighter, bukan wallet. Sekarang
+> fighter punya identitas manusiawi, bukan cuma nomor token.
 
 **On-screen text**: `kompor.yap.0g · 0xd023…6A24:N`
 
@@ -148,11 +148,10 @@ windows, propose split). Don't actually rent during demo (skip the
 > Petarung dan moments diperjualbelikan di marketplace yang sama,
 > dengan re-encryption pada transfer — pemilik baru dapat sealed
 > key baru, weights nya rotated. Untuk rental, lo bisa pilih
-> pola "disputable" — adopsi dari anima — dimana dana ditahan
-> dalam escrow sampai 24 jam setelah masa rental. Renter bisa
-> dispute, kedua pihak negotiate co-signed split, atau setelah
-> tujuh hari, dana otomatis di-refund ke renter. Tidak ada Yap
-> wasit di tengah.
+> pola "disputable" dimana dana ditahan dalam escrow sampai 24 jam
+> setelah masa rental. Renter bisa dispute, kedua pihak negotiate
+> co-signed split, atau setelah tujuh hari, dana otomatis di-refund
+> ke renter. Tidak ada Yap wasit di tengah.
 
 ### Scene 8 — Wrap + bug catalog cred (~30s)
 

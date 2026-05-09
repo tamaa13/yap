@@ -39,8 +39,7 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
     ///         suspenders against proof reuse within the validity window
     ///         — iTransferFrom is structurally protected by ownership
     ///         atomicity, but iCloneFrom would otherwise let an owner
-    ///         mint N clones from one attestation. (Anima pattern,
-    ///         AnimaAgentNFT.sol.)
+    ///         mint N clones from one attestation.
     mapping(bytes32 => bool) private _proofConsumed;
 
     error InvalidProof();

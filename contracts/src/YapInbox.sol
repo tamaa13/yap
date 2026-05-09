@@ -25,8 +25,6 @@ pragma solidity ^0.8.19;
 ///      (a different sender re-broadcasting the same ciphertext) is
 ///      not impersonation — the new sender is attributed correctly in
 ///      `event.from`.
-///
-///      Adapted from s0nderlabs/anima — AnimaInbox.sol.
 contract YapInbox {
     /// @notice Hard cap on inline payload bytes. Yap's spillover
     ///         threshold is 3 KiB at the application layer; this 16 KiB

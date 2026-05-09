@@ -22,9 +22,8 @@ interface IFighter {
 ///         Listeners that need ownership-change events should subscribe
 ///         to `IERC721.Transfer` on YapFighter.
 ///
-///         Adapted from Anima's permissionless registrar pattern at
-///         contracts/src/AnimaSubnameRegistrar.sol — but rebound from
-///         (label → address) to (label → tokenId) so the canonical
+///         Permissionless ENS-style registrar — bound to (label →
+///         tokenId) instead of (label → address) so the canonical
 ///         pointer follows the NFT instead of a static wallet.
 contract YapSubnameRegistrar is AccessControl {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");

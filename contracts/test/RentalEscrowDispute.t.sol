@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {RentalEscrow} from "../src/RentalEscrow.sol";
 import {YapFighter} from "../src/YapFighter.sol";
 
-/// @dev Tests cover the anima-style dispute lifecycle on top of the
+/// @dev Tests cover the co-signed dispute lifecycle on top of the
 ///      existing RentalEscrow. Each test rents a disputable listing and
 ///      drives one branch of {accept, dispute → split, dispute → force,
 ///      timeout claim, force-close from Funded}.

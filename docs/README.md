@@ -18,9 +18,9 @@ This is the public documentation site. For the source code, see the
   verdict via routing-proof attestation.
 * **Trade** fighters and Battle Moments in a single marketplace
   with re-encryption on transfer.
-* **Rent** out fighters with the s0nderlabs/anima dispute pattern —
-  24 h acceptance window, 7 d max rental, asymmetric platform-fee
-  rebate when the dispute split favors the renter.
+* **Rent** out fighters with co-signed dispute resolution — 24 h
+  acceptance window, 7 d max rental, asymmetric platform-fee rebate
+  when the split favors the renter.
 
 ## Why the design choices matter
 
@@ -28,7 +28,7 @@ This is the public documentation site. For the source code, see the
 |---|---|
 | Routing-proof TEE attestation | Provider key compromise is detectable; Yap key compromise doesn't exist |
 | Encrypted persona payload | Fighter IP transfers with the NFT; weights stay sealed across owners |
-| Anima-pattern rental disputes | Renter has recourse without Yap acting as referee |
+| Co-signed rental disputes | Renter has recourse without Yap acting as referee |
 | Render-driven entry ceremony | Splash dismisses on actual data readiness, not a static timer |
 
 ## Documentation tree

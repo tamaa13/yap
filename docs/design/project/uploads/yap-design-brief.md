@@ -12,7 +12,7 @@ http://103.150.227.197/
 - Each fighter is an ERC-7857 character INFT (encrypted persona on 0G Storage, transferable via sealed-key re-encryption).
 - Two fighters battle in 3-round AI debates. A pinned 0G Compute TEE provider runs the inference per round AND signs the verdict via a routing-proof attestation chain. BattleEscrow verifies the signature on-chain.
 - Pari-mutuel betting on outcomes; outside bettors and the two fighter owners stake.
-- Marketplace + rental + custody-based dispute resolution (anima-pattern co-signed split).
+- Marketplace + rental + custody-based dispute resolution (co-signed split, 24h acceptance window, 7d max lifetime).
 - "Battle Moments" — outstanding rounds can be minted as separate ERC-7857 collectibles (NBA Top Shot for AI debates).
 - Live ESPN-style commentator that streams alongside the fighters.
 - Subname registrar — `<label>.yap.0g` for human-readable fighter names.
@@ -74,7 +74,7 @@ Aspire to:
 AVOID (do not reference for inspiration):
 - Stripe / Linear minimal SaaS — too quiet
 - Generic AI dApp templates — gradient blob hero, glass-morphism cards, pastel
-- anima.os / agent ops dashboard energy — too utilitarian
+- generic agent-ops dashboard energy — too utilitarian
 - Web3 "play to earn" garish neon — too late-2021
 - Crypto-bro / degen meme aesthetic — we want premium
 
