@@ -190,6 +190,61 @@ a { color: inherit; text-decoration: none; }
 *:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; border-radius: 2px; }
 
 /* ──────────────────────────────────────────────────────────────
+   NAVBAR LINK — hover micro-state.
+   Active indicator (the 2px crimson underline) is rendered as a
+   motion.span with layoutId="al-active-nav" so it slides between
+   items on route change (see top-nav.tsx). This CSS only handles
+   the hover state — color ramp + warm background + a left-to-right
+   underline draw that doesn't conflict with the active indicator.
+   ────────────────────────────────────────────────────────────── */
+.al-nav-link {
+  position: relative;
+  transition:
+    color 140ms cubic-bezier(.32, .72, 0, 1),
+    background-color 140ms cubic-bezier(.32, .72, 0, 1);
+}
+.al-nav-link::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: -1px;
+  height: 2px;
+  background: var(--yap-ink-200);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 180ms cubic-bezier(.32, .72, 0, 1);
+  pointer-events: none;
+}
+.al-nav-link:hover::before {
+  transform: scaleX(1);
+}
+/* Suppress the hover underline on the active link — the layoutId
+   crimson underline owns that visual slot. */
+.al-nav-link[data-active="true"]::before {
+  display: none;
+}
+.al-nav-link:hover {
+  color: var(--yap-ink-50);
+  background: rgba(242, 237, 226, 0.04);
+}
+.al-nav-link:active {
+  transform: scale(0.97);
+  transition-duration: 80ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .al-nav-link,
+  .al-nav-link::before,
+  .al-nav-link:hover,
+  .al-nav-link:active {
+    transition: none;
+    transform: none;
+  }
+  .al-nav-link::before { transform: none; }
+  .al-nav-link:hover::before { transform: none; }
+}
+
+/* ──────────────────────────────────────────────────────────────
    BUTTONS — Voltage cut-corner + chunky condensed display.
    Source: docs/design/project/design-system.html § buttons.
    The React Button component (components/ui/button.tsx) composes
