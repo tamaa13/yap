@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Anton, Archivo, Space_Mono } from "next/font/google";
 import "./globals.css";
+import { EntryGate } from "@/components/shell/entry-gate";
 import { Providers } from "./providers";
 
 // Promoter design direction — fight-poster editorial. Anton handles
@@ -54,6 +55,7 @@ export default function RootLayout({
     >
       <body>
         <Providers>{children}</Providers>
+        <EntryGate />
       </body>
     </html>
   );
