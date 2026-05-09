@@ -201,6 +201,33 @@ function applyEvent(
         },
         updatedAt: Date.now(),
       };
+
+    case "hp-damage":
+      if (!prev) return prev;
+      return {
+        ...prev,
+        hpA: event.hpA,
+        hpB: event.hpB,
+        hpDamage: [
+          ...(prev.hpDamage ?? []),
+          {
+            round: event.round,
+            toSide: event.toSide,
+            amount: event.amount,
+            hpAAfter: event.hpA,
+            hpBAfter: event.hpB,
+          },
+        ],
+        updatedAt: Date.now(),
+      };
+
+    case "tko":
+      if (!prev) return prev;
+      return {
+        ...prev,
+        tkoAtRound: event.atRound,
+        updatedAt: Date.now(),
+      };
   }
 }
 

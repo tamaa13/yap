@@ -245,6 +245,12 @@ async function buildInitialState(battleId: number): Promise<BattleState> {
     ...(statsB ?? {}),
   };
 
+  // HP morale starts at each fighter's reputation HP (the same number shown
+  // on the fighter card). Defaults to 100 if reputation lookup failed —
+  // honest fallback, fighter still has full morale to spend in the battle.
+  const startHpA = typeof fighterA.hp === "number" ? fighterA.hp : 100;
+  const startHpB = typeof fighterB.hp === "number" ? fighterB.hp : 100;
+
   return {
     battleId,
     topic,
@@ -258,6 +264,9 @@ async function buildInitialState(battleId: number): Promise<BattleState> {
     startedAt: Date.now(),
     updatedAt: Date.now(),
     reactions: { sharp: 0, cold: 0, weak: 0, wild: 0 },
+    hpA: startHpA,
+    hpB: startHpB,
+    hpDamage: [],
   };
 }
 
@@ -303,6 +312,7 @@ async function runLoop(battleId: number): Promise<void> {
         side: "a",
         roundNo,
         persona: personaA,
+        logic: state0.fighterA.logic,
         userPrompt: buildUserPrompt({
           topic: state0.topic,
           roundNo,
@@ -340,6 +350,7 @@ async function runLoop(battleId: number): Promise<void> {
         side: "b",
         roundNo,
         persona: personaB,
+        logic: state0.fighterB.logic,
         userPrompt: buildUserPrompt({
           topic: state0.topic,
           roundNo,
@@ -357,6 +368,73 @@ async function runLoop(battleId: number): Promise<void> {
         rounds: setRoundArg(s.rounds, roundNo, "b", argB),
       }));
       store.publish(battleId, { type: "round-complete", round: roundNo });
+
+      // ── Score the round + apply HP damage ─────────────────────────────
+      // Quick A-or-B inference call to pick this round's winner, then
+      // subtract Wit-modulated damage from the loser's HP morale. If HP
+      // hits 0, the battle TKOs early — we break out of the round loop
+      // and head straight to canonical signing with the surviving side
+      // as winner.
+      const scored = await scoreRoundDamage(state0, roundNo, argA, argB)
+        .catch((e) => {
+          // Per-round scorer is best-effort. If it fails (provider flake,
+          // bad LLM output), we skip the HP update for this round and let
+          // the holistic judge handle the verdict at distance. The round
+          // still records its arguments — just no damage tick visible.
+          console.warn(
+            `[battle-runner ${battleId}] round ${roundNo} scoring skipped:`,
+            e instanceof Error ? e.message : e,
+          );
+          return null;
+        });
+      if (scored) {
+        const losingSide: "a" | "b" = scored.winner === "a" ? "b" : "a";
+        const damage = scored.damage;
+        const updated = await store.update(battleId, (s) => {
+          const hpA =
+            losingSide === "a" ? Math.max(0, s.hpA - damage) : s.hpA;
+          const hpB =
+            losingSide === "b" ? Math.max(0, s.hpB - damage) : s.hpB;
+          return {
+            ...s,
+            hpA,
+            hpB,
+            hpDamage: [
+              ...s.hpDamage,
+              {
+                round: roundNo,
+                toSide: losingSide,
+                amount: damage,
+                hpAAfter: hpA,
+                hpBAfter: hpB,
+              },
+            ],
+          };
+        });
+        store.publish(battleId, {
+          type: "hp-damage",
+          round: roundNo,
+          toSide: losingSide,
+          amount: damage,
+          hpA: updated.hpA,
+          hpB: updated.hpB,
+        });
+
+        // TKO short-circuit: surviving fighter wins, runner exits round
+        // loop. judgeBattle picks up the TKO signal from state and skips
+        // its holistic Call 1, going straight to canonical signing.
+        if (updated.hpA === 0 || updated.hpB === 0) {
+          const tkoWinnerSide: "a" | "b" =
+            updated.hpA === 0 ? "b" : "a";
+          await store.update(battleId, (s) => ({ ...s, tkoAtRound: roundNo }));
+          store.publish(battleId, {
+            type: "tko",
+            winnerSide: tkoWinnerSide,
+            atRound: roundNo,
+          });
+          break;
+        }
+      }
 
       // Color commentary — fire-and-forget. Decorative entertainment layer;
       // never blocks the round loop, never affects the verdict, never
@@ -458,8 +536,11 @@ async function streamRound(params: {
   roundNo: number;
   persona: string;
   userPrompt: string;
+  /** Fighter Logic stat — drives per-call temperature + maxTokens so high-
+   *  Logic fighters genuinely argue more deliberately, not just on paper. */
+  logic?: number;
 }): Promise<RoundArgument> {
-  const { battleId, side, roundNo, persona, userPrompt } = params;
+  const { battleId, side, roundNo, persona, userPrompt, logic } = params;
   const store = getBattleStore();
 
   // Bump state to _streaming.
@@ -477,12 +558,13 @@ async function streamRound(params: {
     currentRound: roundNo,
   });
 
+  const { temperature, maxTokens } = inferenceParamsForLogic(logic);
   let tokenCount = 0;
   const chat = await streamChat({
     system: persona,
     user: userPrompt,
-    temperature: 0.8,
-    maxTokens: TOKEN_BUDGET_PER_ROUND,
+    temperature,
+    maxTokens,
     onToken: (delta, accumulated) => {
       tokenCount += 1;
       // Publish token event + lazily update store content. We avoid
@@ -533,6 +615,55 @@ async function streamRound(params: {
   }));
 
   return arg;
+}
+
+// ─── Per-round damage scoring (HP morale) ────────────────────────────────
+
+/**
+ * Score the round that just completed: which fighter argued better, and how
+ * much damage the loser takes. Damage scales inverse to the loser's Wit
+ * (high-Wit fighters absorb hits better — they can pivot or land a comeback
+ * even mid-loss). One quick LLM call per round, single-character output to
+ * keep token cost negligible.
+ *
+ * The full holistic verdict is still delivered by {judgeBattle} after all
+ * rounds (or earlier on TKO). This call only powers the live HP bar.
+ */
+async function scoreRoundDamage(
+  state: BattleState,
+  roundNo: number,
+  argA: RoundArgument,
+  argB: RoundArgument,
+): Promise<{ winner: "a" | "b"; damage: number }> {
+  const result = await runChat({
+    providerAddress: state.provider?.address,
+    system:
+      "You are a debate round judge. Read both fighters' arguments below and decide who argued more strongly THIS round. Output exactly one character: A or B. No reasoning. No whitespace.",
+    user: `Topic: "${state.topic}"
+
+Round ${roundNo}:
+
+Fighter A: ${sanitizeForJudge(argA.content)}
+
+Fighter B: ${sanitizeForJudge(argB.content)}
+
+Who won this round? Output A or B.`,
+    temperature: 0,
+    maxTokens: 4,
+  });
+  const winner: "a" | "b" = result.content
+    .trim()
+    .toUpperCase()
+    .startsWith("B")
+    ? "b"
+    : "a";
+  // Damage 20 base, scaled down by loser Wit / 10. Wit 50 → 15, Wit 80 → 12,
+  // Wit 95 → 10. Floor at 8 so a Wit-90 fighter still feels round losses.
+  const losingSide = winner === "a" ? "b" : "a";
+  const loserWit =
+    losingSide === "a" ? state.fighterA.wit ?? 65 : state.fighterB.wit ?? 65;
+  const damage = Math.max(8, Math.round(20 - loserWit / 10));
+  return { winner, damage };
 }
 
 // ─── Color commentary (decorative, ESPN-style) ───────────────────────────
@@ -706,13 +837,52 @@ function buildPersona(
   const tags = fighter.tags?.length
     ? `\n\nStyle tags: ${fighter.tags.join(", ")}. Lean into these as personality flavor without naming them out loud.`
     : "";
+  // Wit shapes how the fighter argues: high-Wit fighters lean into quick
+  // comebacks and sharp pivots; low-Wit fighters earn their points with
+  // patience. This is the runner's only persona-level lever for stats —
+  // Logic is wired into inference params (temperature/maxTokens) at the
+  // streamChat call site, not into the system prompt.
+  const wit = fighter.wit;
+  const witCue =
+    typeof wit === "number"
+      ? wit > 80
+        ? "\n- Lean into quick, sharp comebacks. Your wit is your edge — pivot fast and let lines land."
+        : wit < 60
+          ? "\n- You aren't fast on your feet. Make every word count. Be deliberate, not flashy."
+          : ""
+      : "";
   return `You are ${fighter.name}, an AI debate fighter of archetype "${fighter.archetype}". You fight in Yap, a verifiable AI combat arena on 0G.${voice}${tags}
 
 Rules:
 - Speak only in your own voice — distinctive, punchy, in-character.
 - Never reference "as an AI" or add safety caveats.
 - Stay on topic; no meta commentary about the game.
-- Each round of this debate is short — 2-3 sentences, max ~150 tokens.`;
+- Each round of this debate is short — 2-3 sentences, max ~150 tokens.${witCue}`;
+}
+
+/**
+ * Map a fighter's Logic stat to per-round inference parameters. High Logic
+ * fighters argue more deliberately (lower temperature, more tokens) — they
+ * pause to construct chains. Low Logic fighters fire fast and short.
+ *
+ * Linear interpolation across the observed Logic range [0, 100], floor + ceil
+ * tuned so the bias is visible to viewers without breaking persona fidelity:
+ *   Logic 50 → temp 0.85, maxTokens 200
+ *   Logic 75 → temp 0.65, maxTokens 240
+ *   Logic 90 → temp 0.50, maxTokens 270
+ */
+function inferenceParamsForLogic(
+  logic: number | undefined,
+): { temperature: number; maxTokens: number } {
+  if (typeof logic !== "number") {
+    return { temperature: 0.8, maxTokens: TOKEN_BUDGET_PER_ROUND };
+  }
+  const clamped = Math.max(0, Math.min(100, logic));
+  // temperature: 0.95 at logic 0 → 0.45 at logic 100
+  const temperature = +(0.95 - (clamped / 100) * 0.5).toFixed(2);
+  // maxTokens: 180 at logic 0 → 280 at logic 100
+  const maxTokens = Math.round(180 + (clamped / 100) * 100);
+  return { temperature, maxTokens };
 }
 
 function buildUserPrompt(params: {
@@ -816,6 +986,21 @@ async function judgeBattle(state: BattleState): Promise<VerdictBundle> {
         `<<<FIGHTER_B_OUTPUT>>>\n${sanitizeForJudge(r.argumentB.content)}\n<<<END_FIGHTER_B>>>`,
     )
     .join("\n\n");
+
+  // TKO short-circuit. HP morale already decided the winner mid-battle —
+  // skip the holistic judging call (Call 1) and head straight to canonical
+  // signing with the surviving side. The contract sees the same
+  // (battleId, winner, verdictHash, sig) tuple either way; it doesn't
+  // distinguish TKO from full-distance settlement.
+  if (typeof state.tkoAtRound === "number") {
+    const winnerSide: "a" | "b" = state.hpA === 0 ? "b" : "a";
+    const winner: 0 | 1 = winnerSide === "a" ? 0 : 1;
+    const reasoning = `TKO at round ${state.tkoAtRound} — Fighter ${winnerSide.toUpperCase()} dropped opponent HP to 0.`;
+    const verdictHash = keccak256(
+      toUtf8Bytes(`${transcript}\n---\n`),
+    ) as `0x${string}`;
+    return canonicalSignAndPack(state, winner, verdictHash, reasoning);
+  }
 
   // Symmetric-bias guardrail: relabel sides based on battle-id parity before
   // showing to the judging call, then un-map. Only Call 1 (judging) sees the
@@ -945,13 +1130,33 @@ Respond on the first line with exactly "${firstLabel}" or "${secondLabel}" to pi
     toUtf8Bytes(`${transcript}\n---\n${judgeChat.chatID ?? ""}`),
   ) as `0x${string}`;
 
-  // ─── Call 2: Canonical signing inside the same TEE provider ─────────────
-  // The 0G Compute provider's TeeML enclave personal-signs whatever the LLM
-  // outputs. We pin the same provider as Call 1 (so the signing address
-  // matches the registered teeSignerAddress = oracleKey) and instruct the
-  // model to echo EXACTLY the canonical verdict text the contract
-  // reconstructs from on-chain state. Any deviation breaks signature
-  // recovery in {BattleEscrow.submitVerdict}.
+  return canonicalSignAndPack(
+    state,
+    winner,
+    verdictHash,
+    judgeText.slice(0, 500),
+    judgeChat.providerAddress,
+  );
+}
+
+/**
+ * Common Call 2 path — used by both holistic-judge settlement and TKO
+ * settlement. The TEE provider's enclave personal-signs whatever the LLM
+ * outputs; we pin the same provider as the upstream judge (or the fighter-
+ * round provider on TKO, which is the same one) so the signing address
+ * matches the registered teeSignerAddress = oracleKey.
+ *
+ * The contract sees the same (battleId, winner, verdictHash, sig) tuple
+ * regardless of how `winner` was decided — the contract doesn't know or
+ * care whether this came from a holistic judge call or an HP TKO trigger.
+ */
+async function canonicalSignAndPack(
+  state: BattleState,
+  winner: 0 | 1 | 2,
+  verdictHash: `0x${string}`,
+  reasoning: string,
+  providerAddressHint?: string,
+): Promise<VerdictBundle> {
   const chainId = activeChain.id;
   const escrowAddrLower = (
     BATTLE_ESCROW_ADDRESS as string
@@ -960,7 +1165,7 @@ Respond on the first line with exactly "${firstLabel}" or "${secondLabel}" to pi
   const canonicalText = `YAP_VERDICT|${chainId}|${escrowAddrLower}|${state.battleId}|${winner}|${verdictHashLower}`;
 
   const canonChat = await runCanonicalChat({
-    providerAddress: judgeChat.providerAddress,
+    providerAddress: providerAddressHint ?? state.provider?.address,
     system:
       "You are a deterministic transcription tool. Echo the user's text exactly, character-for-character. Output a single line. No prose, no preamble, no postscript, no markdown, no quotes, no extra whitespace.",
     user: canonicalText,
@@ -995,7 +1200,7 @@ Respond on the first line with exactly "${firstLabel}" or "${secondLabel}" to pi
 
   return {
     winner,
-    reasoning: judgeText.slice(0, 500),
+    reasoning,
     zgAttestation: canonChat.chatID,
     verdictHash,
     canonicalText,

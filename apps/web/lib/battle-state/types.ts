@@ -103,6 +103,29 @@ export interface BattleState {
   failure?: BattleFailure;
   /** Anonymous reaction counters keyed by {ReactionKey}. */
   reactions: Record<ReactionKey, number>;
+  /** In-battle morale HP. Initialized from each fighter's reputation HP at
+   *  battle start, then decremented per round based on per-round winner +
+   *  Wit-modulated damage. Battle ends early ("TKO") if either side hits 0;
+   *  the surviving fighter then settles via the normal canonical-signing
+   *  path (the contract is unaware of TKO vs distance). */
+  hpA: number;
+  hpB: number;
+  /** Per-round damage log, built up as the battle progresses. */
+  hpDamage: HPDamageEntry[];
+  /** Set when the battle ended via TKO before all rounds completed.
+   *  Stores the round number at which HP hit 0. */
+  tkoAtRound?: number;
+}
+
+export interface HPDamageEntry {
+  round: number;
+  /** Side that lost the round and took damage. */
+  toSide: "a" | "b";
+  /** Damage applied this round. */
+  amount: number;
+  /** HP values *after* the damage is applied. */
+  hpAAfter: number;
+  hpBAfter: number;
 }
 
 // ─── SSE events ─────────────────────────────────────────────────────────
@@ -134,4 +157,13 @@ export type BattleEvent =
   | { type: "verdict"; verdict: Verdict }
   | { type: "failed"; failure: BattleFailure }
   | { type: "spectators"; count: number }
-  | { type: "reaction"; key: ReactionKey; count: number };
+  | { type: "reaction"; key: ReactionKey; count: number }
+  | {
+      type: "hp-damage";
+      round: number;
+      toSide: "a" | "b";
+      amount: number;
+      hpA: number;
+      hpB: number;
+    }
+  | { type: "tko"; winnerSide: "a" | "b"; atRound: number };
