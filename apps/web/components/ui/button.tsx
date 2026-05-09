@@ -80,6 +80,17 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     ...style,
   };
 
+  // YapCursor data-cursor mapping by variant. Caller can override via
+  // explicit `data-cursor` / `data-cursor-tag` props in `...rest`.
+  // gold → bet (loud STAKE), destructive → danger (DISPUTE), else
+  // YapCursor's auto-classifier picks up the bare <button> as PUNCH.
+  const cursorAttr =
+    variant === "gold"
+      ? { "data-cursor": "bet" as const }
+      : variant === "destructive"
+        ? { "data-cursor": "danger" as const }
+        : {};
+
   return (
     <button
       ref={ref}
@@ -87,6 +98,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={isDisabled}
       className={cls}
       style={inlineStyle}
+      {...cursorAttr}
       {...rest}
     >
       {loading ? (

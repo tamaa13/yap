@@ -168,28 +168,139 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  /* Custom Promoter cursors. Voltage-cut-corner crimson arrow as default,
-   * boxing-reticle target on actionable surfaces (a, button, [role=button],
-   * summary). Native fallback if the SVG fails to load. Hotspot is the
-   * top-left tip for the arrow (0 0) and the bead center for the reticle
-   * (14 14). Disabled on touch devices below — those don't have cursors. */
-  cursor: url("/cursors/arrow.svg") 0 0, default;
+  /* Native cursor hidden in favor of the Dot + Leash JS cursor mounted
+   * via <YapCursor>. The component itself restores `cursor: auto` on
+   * touch / coarse-pointer devices, where hover-based UI doesn't apply. */
+  cursor: none;
 }
 @media (hover: hover) and (pointer: fine) {
   a, button, [role="button"], summary, label[for], select,
-  [data-cursor="target"] {
-    cursor: url("/cursors/target.svg") 14 14, pointer;
-  }
-  input[type="text"], input[type="search"], input[type="number"],
-  input[type="email"], input[type="password"], input[type="url"],
-  textarea, [contenteditable="true"] {
-    cursor: url("/cursors/text.svg") 10 12, text;
-  }
-  [aria-disabled="true"], button:disabled, [data-cursor="not-allowed"] {
-    cursor: not-allowed;
+  input, textarea, [contenteditable="true"], [data-cursor] {
+    cursor: none !important;
   }
 }
 ::selection { background: var(--yap-crimson); color: var(--yap-ink-50); }
+
+/* ─────────────────────────────────────────────────────────────────────
+   Yap cursor — Dot + Leash
+   ───────────────────────────────────────────────────────────────────── */
+
+#yap-cursor {
+  position: fixed; left: 0; top: 0;
+  pointer-events: none; z-index: 9999;
+  width: 0; height: 0;
+  --c: var(--yap-crimson);
+}
+
+#yap-cursor .yap-cursor-dot {
+  position: absolute; left: 0; top: 0;
+  width: 12px; height: 12px;
+  background: var(--c);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--c) 25%, transparent);
+  animation: yap-cursor-pulse 1.2s ease-in-out infinite;
+  transition: width .18s, height .18s, background .18s, box-shadow .18s;
+}
+@keyframes yap-cursor-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px color-mix(in oklab, var(--c) 25%, transparent); }
+  50%      { box-shadow: 0 0 0 9px color-mix(in oklab, var(--c) 6%, transparent); }
+}
+
+#yap-cursor .yap-cursor-leash {
+  position: absolute; left: 8px; top: -1px;
+  height: 1.5px;
+  background: var(--c);
+  transform-origin: left center;
+  width: 0;
+  transition: width .22s cubic-bezier(.34, 1.56, .64, 1), background .18s;
+}
+
+#yap-cursor .yap-cursor-tag {
+  position: absolute; left: 42px; top: -10px;
+  font-family: var(--display); font-size: 13px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--yap-ink-50); line-height: 1;
+  white-space: nowrap;
+  background: var(--yap-ink-800); padding: 5px 9px 4px;
+  border-bottom: 2px solid var(--c);
+  opacity: 0; transform: translate(-6px, 0);
+  transition: opacity .18s, transform .18s cubic-bezier(.34, 1.56, .64, 1), border-color .18s;
+}
+
+#yap-cursor[data-state="default"] { --c: var(--yap-crimson); }
+
+#yap-cursor[data-state="link"] { --c: var(--yap-gold); }
+#yap-cursor[data-state="link"] .yap-cursor-leash { width: 32px; }
+#yap-cursor[data-state="link"] .yap-cursor-tag   { opacity: 1; transform: translate(0, 0); }
+
+#yap-cursor[data-state="button"] { --c: var(--yap-crimson); }
+#yap-cursor[data-state="button"] .yap-cursor-dot   { width: 16px; height: 16px; }
+#yap-cursor[data-state="button"] .yap-cursor-leash { width: 32px; }
+#yap-cursor[data-state="button"] .yap-cursor-tag   { opacity: 1; transform: translate(0, 0); }
+
+#yap-cursor[data-state="bet"] { --c: var(--yap-gold); }
+#yap-cursor[data-state="bet"] .yap-cursor-dot   { width: 18px; height: 18px; }
+#yap-cursor[data-state="bet"] .yap-cursor-leash { width: 32px; }
+#yap-cursor[data-state="bet"] .yap-cursor-tag   { opacity: 1; transform: translate(0, 0); }
+
+#yap-cursor[data-state="danger"] { --c: var(--danger); }
+#yap-cursor[data-state="danger"] .yap-cursor-dot   { width: 16px; height: 16px; animation-duration: .6s; }
+#yap-cursor[data-state="danger"] .yap-cursor-leash { width: 32px; }
+#yap-cursor[data-state="danger"] .yap-cursor-tag   { opacity: 1; transform: translate(0, 0); }
+
+#yap-cursor[data-state="fighter"] { --c: var(--yap-crimson); }
+#yap-cursor[data-state="fighter"] .yap-cursor-dot   { width: 14px; height: 14px; }
+#yap-cursor[data-state="fighter"] .yap-cursor-leash { width: 32px; }
+#yap-cursor[data-state="fighter"] .yap-cursor-tag   { opacity: 1; transform: translate(0, 0); }
+
+#yap-cursor[data-state="ring"] { --c: var(--yap-gold); }
+#yap-cursor[data-state="ring"] .yap-cursor-dot   { width: 14px; height: 14px; }
+#yap-cursor[data-state="ring"] .yap-cursor-leash { width: 32px; }
+#yap-cursor[data-state="ring"] .yap-cursor-tag   { opacity: 1; transform: translate(0, 0); }
+
+/* Text — replace the dot with a crimson I-beam (serif top + bottom). */
+#yap-cursor[data-state="text"] .yap-cursor-dot {
+  width: 2px; height: 22px; border-radius: 0;
+  background: var(--yap-crimson);
+  box-shadow:
+    -4px -10px 0 -3px var(--yap-crimson),  4px -10px 0 -3px var(--yap-crimson),
+    -4px  10px 0 -3px var(--yap-crimson),  4px  10px 0 -3px var(--yap-crimson);
+  animation: yap-cursor-ibeam 1s steps(2) infinite;
+}
+@keyframes yap-cursor-ibeam { 50% { opacity: .35; } }
+#yap-cursor[data-state="text"] .yap-cursor-leash { width: 0; }
+#yap-cursor[data-state="text"] .yap-cursor-tag   { opacity: 0; }
+
+/* Disabled — pulse dies, color fades. No tag. */
+#yap-cursor[data-state="disabled"] { --c: var(--yap-ink-500); }
+#yap-cursor[data-state="disabled"] .yap-cursor-dot { animation: none; box-shadow: none; }
+#yap-cursor[data-state="disabled"] .yap-cursor-tag { opacity: 0; }
+
+/* mousedown punch */
+#yap-cursor.is-down .yap-cursor-dot { transform: translate(-50%, -50%) scale(.7); }
+
+/* hide on viewport leave */
+#yap-cursor.is-hidden { opacity: 0; }
+
+/* Velocity trail — single fading crimson dot stamped on fast moves. */
+.yap-trail {
+  position: fixed; pointer-events: none; z-index: 9998;
+  width: 5px; height: 5px;
+  background: var(--yap-crimson);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: yap-trail-fade .42s cubic-bezier(.2, .8, .2, 1) forwards;
+}
+@keyframes yap-trail-fade {
+  0%   { opacity: .8; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0;  transform: translate(-50%, -50%) scale(.3); }
+}
+
+/* prefers-reduced-motion: dampen the pulse + drop the trail entirely */
+@media (prefers-reduced-motion: reduce) {
+  #yap-cursor .yap-cursor-dot { animation: none; }
+  .yap-trail { display: none; }
+}
 h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 p { margin: 0; }
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; padding: 0; }

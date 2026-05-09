@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Anton, Archivo, Space_Mono } from "next/font/google";
 import "./globals.css";
 import { EntryGate } from "@/components/shell/entry-gate";
+import { YapCursor } from "@/components/shell/yap-cursor";
 import { Providers } from "./providers";
 
 // Promoter design direction — fight-poster editorial. Anton handles
@@ -57,6 +58,7 @@ export default function RootLayout({
         <Providers>
           <EntryGate>{children}</EntryGate>
         </Providers>
+        <YapCursor />
       </body>
     </html>
   );
