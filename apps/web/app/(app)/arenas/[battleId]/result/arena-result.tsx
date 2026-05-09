@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useState } from "react";
 import { useReadContract } from "wagmi";
-import { Badge } from "@/components/ui/badge";
+import { Badge, RecordBadge, Split, Stamp, TokenTag } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Hash } from "@/components/ui/hash";
@@ -181,51 +181,171 @@ export function ArenaResult({
         ]}
       />
 
+      {/* Promoter result hero — diagonal stripe overlay (decorative-honest)
+       * + VERIFIED stamp gate, conditional on settled+signed verdict. */}
+      <div
+        style={{
+          position: "relative",
+          padding: "20px 28px",
+          background: "var(--yap-ink-950)",
+          borderBottom: "3px solid var(--yap-crimson)",
+          marginBottom: 20,
+          overflow: "hidden",
+        }}
+      >
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "repeating-linear-gradient(45deg, var(--yap-crimson) 0 2px, transparent 2px 14px)",
+            opacity: 0.07,
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 16,
+            flexWrap: "wrap",
+          }}
+        >
+          <div
+            style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}
+          >
+            {isSettled && liveVerdict?.signature ? (
+              <Stamp tone="gold">Verified</Stamp>
+            ) : (
+              <Stamp>{awaitingDispute ? "Pending" : "Match"}</Stamp>
+            )}
+            <div>
+              <div
+                className="mono"
+                style={{
+                  fontSize: 11,
+                  color: "var(--yap-gold)",
+                  letterSpacing: 2,
+                  textTransform: "uppercase",
+                }}
+              >
+                Battle {battle.id} · Round {battle.round} of {battle.maxRound}
+              </div>
+              <div
+                style={{
+                  fontFamily: "var(--yap-font-display)",
+                  fontWeight: 400,
+                  fontSize: 22,
+                  lineHeight: 1.2,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  color: "var(--yap-ink-50)",
+                  marginTop: 4,
+                  maxWidth: 760,
+                }}
+              >
+                {battle.topic}
+              </div>
+            </div>
+          </div>
+          {effectiveVerdictTxHash && (
+            <TokenTag>
+              tx {effectiveVerdictTxHash.slice(0, 6)}…{effectiveVerdictTxHash.slice(-4)}
+            </TokenTag>
+          )}
+        </div>
+      </div>
+
       <div
         className="al-detail-2col"
         style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 20 }}
       >
         <div>
-          <Card style={{ padding: 28, marginBottom: 16 }}>
-            <div className="label" style={{ marginBottom: 6, color: "var(--success)" }}>
-              Verdict · TEE attested
-            </div>
-            <div style={{ fontSize: 13, color: "var(--tx-secondary)", marginBottom: 18 }}>
-              {battle.topic}
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 18 }}>
+          <Card
+            elevated
+            style={{
+              padding: 28,
+              marginBottom: 16,
+              boxShadow: "var(--yap-glow-crimson)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 24, marginBottom: 18 }}>
               <Sigil
                 seed={winner.name}
-                size={72}
-                color={battle.winner === "a" ? "var(--fighter-a)" : "var(--fighter-b)"}
+                size={92}
+                color={battle.winner === "a" ? "var(--yap-crimson)" : "var(--yap-gold)"}
               />
-              <div>
-                <div className="label" style={{ marginBottom: 4 }}>Winner</div>
-                <div style={{ fontSize: 28, fontWeight: 600, letterSpacing: "-0.01em" }}>
+              <div style={{ minWidth: 0 }}>
+                <div
+                  className="mono"
+                  style={{
+                    fontSize: 11,
+                    color:
+                      battle.winner === "a" ? "var(--yap-crimson)" : "var(--yap-gold)",
+                    letterSpacing: 2,
+                    textTransform: "uppercase",
+                    marginBottom: 6,
+                  }}
+                >
+                  Winner · {winner.arch}
+                </div>
+                <div
+                  style={{
+                    fontFamily: "var(--yap-font-display)",
+                    fontWeight: 400,
+                    fontSize: 56,
+                    lineHeight: 0.85,
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                    marginBottom: 10,
+                    color: "var(--yap-ink-50)",
+                  }}
+                >
                   {winner.name}
                 </div>
-                <div style={{ fontSize: 13, color: "var(--tx-secondary)" }}>
-                  Beats {loser.name} in {battle.round} round{battle.round === 1 ? "" : "s"}.
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <RecordBadge w={winner.w} l={winner.l} size="sm" />
+                  <Split k="ELO" v={winner.elo} size="sm" />
+                  <Split
+                    k="Beat"
+                    v={`${loser.name} in ${battle.round}`}
+                    size="sm"
+                    tone="crim"
+                  />
                 </div>
               </div>
             </div>
 
             <div
               style={{
-                padding: 14,
-                background: "var(--bg-sunken)",
-                border: "1px solid var(--bd-subtle)",
-                borderRadius: 4,
+                padding: 16,
+                background: "var(--yap-ink-900)",
+                borderLeft: "3px solid var(--yap-gold)",
               }}
             >
-              <div className="label" style={{ marginBottom: 6 }}>Judge-TEE reasoning</div>
+              <div
+                className="mono"
+                style={{
+                  fontSize: 11,
+                  letterSpacing: 2,
+                  textTransform: "uppercase",
+                  color: "var(--yap-gold)",
+                  marginBottom: 8,
+                }}
+              >
+                ━━ Judge reasoning
+              </div>
               <div
                 style={{
-                  fontSize: 13,
-                  color: verdictReasoning ? "var(--tx-primary)" : "var(--tx-tertiary)",
-                  lineHeight: 1.6,
-                  marginBottom: 10,
+                  fontSize: 14,
+                  fontFamily: "var(--yap-font-body)",
                   fontStyle: verdictReasoning ? "italic" : "normal",
+                  color: verdictReasoning ? "var(--yap-ink-100)" : "var(--yap-ink-400)",
+                  lineHeight: 1.6,
+                  marginBottom: 12,
                 }}
               >
                 {verdictReasoning
@@ -247,15 +367,21 @@ export function ArenaResult({
                   <Hash value={effectiveVerdictTxHash} copy />
                 ) : (
                   <span
-                    style={{ fontSize: 11, color: "var(--tx-tertiary)" }}
+                    className="mono"
+                    style={{
+                      fontSize: 11,
+                      color: "var(--yap-ink-400)",
+                      letterSpacing: 1.5,
+                      textTransform: "uppercase",
+                    }}
                   >
                     Verdict tx pending
                   </span>
                 )}
-                <Badge mono tone="success">
+                <Stamp tone="gold">
                   <Icon name="shield" size={10} />
-                  &nbsp;Verified on 0G
-                </Badge>
+                  &nbsp;On 0G
+                </Stamp>
               </div>
               {verdictAttestationId && (
                 <div
