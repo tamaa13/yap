@@ -1,23 +1,31 @@
 # Contract verification — Galileo testnet
 
-Manual verification artifacts for all 10 deployed contracts.
+**All 10 contracts are verified on-chain.** This directory contains
+the standard JSON inputs + an automation script that ran them.
 
-**Why manual?** chainscan-galileo.0g.ai doesn't expose a programmatic
-verifier API (the `/api` endpoint serves the SPA shell, not Etherscan
-or Blockscout JSON). The verification UI exists in the explorer's
-React bundle (`verifyContract` route) but only accepts paste from a
-human. Sourcify doesn't list 0G chainIds yet.
+## How verification works on chainscan-galileo
 
-If/when 0G publishes a verifier endpoint, swap to:
+chainscan-galileo's `/open` endpoint is **Etherscan-compatible** — the
+SPA's verify form POSTs to `/open/api` with
+`module=contract&action=verifysourcecode`. The OpenAPI spec at
+`/open/doc` documents the exact contract.
+
+Foundry's `forge verify-contract --verifier blockscout --verifier-url
+https://chainscan-galileo.0g.ai/api` does NOT work — that hits the
+explorer's static SPA route, not the API. The correct path is `/open`,
+not `/api`. There's no documented `--verifier-url` shortcut for this
+yet, so we drive the API directly via `scripts/verify-all.py`.
+
+## Running the automation
 
 ```bash
-forge verify-contract <addr> <path:name> \
-  --chain-id 16602 \
-  --verifier blockscout \
-  --verifier-url <whatever 0G publishes>
+cd contracts
+python3 scripts/verify-all.py
 ```
 
-Until then: this directory has the inputs prepped, paste-ready.
+The script POSTs `module=contract&action=verifysourcecode` for each
+contract, polls `checkverifystatus` until terminal, and prints a
+summary. ~30 seconds total for 10 contracts.
 
 ## Compiler settings (apply to all 10)
 
