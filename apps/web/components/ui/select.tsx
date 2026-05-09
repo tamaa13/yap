@@ -30,16 +30,17 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
           appearance: "none",
           WebkitAppearance: "none",
           width: "100%",
-          height: 34,
-          padding: "0 32px 0 10px",
-          background: "var(--bg-sunken)",
-          color: "var(--tx-primary)",
-          border: `1px solid ${focus ? "var(--accent)" : "var(--bd-default)"}`,
-          borderRadius: 4,
-          fontSize: 13,
-          fontFamily: "inherit",
+          height: 38,
+          padding: "0 36px 0 12px",
+          background: "var(--yap-ink-900)",
+          color: "var(--yap-ink-50)",
+          border: `1.5px solid ${focus ? "var(--yap-crimson)" : "var(--yap-ink-600)"}`,
+          borderRadius: 0,
+          fontSize: 14,
+          fontFamily: "var(--yap-font-mono)",
           outline: "none",
           cursor: "pointer",
+          transition: "border-color 150ms cubic-bezier(.32,.72,0,1)",
           ...style,
         }}
         {...rest}
@@ -49,7 +50,12 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
       <Icon
         name="chevronDown"
         size={14}
-        style={{ position: "absolute", right: 10, pointerEvents: "none", color: "var(--tx-tertiary)" }}
+        style={{
+          position: "absolute",
+          right: 12,
+          pointerEvents: "none",
+          color: "var(--yap-ink-300)",
+        }}
       />
     </div>
   );
