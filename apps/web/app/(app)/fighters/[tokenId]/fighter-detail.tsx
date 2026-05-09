@@ -1013,9 +1013,9 @@ export function FighterDetail({
               gap: 10,
               alignItems: "flex-start",
               padding: 12,
-              background: "var(--bg-elevated, #161616)",
+              background: "var(--bg-raised)",
               borderRadius: 6,
-              border: "1px solid var(--border, #2a2a2a)",
+              border: "1px solid var(--bd-default)",
               cursor: "pointer",
             }}
           >

@@ -53,8 +53,8 @@ export function TrainingHistory({ tokenId }: TrainingHistoryProps) {
       <div
         style={{
           padding: 14,
-          background: "var(--bg-elevated, #161616)",
-          border: "1px dashed var(--border, #2a2a2a)",
+          background: "var(--bg-raised)",
+          border: "1px dashed var(--bd-default)",
           borderRadius: 8,
           fontSize: 13,
           opacity: 0.7,
@@ -71,7 +71,7 @@ export function TrainingHistory({ tokenId }: TrainingHistoryProps) {
     <div
       style={{
         padding: 14,
-        background: "var(--bg-elevated, #161616)",
+        background: "var(--bg-raised)",
         borderRadius: 8,
         display: "flex",
         flexDirection: "column",
@@ -84,8 +84,8 @@ export function TrainingHistory({ tokenId }: TrainingHistoryProps) {
         <span
           style={{
             padding: "2px 8px",
-            background: "var(--accent, #ffba49)",
-            color: "#000",
+            background: "var(--accent)",
+            color: "var(--bg-canvas)",
             borderRadius: 4,
             fontWeight: 700,
             fontSize: 12,
