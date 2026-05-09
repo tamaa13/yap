@@ -383,15 +383,6 @@ export function TopNav() {
                   >
                     Profile
                   </button>
-                  <button
-                    onClick={() => {
-                      setUserOpen(false);
-                      router.push("/settings");
-                    }}
-                    style={dropdownItem}
-                  >
-                    Settings
-                  </button>
                   <div style={{ height: 1, background: "var(--bd-subtle)", margin: "4px 0" }} />
                   <button
                     onClick={() => {
@@ -466,15 +457,6 @@ export function TopNav() {
                 Profile
               </button>
             )}
-            <button
-              className="al-drawer-item"
-              onClick={() => {
-                setDrawerOpen(false);
-                router.push("/settings");
-              }}
-            >
-              Settings
-            </button>
             <div style={{ flex: 1 }} />
             {connected ? (
               <div
