@@ -26,7 +26,13 @@ jobs:
 
       - name: Deploy to VPS
         run: |
-          ssh -i ~/.ssh/deploy_key -p 22987 yap-service@103.150.227.197 << 'DEPLOY'
+          # ServerAliveInterval keeps the control channel hot during the
+          # 4-6 minute Turbopack build. Without it, SSH idle-timeouts at
+          # ~5 minutes and "client_loop: Broken pipe" kills the deploy.
+          ssh -i ~/.ssh/deploy_key -p 22987 \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=20 \
+            yap-service@103.150.227.197 << 'DEPLOY'
             set -e
             cd ~/yap
             git pull origin main
