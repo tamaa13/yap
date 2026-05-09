@@ -143,9 +143,9 @@ export function TrainModal({
           style={{
             width: "100%",
             padding: 12,
-            background: "var(--bg-elevated, #161616)",
+            background: "var(--bg-raised)",
             color: "inherit",
-            border: "1px solid var(--border, #2a2a2a)",
+            border: "1px solid var(--bd-default)",
             borderRadius: 8,
             fontFamily: "inherit",
             fontSize: 14,
@@ -168,7 +168,7 @@ export function TrainModal({
           <div
             style={{
               padding: 12,
-              background: "var(--bg-elevated, #161616)",
+              background: "var(--bg-raised)",
               borderRadius: 8,
               fontSize: 13,
             }}
@@ -177,7 +177,7 @@ export function TrainModal({
               {PHASE_LABEL[train.phase]}
             </div>
             {train.error && (
-              <div style={{ color: "#ff6b6b", marginTop: 6 }}>
+              <div style={{ color: "var(--danger)", marginTop: 6 }}>
                 {train.error.message}
               </div>
             )}
@@ -188,7 +188,7 @@ export function TrainModal({
                   href={train.result.explorerUrl}
                   target="_blank"
                   rel="noreferrer"
-                  style={{ color: "var(--accent, #ffba49)" }}
+                  style={{ color: "var(--accent)" }}
                 >
                   view on explorer
                 </a>
