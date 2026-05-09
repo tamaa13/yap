@@ -42,9 +42,17 @@ export function BetBar({
     gate(`Bet on ${battle.id}`, () => setExpanded(true));
   };
   const tryLock = () => {
+    // Defense-in-depth: NumberInput bounds the input visually (min 0.01,
+    // max 100), but a manually-typed 0 or NaN would still reach here.
+    // Reverts on-chain regardless (BattleEscrow rejects 0-value bets),
+    // but failing client-side is the kinder path.
+    const amt = +amount;
+    if (!Number.isFinite(amt) || amt < 0.01 || amt > 100) {
+      return;
+    }
     gate(
-      `Lock ${amount} 0G on ${side === "a" ? fighterA.name : fighterB.name}`,
-      () => onLock({ side, amount: +amount, odds }),
+      `Lock ${amt} 0G on ${side === "a" ? fighterA.name : fighterB.name}`,
+      () => onLock({ side, amount: amt, odds }),
     );
   };
 
