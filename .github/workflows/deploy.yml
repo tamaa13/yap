@@ -92,7 +92,12 @@ jobs:
             yap-service@103.150.227.197 << 'DEPLOY'
             set -e
             cd ~/yap
-            git pull origin main
+            # Use fetch + reset --hard instead of pull so the deploy survives
+            # history rewrites on origin (e.g. force-push after a commit-msg
+            # cleanup). pull would refuse to fast-forward across divergence;
+            # reset always lands on whatever main is now.
+            git fetch origin main
+            git reset --hard origin/main
             cd apps/web
 
             # Refresh deps only if the lockfile drifted (fast skip on
