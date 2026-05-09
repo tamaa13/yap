@@ -200,9 +200,30 @@ export default function MintPage() {
   return (
     <PageContainer maxWidth={920}>
       <Breadcrumbs items={[{ label: "Mint fighter" }]} />
-      <h1 style={{ fontSize: 24, marginBottom: 6 }}>Mint fighter</h1>
-      <div style={{ fontSize: 13, color: "var(--tx-secondary)", marginBottom: 24 }}>
-        Seal a persona into an ERC-7857 INFT on 0G. Takes about five seconds.
+      <h1
+        style={{
+          fontFamily: "var(--yap-font-display)",
+          fontWeight: 400,
+          fontSize: 56,
+          lineHeight: 0.9,
+          letterSpacing: "-0.5px",
+          textTransform: "uppercase",
+          marginBottom: 8,
+          color: "var(--yap-ink-50)",
+        }}
+      >
+        Mint a fighter
+      </h1>
+      <div
+        style={{
+          fontSize: 14,
+          color: "var(--yap-ink-200)",
+          marginBottom: 24,
+          maxWidth: "60ch",
+        }}
+      >
+        Seal a persona into an ERC-7857 INFT on 0G. Takes about five
+        seconds.
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
@@ -677,40 +698,77 @@ Crypto is a slot machine with footnotes.
           <div>
             {mint.phase === "idle" && (
               <>
-                <div className="label" style={{ marginBottom: 12 }}>Review</div>
                 <div
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 16,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
                     marginBottom: 16,
+                    gap: 12,
                   }}
                 >
-                  <div>
-                    <div className="label">Name</div>
-                    <div style={{ fontSize: 15, fontWeight: 600 }}>{name || "Unnamed"}</div>
+                  <div className="label" style={{ color: "var(--yap-crimson)" }}>
+                    ━━ Persona Preview
                   </div>
-                  <div>
-                    <div className="label">Archetype</div>
+                  <span className="token-badge token-badge--gold">
+                    #?? · pending mint
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: 18, marginBottom: 18 }}>
+                  <Sigil
+                    seed={name || arch}
+                    size={92}
+                    color="var(--yap-crimson)"
+                    radius={0}
+                  />
+                  <div style={{ minWidth: 0, flex: 1 }}>
                     <div
                       style={{
-                        fontSize: 15,
-                        fontWeight: 600,
-                        textTransform: "capitalize",
+                        fontFamily: "var(--yap-font-display)",
+                        fontWeight: 400,
+                        fontSize: 36,
+                        lineHeight: 0.95,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
+                        marginBottom: 6,
+                        color: "var(--yap-ink-50)",
                       }}
                     >
-                      {arch}
+                      {name || "Unnamed"}
                     </div>
-                  </div>
-                  <div>
-                    <div className="label">Samples</div>
-                    <div className="num" style={{ fontSize: 15, fontWeight: 600 }}>
-                      {samples}
+                    <div
+                      className="mono"
+                      style={{
+                        fontSize: 11,
+                        color: "var(--yap-ink-300)",
+                        letterSpacing: 1.5,
+                        textTransform: "uppercase",
+                        marginBottom: 12,
+                      }}
+                    >
+                      {arch} · {samples} sample{samples === 1 ? "" : "s"}
                     </div>
-                  </div>
-                  <div>
-                    <div className="label">Owner</div>
-                    <Hash value={addr ?? ""} />
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <span
+                        className="mono"
+                        style={{
+                          fontSize: 10,
+                          color: "var(--yap-ink-400)",
+                          letterSpacing: 1.5,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Owner
+                      </span>
+                      <Hash value={addr ?? ""} />
+                    </div>
                   </div>
                 </div>
                 <div
