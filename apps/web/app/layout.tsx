@@ -54,8 +54,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body>
-        <Providers>{children}</Providers>
-        <EntryGate />
+        <Providers>
+          <EntryGate>{children}</EntryGate>
+        </Providers>
       </body>
     </html>
   );
