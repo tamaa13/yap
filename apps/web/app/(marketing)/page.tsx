@@ -8,16 +8,10 @@ import { LandingHeroStats } from "./hero-stats";
 import { LandingLiveBoard } from "./live-board";
 import { LandingTopFighters } from "./top-fighters";
 
-// Footer link targets. Externalized so swapping a URL (e.g. moving
-// from the README fallback to a real GitBook handle once published)
-// is a one-line change. Explorer threads through `activeChain` so
-// testnet renders chainscan-galileo and mainnet flips to chainscan.
-//
-// DOCS_URL temporarily points at the GitHub README — the README is
-// already a complete docs surface (architecture, stack, mint/battle
-// flow, contracts). Swap to the real GitBook URL once the handle is
-// claimed and content imported.
-const DOCS_URL = "https://github.com/tamaa13/yap#readme";
+// Footer link targets. Externalized so swapping a URL is a one-line
+// change. Explorer threads through `activeChain` so testnet renders
+// chainscan-galileo and mainnet flips to chainscan.
+const DOCS_URL = "https://yap-3.gitbook.io/untitled";
 const GITHUB_URL = "https://github.com/tamaa13/yap";
 
 const HOW_STEPS = [
