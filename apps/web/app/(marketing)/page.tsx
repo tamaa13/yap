@@ -9,11 +9,15 @@ import { LandingLiveBoard } from "./live-board";
 import { LandingTopFighters } from "./top-fighters";
 
 // Footer link targets. Externalized so swapping a URL (e.g. moving
-// from a placeholder GitBook to the real published handle) is a one-line
-// change. GitHub is the public hackathon repo; Docs points at the
-// project's GitBook space; Explorer threads through `activeChain` so
+// from the README fallback to a real GitBook handle once published)
+// is a one-line change. Explorer threads through `activeChain` so
 // testnet renders chainscan-galileo and mainnet flips to chainscan.
-const DOCS_URL = "https://yap-0g.gitbook.io";
+//
+// DOCS_URL temporarily points at the GitHub README — the README is
+// already a complete docs surface (architecture, stack, mint/battle
+// flow, contracts). Swap to the real GitBook URL once the handle is
+// claimed and content imported.
+const DOCS_URL = "https://github.com/tamaa13/yap#readme";
 const GITHUB_URL = "https://github.com/tamaa13/yap";
 
 const HOW_STEPS = [
