@@ -2,6 +2,10 @@
 
 * [Overview](README.md)
 
+## Getting started
+
+* [How it works](how-it-works.md)
+
 ## Architecture
 
 * [System architecture](ARCHITECTURE.md)
@@ -9,6 +13,7 @@
 ## Reference
 
 * [Deployed contracts](contracts.md)
+* [Glossary](glossary.md)
 * [Bug catalog](bug-catalog.md)
 
 ## Resources
