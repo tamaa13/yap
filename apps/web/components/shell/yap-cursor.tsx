@@ -46,7 +46,13 @@ function classify(el: EventTarget | null): [CursorState, string] {
   if (el.closest("input, textarea, [contenteditable='true']"))
     return ["text", "TYPE"];
   if (el.closest("a")) return ["link", "READ"];
-  if (el.closest("button, [role='button']")) return ["button", "PUNCH"];
+  // <select> is a button-shaped control (opens a menu on click) — give it
+  // the same PUNCH state. Tables with onClick rows on <tr> route through
+  // [role="button"] when callers add the role; otherwise fall through to
+  // default. Either way the row's native pointer is suppressed by the
+  // global * { cursor: none } rule, so no double-cursor.
+  if (el.closest("button, select, [role='button']"))
+    return ["button", "PUNCH"];
   return ["default", "READY"];
 }
 
@@ -80,7 +86,13 @@ export function YapCursor() {
 
       const [s, t] = classify(e.target);
       cur.dataset.state = s;
-      if (t) tagEl.textContent = t;
+      // Always update tag text (not gated on `t` truthy). Otherwise
+      // moving from a tagged state (e.g. "PUNCH") to a tagless one
+      // (e.g. default/disabled) leaves the prior label sitting in the
+      // DOM. CSS still hides the tag visually for tagless states, but
+      // any transition that briefly keeps it visible would flash the
+      // stale text.
+      tagEl.textContent = t;
 
       // Velocity trail: only fires when the user is moving fast enough
       // (pixels per ms > 1.6). Stamps a single fading dot at the
