@@ -16,13 +16,24 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           # Retry ssh-keyscan — the host occasionally drops SSH probes
           # under load and a 5-second silent failure cancels the deploy.
+          # Write to a tmp file and only commit on success — accumulating
+          # outputs across retries was causing "Host key verification
+          # failed" when partial responses landed in known_hosts.
           for i in 1 2 3; do
-            if ssh-keyscan -p 22987 -H 103.150.227.197 >> ~/.ssh/known_hosts 2>&1; then
+            if ssh-keyscan -p 22987 -H 103.150.227.197 > /tmp/known_hosts.tmp 2>/dev/null \
+               && [ -s /tmp/known_hosts.tmp ]; then
+              cat /tmp/known_hosts.tmp >> ~/.ssh/known_hosts
+              echo "ssh-keyscan succeeded on attempt $i"
               break
             fi
             echo "ssh-keyscan attempt $i failed, retrying in 3s"
             sleep 3
           done
+          # Sanity: known_hosts must contain at least one key entry
+          if ! grep -q "^|" ~/.ssh/known_hosts 2>/dev/null; then
+            echo "ssh-keyscan never produced output — aborting"
+            exit 1
+          fi
 
       - name: Deploy to VPS
         run: |
