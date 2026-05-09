@@ -9,7 +9,7 @@ import {
   useReducedMotion,
   useTransform,
 } from "motion/react";
-import { Badge } from "@/components/ui/badge";
+import { Badge, Stamp, TokenTag } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { LiveDot } from "@/components/ui/live-dot";
@@ -189,15 +189,26 @@ export function ArenaLive({
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 6,
-            fontFamily: "var(--mono)",
-            fontSize: 12,
+            gap: 10,
             flexShrink: 0,
           }}
         >
-          <LiveDot />
-          <span style={{ color: "var(--live)", letterSpacing: 0.1 }}>LIVE</span>
-          <span style={{ color: "var(--tx-tertiary)", marginLeft: 8 }}>{battle.id}</span>
+          {/* LIVE Stamp — pulse only on non-terminal phase per
+           *  MOTION.md ambient anti-pattern. */}
+          {(() => {
+            const phase = liveState?.phase;
+            const isLive =
+              phase !== undefined &&
+              phase !== "settled" &&
+              phase !== "failed" &&
+              phase !== "pending";
+            return (
+              <Stamp dot pulse={isLive}>
+                {isLive ? "Live" : "Match"}
+              </Stamp>
+            );
+          })()}
+          <TokenTag>{battle.id}</TokenTag>
         </div>
         <div style={{ fontFamily: "var(--mono)", fontSize: 12, color: "var(--tx-primary)", flexShrink: 0 }}>
           {liveState
@@ -228,10 +239,10 @@ export function ArenaLive({
           <CommentatorTtsToggle />
         </div>
         <div style={{ flexShrink: 0 }}>
-          <Badge mono tone="success">
+          <Stamp tone="gold">
             <Icon name="shield" size={10} />
             &nbsp;TEE
-          </Badge>
+          </Stamp>
         </div>
       </div>
 
