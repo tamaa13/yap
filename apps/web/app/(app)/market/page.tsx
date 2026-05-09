@@ -12,6 +12,7 @@ import { FighterCardSkel } from "@/components/ui/skeleton";
 import { Tabs } from "@/components/ui/tabs";
 import { PageContainer } from "@/components/shell/page-container";
 import { Pagination, usePageFromUrl } from "@/components/ui/pagination";
+import { RecordBadge, Split, TokenTag } from "@/components/ui/badge";
 import { useFighters } from "@/hooks/use-fighters";
 import { CARD_GRID_PAGE_SIZE, pageToOffset } from "@/lib/pagination";
 import type { FighterArchetype } from "@/lib/types";
@@ -108,8 +109,28 @@ export default function MarketPage() {
 
   return (
     <PageContainer>
-      <h1 style={{ fontSize: 24, marginBottom: 4 }}>Marketplace</h1>
-      <div style={{ fontSize: 13, color: "var(--tx-secondary)", marginBottom: 20 }}>
+      <h1
+        style={{
+          fontFamily: "var(--yap-font-display)",
+          fontWeight: 400,
+          fontSize: 56,
+          lineHeight: 0.9,
+          letterSpacing: "-0.5px",
+          textTransform: "uppercase",
+          marginBottom: 8,
+          color: "var(--yap-ink-50)",
+        }}
+      >
+        Marketplace
+      </h1>
+      <div
+        style={{
+          fontSize: 14,
+          color: "var(--yap-ink-200)",
+          marginBottom: 24,
+          maxWidth: "60ch",
+        }}
+      >
         Buy a fighter outright, hire one for a stretch, or scout the field.
       </div>
 
@@ -342,37 +363,92 @@ export default function MarketPage() {
                 gap: 12,
               }}
             >
-              {visible.map((f) => (
+              {visible.map((f, i) => (
                 <Card
                   key={f.id}
                   interactive
                   onClick={() => router.push(`/fighters/${f.id}`)}
-                  style={{ padding: 14 }}
+                  style={{ padding: 16 }}
                 >
-                  <div style={{ display: "flex", justifyContent: "center", padding: 10 }}>
-                    <Sigil seed={f.name} size={80} color={f.color} />
-                  </div>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginTop: 6 }}>{f.name}</div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: "var(--tx-tertiary)",
-                      textTransform: "capitalize",
-                    }}
-                  >
-                    {f.arch} · ELO {f.elo}
-                  </div>
                   <div
                     style={{
                       display: "flex",
                       justifyContent: "space-between",
-                      marginTop: 10,
-                      paddingTop: 10,
-                      borderTop: "1px solid var(--bd-subtle)",
+                      alignItems: "flex-start",
+                      marginBottom: 14,
                     }}
                   >
-                    <span className="label">Owner</span>
-                    <Hash value={f.owner} />
+                    <Sigil
+                      seed={f.name}
+                      size={72}
+                      color={i % 2 === 0 ? "var(--yap-crimson)" : "var(--yap-gold)"}
+                    />
+                    <TokenTag>#{f.id}</TokenTag>
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: "var(--yap-font-display)",
+                      fontWeight: 400,
+                      fontSize: 24,
+                      lineHeight: 0.95,
+                      textTransform: "uppercase",
+                      letterSpacing: 0.5,
+                      color: "var(--yap-ink-50)",
+                    }}
+                  >
+                    {f.name}
+                  </div>
+                  <div
+                    className="mono"
+                    style={{
+                      fontSize: 10,
+                      color: "var(--yap-ink-300)",
+                      letterSpacing: 1.5,
+                      textTransform: "uppercase",
+                      marginTop: 4,
+                      marginBottom: 12,
+                    }}
+                  >
+                    {f.arch}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      paddingTop: 10,
+                      borderTop: "1px solid var(--yap-ink-700)",
+                      gap: 6,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <RecordBadge w={f.w} l={f.l} size="sm" />
+                    {f.forSale && f.price ? (
+                      <Split
+                        k="Buy"
+                        v={`${f.price.toFixed(2)} 0G`}
+                        size="sm"
+                        tone="gold"
+                      />
+                    ) : f.forRent && f.rentPrice ? (
+                      <Split
+                        k="Hire"
+                        v={`${f.rentPrice.toFixed(3)} 0G/d`}
+                        size="sm"
+                      />
+                    ) : (
+                      <span
+                        className="mono"
+                        style={{
+                          fontSize: 10,
+                          color: "var(--yap-ink-400)",
+                          letterSpacing: 1.5,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        ELO {f.elo}
+                      </span>
+                    )}
                   </div>
                 </Card>
               ))}
