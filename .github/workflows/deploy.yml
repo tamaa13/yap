@@ -8,17 +8,30 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          # Retry ssh-keyscan — the host occasionally drops SSH probes
-          # under load and a 5-second silent failure cancels the deploy.
-          # Write to a tmp file and only commit on success — accumulating
-          # outputs across retries was causing "Host key verification
-          # failed" when partial responses landed in known_hosts.
+          # Atomic ssh-keyscan with retry — partial output corrupted
+          # known_hosts on prior workflow versions, surfacing as
+          # "Host key verification failed" on the first ssh call.
           for i in 1 2 3; do
             if ssh-keyscan -p 22987 -H 103.150.227.197 > /tmp/known_hosts.tmp 2>/dev/null \
                && [ -s /tmp/known_hosts.tmp ]; then
@@ -29,17 +42,50 @@ jobs:
             echo "ssh-keyscan attempt $i failed, retrying in 3s"
             sleep 3
           done
-          # Sanity: known_hosts must contain at least one key entry
           if ! grep -q "^|" ~/.ssh/known_hosts 2>/dev/null; then
             echo "ssh-keyscan never produced output — aborting"
             exit 1
           fi
 
-      - name: Deploy to VPS
+      - name: Fetch .env.local from VPS
         run: |
-          # ServerAliveInterval keeps the control channel hot during the
-          # 4-6 minute Turbopack build. Without it, SSH idle-timeouts at
-          # ~5 minutes and "client_loop: Broken pipe" kills the deploy.
+          # Pull build-time env (NEXT_PUBLIC_*) + server-side env from
+          # VPS so the runner builds with the same config that pm2 sees.
+          # Cleaner than mirroring 25+ vars as GitHub secrets and means
+          # config rotates in one place (the VPS file).
+          scp -i ~/.ssh/deploy_key -P 22987 \
+            -o ServerAliveInterval=30 \
+            yap-service@103.150.227.197:~/yap/apps/web/.env.local \
+            apps/web/.env.local
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web (on runner — VPS RAM is too tight)
+        run: |
+          # 7GB GHA runner has plenty of headroom; previous "build on
+          # VPS" pattern OOM-thrashed the 1.9GB box (load avg 13+,
+          # swap 100%) and SSH connections dropped mid-build, leaving
+          # pm2 serving stale code for 7+ hours.
+          cd apps/web
+          rm -rf .next
+          pnpm build
+
+      - name: Package build artifact
+        run: |
+          cd apps/web
+          # Just the .next directory — node_modules stays on VPS
+          # (lockfile pinning ensures it's already in sync). If a
+          # future commit changes the lockfile, the post-deploy
+          # pnpm install on VPS picks up the delta.
+          tar -czf /tmp/yap-web-build.tar.gz .next public package.json
+
+      - name: Ship + activate on VPS
+        run: |
+          scp -i ~/.ssh/deploy_key -P 22987 \
+            -o ServerAliveInterval=30 \
+            /tmp/yap-web-build.tar.gz \
+            yap-service@103.150.227.197:/tmp/yap-web-build.tar.gz
           ssh -i ~/.ssh/deploy_key -p 22987 \
             -o ServerAliveInterval=30 \
             -o ServerAliveCountMax=20 \
@@ -48,18 +94,38 @@ jobs:
             cd ~/yap
             git pull origin main
             cd apps/web
-            NODE_OPTIONS="--max-old-space-size=1536" pnpm install --frozen-lockfile
-            # Always purge .next before build. Turbopack's incremental
-            # chunk cache occasionally retains references to deleted
-            # files (e.g. WelcomeBackBanner ChunkLoadError after
-            # a048c5c, RSC manifest stale after motion pilot). Cost of
-            # full rebuild is ~10-30s; cost of stale build is a broken
-            # demo. Trade is obvious.
-            rm -rf .next
-            NODE_OPTIONS="--max-old-space-size=1536" pnpm build
-            # startOrReload re-reads the ecosystem file every time, so
-            # changes like max_memory_restart pick up without a manual
-            # delete/start dance. --update-env brings in any new env vars.
+
+            # Refresh deps only if the lockfile drifted (fast skip on
+            # most deploys; a 500MB pnpm install only happens when
+            # someone actually added a dep).
+            if ! cmp -s pnpm-lock.yaml /tmp/yap-prev-lockfile 2>/dev/null; then
+              echo "Lockfile changed — running pnpm install"
+              NODE_OPTIONS="--max-old-space-size=1200" pnpm install --frozen-lockfile
+              cp pnpm-lock.yaml /tmp/yap-prev-lockfile
+            else
+              echo "Lockfile unchanged — skipping pnpm install"
+            fi
+
+            # Replace built artifact atomically. We tar over .next and
+            # public/ — copying live without staging risks pm2 hitting
+            # half-extracted chunks during the SIGUSR2 reload.
+            rm -rf .next.new
+            mkdir .next.new
+            tar -xzf /tmp/yap-web-build.tar.gz -C .next.new
+            rm -rf .next .next.old.purge 2>/dev/null
+            mv .next.new/.next .next
+            # public/ is mostly static — only swap if shipped
+            if [ -d .next.new/public ]; then
+              rm -rf public.new
+              mv .next.new/public public.new
+              rm -rf public
+              mv public.new public
+            fi
+            rm -rf .next.new
+            rm -f /tmp/yap-web-build.tar.gz
+
+            # pm2 reload re-reads ecosystem.config.cjs; --update-env
+            # picks up any .env.local changes in the same swap.
             pm2 startOrReload ~/yap/ecosystem.config.cjs --update-env
             pm2 save
             echo "✓ Deploy done at $(date)"
@@ -67,8 +133,8 @@ jobs:
 
       - name: Health check
         run: |
-          # Next.js needs ~7-10s to print "Ready" after pm2 reload; poll
-          # instead of sleep so we don't race the restart.
+          # pm2 reload returns immediately; Next.js needs ~7-10s to
+          # print "Ready". Poll instead of fixed sleep.
           for i in $(seq 1 30); do
             code=$(curl -s -o /dev/null -w "%{http_code}" http://103.150.227.197/ || true)
             if [ "$code" = "200" ]; then
