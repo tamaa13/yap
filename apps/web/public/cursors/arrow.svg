@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <!-- Voltage-cut-corner pointer in Promoter crimson with cream rim for visibility on
+       both crimson and ink backgrounds. Hotspot at the tip (0, 0). -->
+  <defs>
+    <filter id="s" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0.5" dy="0.5" stdDeviation="0.7" flood-color="#0E0B08" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+  <path d="M 1 1 L 1 16 L 5.5 12.5 L 8.2 18.5 L 11 17 L 8.4 11 L 14 11 Z"
+        fill="#C8102E" stroke="#F2EDE2" stroke-width="1" stroke-linejoin="miter"
+        filter="url(#s)"/>
+</svg>
