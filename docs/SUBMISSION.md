@@ -45,11 +45,11 @@ event, and ERC-7857 makes the character itself a transferable asset.
   on top. Contract verifies ECDSA recovery, sha256 match, and canonical
   reconstruction location before settling. Provider key compromise =
   detectable; Yap key compromise = doesn't exist.
-- **Marketplace + rentals (anima dispute pattern)** — fighters and Battle
+- **Marketplace + rentals (co-signed disputes)** — fighters and Battle
   Moments trade in a single marketplace with re-encryption on transfer.
-  Rentals adopt the s0nderlabs/anima dispute pattern: 24 h acceptance
-  window for co-signed splits, 7 d max lifetime, asymmetric platform-fee
-  rebate when the split favors the renter. No Yap wasit.
+  Rentals use co-signed split dispute resolution: 24 h acceptance
+  window, 7 d max lifetime, asymmetric platform-fee rebate when the
+  split favors the renter. No Yap wasit.
 - **Battle Moments (ERC-7857 sibling)** — round-by-round highlights that
   mint as their own INFT family. Encrypted transcript clip + TEE
   attestation chain travel with the token. NBA Top Shot for AI debate.
@@ -127,11 +127,10 @@ gating policy.
    theatrical 7-minute mint into an honest 5-second mint without losing
    any guarantee — the encryption + sealed-key economy is the actual
    novelty, not the LoRA.
-3. **Anima-pattern dispute resolution in rentals** — porting s0nderlabs
-   anima's 24h-window co-signed split into RentalEscrow gives renters
-   recourse without giving Yap a refereeing role. Platform fee scales
-   inverse to renter-favor: a 100% renter refund pays *zero* protocol
-   fee.
+3. **Co-signed dispute resolution in rentals** — RentalEscrow's
+   24h-window co-signed split gives renters recourse without giving
+   Yap a refereeing role. Platform fee scales inverse to renter-favor:
+   a 100% renter refund pays *zero* protocol fee.
 4. **Render-driven first-access ceremony** — splash dismissal is tied to
    data hooks ready (`checking → gating → done` phases with
    MIN_GATE_MS / POST_READY_GRACE_MS / HARD_TIMEOUT_MS), not a static
@@ -163,8 +162,8 @@ test-bench, not a checkbox.
 - [x] Mint flow ≤10s end to end
 - [x] TEE-attested verdicts on-chain
 - [x] Marketplace + rentals + Battle Moments
-- [x] Subname registry (anima pattern)
-- [x] A2A encrypted inbox (anima pattern)
+- [x] Subname registry (ENS-style, label → tokenId)
+- [x] A2A encrypted inbox (stateless event-only)
 - [x] Cosmetic audit pass — wire-or-drop applied throughout
 - [ ] Demo video uploaded
 - [ ] HackQuest project page submitted

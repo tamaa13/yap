@@ -21,10 +21,10 @@ interface DisputePanelProps {
 }
 
 /**
- * Anima-style dispute lifecycle panel. Surfaces the current state of a
- * disputable rental and offers the actions appropriate for the viewer
- * + clock position. Permissionless actions (claimTimeout, forceClose)
- * stay visible even when the viewer is unrelated to the rental — keeps
+ * Dispute lifecycle panel. Surfaces the current state of a disputable
+ * rental and offers the actions appropriate for the viewer + clock
+ * position. Permissionless actions (claimTimeout, forceClose) stay
+ * visible even when the viewer is unrelated to the rental — keeps
  * neither party able to grief the other by going silent.
  */
 export function DisputePanel({

@@ -12,7 +12,7 @@ type Action =
   | "forceCloseRental";
 
 /**
- * Encapsulates the five anima-style dispute lifecycle actions on
+ * Encapsulates the five co-signed dispute lifecycle actions on
  * RentalEscrow. Each action is a single contract write; the hook
  * tracks which one is in flight so the UI can disable the right
  * button. Settlement state is read separately via `useRentalListing`,

@@ -233,9 +233,9 @@ contract YapFighterTest is Test {
         fighter.iCloneFrom(bob, id, tvp);
     }
 
-    /// @dev Anima-style replay protection. Without consuming the proof
-    ///      after first use, an owner could mint N clones from a single
-    ///      attestation within the validity window. We mark the
+    /// @dev Single-use proof replay protection. Without consuming the
+    ///      proof after first use, an owner could mint N clones from a
+    ///      single attestation within the validity window. We mark the
     ///      (proofId, tokenId, recipient) tuple consumed on success.
     function test_ICloneFrom_RevertsOnProofReplay() public {
         uint256 id = _mintTo(alice, keccak256("m"));
