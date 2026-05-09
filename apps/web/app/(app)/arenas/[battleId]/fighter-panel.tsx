@@ -13,10 +13,15 @@ export function FighterPanel({
   fighter,
   corner,
   compact = false,
+  liveHp,
 }: {
   fighter: Fighter;
   corner: "a" | "b";
   compact?: boolean;
+  /** When provided, overrides fighter.hp with the in-battle morale value
+   *  (depletes per round). Reputation HP shown on the fighter card stays
+   *  unchanged; this is just the live arena view. */
+  liveHp?: number;
 }) {
   const cornerColor =
     corner === "a" ? "var(--yap-crimson)" : "var(--yap-gold)";
@@ -83,7 +88,12 @@ export function FighterPanel({
         <RecordBadge w={fighter.w} l={fighter.l} size="sm" />
         <Split k="ELO" v={fighter.elo} size="sm" />
       </div>
-      <HPBar label="HP" value={fighter.hp} showText color={cornerColor} />
+      <HPBar
+        label="HP"
+        value={typeof liveHp === "number" ? liveHp : fighter.hp}
+        showText
+        color={cornerColor}
+      />
       {!compact && (
         <>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
