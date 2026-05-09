@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { RecordBadge, Split, Stamp, TokenTag } from "@/components/ui/badge";
 import { HPBar } from "@/components/ui/hp-bar";
 import { Icon } from "@/components/ui/icon";
 import { Sigil } from "@/components/ui/sigil";
@@ -18,33 +18,58 @@ export function FighterPanel({
   corner: "a" | "b";
   compact?: boolean;
 }) {
-  const cornerColor = corner === "a" ? "var(--fighter-a)" : "var(--fighter-b)";
+  const cornerColor =
+    corner === "a" ? "var(--yap-crimson)" : "var(--yap-gold)";
   const { fullName: subnameFullName } = useSubname(fighter.id);
   return (
-    <Card style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <Badge mono tone={corner}>
+    <Card style={{ padding: 16, display: "flex", flexDirection: "column", gap: 14 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
+        }}
+      >
+        <Stamp tone={corner === "a" ? "default" : "gold"}>
           {corner === "a" ? "Corner A" : "Corner B"}
-        </Badge>
-        <span className="label mono" style={{ fontSize: 10 }}>
-          INFT #{fighter.id}
-        </span>
+        </Stamp>
+        <TokenTag>#{fighter.id}</TokenTag>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
         <Sigil seed={fighter.name} size={64} color={cornerColor} />
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: "-0.01em" }}>
+          <div
+            style={{
+              fontFamily: "var(--yap-font-display)",
+              fontWeight: 400,
+              fontSize: 24,
+              lineHeight: 0.95,
+              textTransform: "uppercase",
+              letterSpacing: 0.5,
+              color: "var(--yap-ink-50)",
+            }}
+          >
             {fighter.name}
           </div>
-          <div style={{ fontSize: 12, color: "var(--tx-tertiary)", textTransform: "capitalize" }}>
+          <div
+            className="mono"
+            style={{
+              fontSize: 10,
+              color: "var(--yap-ink-300)",
+              letterSpacing: 1.5,
+              textTransform: "uppercase",
+              marginTop: 4,
+            }}
+          >
             {fighter.arch}
           </div>
           {subnameFullName && (
             <div
               className="mono"
               style={{
-                fontSize: 11,
-                color: "var(--accent)",
+                fontSize: 10,
+                color: cornerColor,
                 marginTop: 4,
                 letterSpacing: 0.04,
               }}
@@ -54,37 +79,41 @@ export function FighterPanel({
           )}
         </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        <div>
-          <div className="label" style={{ marginBottom: 2 }}>ELO</div>
-          <div className="num" style={{ fontSize: 15, fontWeight: 600 }}>{fighter.elo}</div>
-        </div>
-        <div>
-          <div className="label" style={{ marginBottom: 2 }}>Record</div>
-          <div className="num" style={{ fontSize: 15, fontWeight: 600 }}>
-            {fighter.w}–{fighter.l}
-          </div>
-        </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <RecordBadge w={fighter.w} l={fighter.l} size="sm" />
+        <Split k="ELO" v={fighter.elo} size="sm" />
       </div>
       <HPBar label="HP" value={fighter.hp} showText color={cornerColor} />
       {!compact && (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <HPBar label="Logic" value={fighter.logic} color="var(--tx-secondary)" />
-            <HPBar label="Wit" value={fighter.wit} color="var(--tx-secondary)" />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <HPBar label="LGC" value={fighter.logic} color="var(--yap-info)" />
+            <HPBar label="WIT" value={fighter.wit} color="var(--yap-warning)" />
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-            {fighter.tags.map((t) => (
-              <Badge key={t}>{t}</Badge>
-            ))}
-          </div>
+          {fighter.tags.length > 0 && (
+            <div
+              className="mono"
+              style={{
+                fontSize: 10,
+                letterSpacing: 1.5,
+                textTransform: "uppercase",
+                color: "var(--yap-ink-400)",
+                lineHeight: 1.5,
+              }}
+            >
+              {fighter.tags.join(" · ")}
+            </div>
+          )}
         </>
       )}
       <Link
         href={`/fighters/${fighter.id}`}
         style={{
-          fontSize: 12,
-          color: "var(--tx-secondary)",
+          fontFamily: "var(--yap-font-mono)",
+          fontSize: 10,
+          letterSpacing: 1.5,
+          textTransform: "uppercase",
+          color: "var(--yap-ink-300)",
           textAlign: "left",
           display: "inline-flex",
           alignItems: "center",
@@ -92,7 +121,7 @@ export function FighterPanel({
           marginTop: "auto",
         }}
       >
-        View fighter <Icon name="arrowRight" size={12} />
+        Fighter card <Icon name="arrowRight" size={12} />
       </Link>
     </Card>
   );
