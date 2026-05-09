@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useState,
+  type ReactNode,
+} from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { Icon } from "./icon";
 
 export type ToastKind = "default" | "success" | "error";
@@ -16,6 +23,26 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue>({ push: () => {} });
 
+const KIND_BORDER: Record<ToastKind, string> = {
+  default: "var(--yap-info)",
+  success: "var(--yap-success)",
+  error: "var(--yap-danger)",
+};
+
+const KIND_ICON: Record<
+  ToastKind,
+  { name: "alert" | "check" | "dot"; size: number; color: string }
+> = {
+  default: { name: "dot", size: 10, color: "var(--yap-info)" },
+  success: { name: "check", size: 16, color: "var(--yap-success)" },
+  error: { name: "alert", size: 16, color: "var(--yap-danger)" },
+};
+
+/**
+ * Promoter toast — ink-800 ground, ink-500 border, 4px left accent
+ * stripe color-coded per kind. Slide in from the right edge per
+ * MOTION.md navigation vocab; 240ms snap easing, no bounce.
+ */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const push = useCallback((t: Omit<Toast, "id">) => {
@@ -35,36 +62,57 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           zIndex: 9500,
           display: "flex",
           flexDirection: "column",
-          gap: 8,
+          gap: 10,
+          maxWidth: 460,
+          pointerEvents: "none",
         }}
       >
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            style={{
-              padding: "10px 14px",
-              background: "var(--bg-raised)",
-              border: `1px solid ${t.kind === "error" ? "rgba(232,107,107,0.40)" : "var(--bd-strong)"}`,
-              borderRadius: 4,
-              minWidth: 260,
-              maxWidth: 360,
-              fontSize: 13,
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
-            }}
-          >
-            {t.kind === "error" ? (
-              <Icon name="alert" size={16} style={{ color: "var(--danger)" }} />
-            ) : t.kind === "success" ? (
-              <Icon name="check" size={16} style={{ color: "var(--success)" }} />
-            ) : (
-              <Icon name="dot" size={10} style={{ color: "var(--accent)" }} />
-            )}
-            <div style={{ flex: 1 }}>{t.text}</div>
-          </div>
-        ))}
+        <AnimatePresence>
+          {toasts.map((t) => {
+            const kind = t.kind ?? "default";
+            const icon = KIND_ICON[kind];
+            return (
+              <motion.div
+                key={t.id}
+                layout
+                initial={{ x: "120%", opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: "120%", opacity: 0 }}
+                transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+                style={{
+                  padding: "14px 16px 14px 14px",
+                  background: "var(--yap-ink-800)",
+                  border: "1px solid var(--yap-ink-500)",
+                  borderLeft: `4px solid ${KIND_BORDER[kind]}`,
+                  borderRadius: 0,
+                  minWidth: 280,
+                  maxWidth: 460,
+                  fontSize: 13,
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 10,
+                  boxShadow: "var(--yap-sh-2)",
+                  pointerEvents: "auto",
+                }}
+              >
+                <Icon
+                  name={icon.name}
+                  size={icon.size}
+                  style={{ color: icon.color, marginTop: 1 }}
+                />
+                <div
+                  style={{
+                    flex: 1,
+                    color: "var(--yap-ink-100)",
+                    lineHeight: 1.45,
+                  }}
+                >
+                  {t.text}
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
       </div>
     </ToastContext.Provider>
   );
