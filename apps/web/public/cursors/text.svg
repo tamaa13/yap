@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="24" viewBox="0 0 20 24">
+  <!-- Text caret in cream with crimson accent. Hotspot at center (10, 12). -->
+  <defs>
+    <filter id="s" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0.4" dy="0.4" stdDeviation="0.6" flood-color="#0E0B08" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+  <g filter="url(#s)" stroke-linecap="square">
+    <line x1="10" y1="3"  x2="10" y2="21" stroke="#F2EDE2" stroke-width="1.6"/>
+    <line x1="6"  y1="3"  x2="14" y2="3"  stroke="#C8102E" stroke-width="1.6"/>
+    <line x1="6"  y1="21" x2="14" y2="21" stroke="#C8102E" stroke-width="1.6"/>
+  </g>
+</svg>

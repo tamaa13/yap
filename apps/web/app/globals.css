@@ -168,6 +168,26 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* Custom Promoter cursors. Voltage-cut-corner crimson arrow as default,
+   * boxing-reticle target on actionable surfaces (a, button, [role=button],
+   * summary). Native fallback if the SVG fails to load. Hotspot is the
+   * top-left tip for the arrow (0 0) and the bead center for the reticle
+   * (14 14). Disabled on touch devices below — those don't have cursors. */
+  cursor: url("/cursors/arrow.svg") 0 0, default;
+}
+@media (hover: hover) and (pointer: fine) {
+  a, button, [role="button"], summary, label[for], select,
+  [data-cursor="target"] {
+    cursor: url("/cursors/target.svg") 14 14, pointer;
+  }
+  input[type="text"], input[type="search"], input[type="number"],
+  input[type="email"], input[type="password"], input[type="url"],
+  textarea, [contenteditable="true"] {
+    cursor: url("/cursors/text.svg") 10 12, text;
+  }
+  [aria-disabled="true"], button:disabled, [data-cursor="not-allowed"] {
+    cursor: not-allowed;
+  }
 }
 ::selection { background: var(--yap-crimson); color: var(--yap-ink-50); }
 h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
