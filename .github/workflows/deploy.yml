@@ -15,8 +15,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.9
+        # Version comes from package.json's `packageManager` field —
+        # specifying both here AND there triggers ERR_PNPM_BAD_PM_VERSION.
 
       - name: Setup Node
         uses: actions/setup-node@v4
