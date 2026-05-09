@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Sigil } from "@/components/ui/sigil";
@@ -41,23 +42,64 @@ const DRAWER_NAV: Array<{ label: string; to: string; icon: IconName }> = [
 ];
 
 function NavLink({ entry, active }: { entry: NavEntry; active: boolean }) {
+  const reduced = useReducedMotion();
   return (
     <Link
       href={entry.to}
+      // CSS class owns hover micro-state (color ramp + warm bg + cut-corner
+      // underline draw) — see globals.css `.al-nav-link`. Active indicator
+      // uses motion.div with layoutId so it slides between nav items on
+      // route change (navigation vocab — fast, dampened).
+      className="al-nav-link"
+      data-active={active ? "true" : undefined}
       style={{
+        position: "relative",
         display: "inline-flex",
         alignItems: "center",
         gap: 6,
-        padding: "0 12px",
+        padding: "0 14px",
         height: 32,
-        fontSize: 13,
+        fontFamily: "var(--yap-font-mono)",
+        fontSize: 11,
+        letterSpacing: 1.6,
+        textTransform: "uppercase",
         fontWeight: 500,
-        color: active ? "var(--tx-primary)" : "var(--tx-secondary)",
-        borderRadius: 4,
-        background: active ? "rgba(255,255,255,0.04)" : "transparent",
+        color: active ? "var(--yap-ink-50)" : "var(--yap-ink-300)",
+        background: "transparent",
+        textDecoration: "none",
       }}
     >
-      {entry.label}
+      <span style={{ position: "relative", zIndex: 1 }}>{entry.label}</span>
+      {active && (
+        reduced ? (
+          <span
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: -1,
+              height: 2,
+              background: "var(--yap-crimson)",
+            }}
+          />
+        ) : (
+          <motion.span
+            layoutId="al-active-nav"
+            transition={{
+              duration: 0.24,
+              ease: [0.32, 0.72, 0, 1],
+            }}
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: -1,
+              height: 2,
+              background: "var(--yap-crimson)",
+            }}
+          />
+        )
+      )}
     </Link>
   );
 }
