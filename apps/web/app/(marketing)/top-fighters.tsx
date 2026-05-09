@@ -6,8 +6,8 @@ import { Sigil } from "@/components/ui/sigil";
 import { useLeaderboard } from "@/hooks/use-leaderboard";
 
 export function LandingTopFighters() {
-  const { data } = useLeaderboard("elo");
-  const top = data.slice(0, 4);
+  const { data } = useLeaderboard({ metric: "elo", limit: 4 });
+  const top = data;
 
   if (top.length === 0) {
     return (

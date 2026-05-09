@@ -14,6 +14,7 @@ import {
   RENTAL_ESCROW_ADDRESS,
 } from "@/lib/contracts";
 import { adaptFighter, type OnChainFighterStats } from "@/lib/on-chain";
+import { paginate, CARD_GRID_PAGE_SIZE } from "@/lib/pagination";
 import type { Fighter, FighterArchetype } from "@/lib/types";
 
 const ONEG = 1e18;
@@ -57,13 +58,26 @@ function useServerMetaMap(owner?: string) {
 
 interface UseFightersArgs {
   owner?: `0x${string}`;
+  /** Page size — defaults to CARD_GRID_PAGE_SIZE (24). Pass a larger
+   *  value for legacy callers that wanted "everything". */
   limit?: number;
+  /** Zero-based offset into the filtered+sorted list. Default 0
+   *  (first page). Surfaces drive this from URL `?page=N`. */
+  offset?: number;
 }
 
 // Discover fighters via Transfer(from=0, ...) events, optionally narrowed by
 // current owner. Returns [] when contracts aren't deployed yet so screens can
 // render their empty state.
-export function useFighters({ owner, limit = 64 }: UseFightersArgs = {}) {
+//
+// Pagination v1: client-side. Hook fetches full Transfer-event log and
+// slices in JS. Acceptable for testnet (~30 fighters); see lib/pagination.ts
+// for the migration path when catalog grows.
+export function useFighters({
+  owner,
+  limit = CARD_GRID_PAGE_SIZE,
+  offset = 0,
+}: UseFightersArgs = {}) {
   const client = usePublicClient();
   const [tokenIds, setTokenIds] = useState<bigint[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
@@ -367,10 +381,16 @@ export function useFighters({ owner, limit = 64 }: UseFightersArgs = {}) {
         );
       })
     : fighters;
-  const limited = filtered.slice(0, limit);
+  const { slice, total, hasMore } = paginate(
+    filtered,
+    { limit, offset },
+    CARD_GRID_PAGE_SIZE,
+  );
 
   return {
-    data: limited,
+    data: slice,
+    total,
+    hasMore,
     isLoading: eventsLoading || readsLoading,
     error: eventsError ?? error ?? null,
     refetch,

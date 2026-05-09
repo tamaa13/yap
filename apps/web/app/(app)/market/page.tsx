@@ -11,7 +11,9 @@ import { Sigil } from "@/components/ui/sigil";
 import { FighterCardSkel } from "@/components/ui/skeleton";
 import { Tabs } from "@/components/ui/tabs";
 import { PageContainer } from "@/components/shell/page-container";
+import { Pagination, usePageFromUrl } from "@/components/ui/pagination";
 import { useFighters } from "@/hooks/use-fighters";
+import { CARD_GRID_PAGE_SIZE, pageToOffset } from "@/lib/pagination";
 import type { FighterArchetype } from "@/lib/types";
 
 type MarketTab = "buy" | "rent" | "auction";
@@ -36,7 +38,9 @@ export default function MarketPage() {
   const [eloMax, setEloMax] = useState<string>("");
   const [priceMax, setPriceMax] = useState<string>("");
 
-  const { data: all, isLoading } = useFighters({ limit: 128 });
+  // Pull full catalog so we filter+paginate post-fetch (testnet scale).
+  // See lib/pagination.ts header for mainnet migration path.
+  const { data: all, isLoading } = useFighters({ limit: 9999 });
 
   const list = useMemo(() => {
     const eloMinN = eloMin === "" ? null : Number(eloMin);
@@ -70,6 +74,13 @@ export default function MarketPage() {
     rent: all.filter((f) => f.forRent).length,
     auction: 0,
   };
+
+  // Page slicing — list is the post-filter set; pagination consumes
+  // its length so the count line tells the truth even when filters
+  // are active.
+  const page = usePageFromUrl();
+  const offset = pageToOffset(page, CARD_GRID_PAGE_SIZE);
+  const visible = list.slice(offset, offset + CARD_GRID_PAGE_SIZE);
 
   const toggleArch = (id: FighterArchetype) => {
     setArchFilter((prev) => {
@@ -331,7 +342,7 @@ export default function MarketPage() {
                 gap: 12,
               }}
             >
-              {list.map((f) => (
+              {visible.map((f) => (
                 <Card
                   key={f.id}
                   interactive
@@ -391,7 +402,7 @@ export default function MarketPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {list.map((f) => (
+                  {visible.map((f) => (
                     <tr
                       key={f.id}
                       onClick={() => router.push(`/fighters/${f.id}`)}
@@ -425,6 +436,17 @@ export default function MarketPage() {
               </table>
             </Card>
           )}
+          <Pagination
+            total={list.length}
+            limit={CARD_GRID_PAGE_SIZE}
+            noun={
+              tab === "buy"
+                ? "listings"
+                : tab === "rent"
+                  ? "rentals"
+                  : "auctions"
+            }
+          />
         </div>
       </div>
     </PageContainer>

@@ -5,12 +5,14 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Hash } from "@/components/ui/hash";
+import { Pagination, usePageFromUrl } from "@/components/ui/pagination";
 import { Sigil } from "@/components/ui/sigil";
 import { TableSkel } from "@/components/ui/skeleton";
 import { Tabs } from "@/components/ui/tabs";
 import { PageContainer } from "@/components/shell/page-container";
 import { useLeaderboard } from "@/hooks/use-leaderboard";
 import { fmtNum } from "@/lib/format";
+import { TABLE_PAGE_SIZE, pageToOffset } from "@/lib/pagination";
 
 type BoardTab = "elo" | "earnings" | "volume" | "rising";
 type RangeKey = "24h" | "7d" | "30d" | "all";
@@ -32,8 +34,17 @@ export default function LeaderboardPage() {
   const [arch, setArch] = useState("all");
 
   const metric = tab === "earnings" ? "earnings" : tab === "volume" ? "volume" : "elo";
-  const { data: sorted, isLoading } = useLeaderboard(metric);
+  // Pull the full sorted catalog so we can apply the archetype filter
+  // *before* paginating — otherwise filtering would shrink each page
+  // and the count line would lie. Page slicing happens locally below.
+  const { data: sorted, isLoading } = useLeaderboard({
+    metric,
+    limit: 9999,
+  });
   const filtered = arch === "all" ? sorted : sorted.filter((f) => f.arch === arch);
+  const page = usePageFromUrl();
+  const offset = pageToOffset(page, TABLE_PAGE_SIZE);
+  const visible = filtered.slice(offset, offset + TABLE_PAGE_SIZE);
 
   return (
     <PageContainer>
@@ -136,7 +147,7 @@ export default function LeaderboardPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((f, i) => {
+              {visible.map((f, i) => {
                 const total = f.w + f.l;
                 const winPct = total > 0 ? (f.w / total) * 100 : 0;
                 return (
@@ -149,11 +160,11 @@ export default function LeaderboardPage() {
                       style={{
                         padding: "10px 14px",
                         width: 40,
-                        color: i < 3 ? "var(--accent)" : "var(--tx-tertiary)",
+                        color: offset + i < 3 ? "var(--accent)" : "var(--tx-tertiary)",
                       }}
                       className="mono"
                     >
-                      {String(i + 1).padStart(2, "0")}
+                      {String(offset + i + 1).padStart(2, "0")}
                     </td>
                     <td style={{ padding: "10px 14px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -189,6 +200,11 @@ export default function LeaderboardPage() {
           </table>
         </Card>
       )}
+      <Pagination
+        total={filtered.length}
+        limit={TABLE_PAGE_SIZE}
+        noun="fighters"
+      />
       <div style={{ fontSize: 11, color: "var(--tx-tertiary)", marginTop: 12 }}>
         Range: {range.toUpperCase()}
       </div>
