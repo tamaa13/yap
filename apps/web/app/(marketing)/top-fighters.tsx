@@ -2,26 +2,29 @@
 
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { RecordBadge, TokenTag } from "@/components/ui/badge";
 import { Sigil } from "@/components/ui/sigil";
 import { useLeaderboard } from "@/hooks/use-leaderboard";
 
 export function LandingTopFighters() {
-  const { data } = useLeaderboard({ metric: "elo", limit: 4 });
-  const top = data;
+  const { data: top } = useLeaderboard({ metric: "elo", limit: 4 });
 
   if (top.length === 0) {
     return (
       <div
         style={{
           padding: "28px 20px",
-          border: "1px dashed var(--bd-default)",
-          borderRadius: 6,
+          border: "1px dashed var(--yap-ink-500)",
           fontSize: 13,
-          color: "var(--tx-secondary)",
+          color: "var(--yap-ink-200)",
           textAlign: "center",
+          background: "var(--yap-ink-800)",
         }}
       >
-        Leaderboard forming. <Link href="/mint" style={{ color: "var(--accent)" }}>Be the first fighter.</Link>
+        Leaderboard forming.{" "}
+        <Link href="/mint" style={{ color: "var(--yap-crimson)" }}>
+          Be the first fighter.
+        </Link>
       </div>
     );
   }
@@ -29,26 +32,64 @@ export function LandingTopFighters() {
   return (
     <div
       className="al-stats-grid-4"
-      style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(4, 1fr)",
+        gap: 16,
+      }}
     >
       {top.map((f, i) => (
         <Link key={f.id} href={`/fighters/${f.id}`}>
-          <Card interactive style={{ padding: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-              <span className="mono" style={{ fontSize: 11, color: "var(--tx-tertiary)" }}>
-                #{i + 1}
-              </span>
-              <span className="mono" style={{ fontSize: 11, color: "var(--accent)" }}>
-                {f.elo}
-              </span>
-            </div>
-            <Sigil seed={f.name} size={56} color={f.color} />
-            <div style={{ fontSize: 14, fontWeight: 600, marginTop: 12 }}>{f.name}</div>
+          <Card interactive style={{ padding: 18 }}>
             <div
               style={{
-                fontSize: 12,
-                color: "var(--tx-tertiary)",
-                textTransform: "capitalize",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                marginBottom: 14,
+              }}
+            >
+              <span
+                className="mono"
+                style={{
+                  fontSize: 11,
+                  letterSpacing: 2,
+                  color: "var(--yap-ink-400)",
+                  textTransform: "uppercase",
+                }}
+              >
+                #{String(i + 1).padStart(2, "0")}
+              </span>
+              <TokenTag>#{f.id}</TokenTag>
+            </div>
+            <Sigil
+              seed={f.name}
+              size={72}
+              color={i % 2 === 0 ? "var(--yap-crimson)" : "var(--yap-gold)"}
+            />
+            <div
+              style={{
+                fontFamily: "var(--yap-font-display)",
+                fontWeight: 400,
+                fontSize: 26,
+                lineHeight: 0.95,
+                marginTop: 14,
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+                color: "var(--yap-ink-50)",
+              }}
+            >
+              {f.name}
+            </div>
+            <div
+              style={{
+                fontFamily: "var(--yap-font-mono)",
+                fontSize: 10,
+                color: "var(--yap-ink-300)",
+                letterSpacing: 1.5,
+                textTransform: "uppercase",
+                marginTop: 4,
+                marginBottom: 12,
               }}
             >
               {f.arch}
@@ -56,15 +97,23 @@ export function LandingTopFighters() {
             <div
               style={{
                 display: "flex",
-                gap: 10,
-                marginTop: 10,
-                fontFamily: "var(--mono)",
-                fontSize: 11,
-                color: "var(--tx-secondary)",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingTop: 10,
+                borderTop: "1px solid var(--yap-ink-700)",
               }}
             >
-              <span>{f.w}W</span>
-              <span>{f.l}L</span>
+              <RecordBadge w={f.w} l={f.l} size="sm" />
+              <span
+                className="mono"
+                style={{
+                  fontSize: 11,
+                  color: "var(--yap-ink-200)",
+                }}
+              >
+                <span style={{ color: "var(--yap-ink-400)" }}>ELO </span>
+                {f.elo}
+              </span>
             </div>
           </Card>
         </Link>

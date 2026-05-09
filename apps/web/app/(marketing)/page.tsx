@@ -2,74 +2,122 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
-import { StatCard } from "@/components/ui/stat-card";
 import { YapMark } from "@/components/brand/yap-mark";
+import { LandingHeroStats } from "./hero-stats";
 import { LandingLiveBoard } from "./live-board";
 import { LandingTopFighters } from "./top-fighters";
+
+const HOW_STEPS = [
+  {
+    n: "01",
+    t: "Mint",
+    d: "Drop in a style seed. The persona seals as an ERC-7857 INFT, encrypted on 0G Storage in about five seconds.",
+  },
+  {
+    n: "02",
+    t: "Battle",
+    d: "Pick an opponent and a topic. Arguments stream live; the TEE judge scores each round with cryptographic attestation.",
+  },
+  {
+    n: "03",
+    t: "Settle",
+    d: "Winner takes the purse. Bettors paid in 0G. Every verdict signed and verifiable on-chain.",
+  },
+];
 
 export default function LandingPage() {
   return (
     <div>
       <section
         style={{
-          padding: "96px 24px 72px",
-          borderBottom: "1px solid var(--bd-subtle)",
+          padding: "96px 56px 64px",
+          borderBottom: "1px solid var(--yap-ink-700)",
+          position: "relative",
           background:
-            "radial-gradient(ellipse 800px 400px at 50% -100px, rgba(200,16,46,0.06), transparent)",
+            "radial-gradient(ellipse 800px 400px at 50% -100px, rgba(200,16,46,0.08), transparent)",
         }}
       >
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          {/* Eyebrow */}
           <div
-            className="label"
-            style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 8 }}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 10,
+              marginBottom: 20,
+            }}
           >
             <span
-              style={{ width: 6, height: 6, borderRadius: 99, background: "var(--accent)" }}
-            />
-            Built on 0G · Storage · Compute · Settled on-chain
+              className="mono"
+              style={{
+                fontSize: 11,
+                letterSpacing: 3,
+                color: "var(--yap-crimson)",
+                textTransform: "uppercase",
+              }}
+            >
+              ━━ Tonight
+            </span>
+            <span
+              className="mono"
+              style={{
+                fontSize: 11,
+                color: "var(--yap-ink-300)",
+                letterSpacing: 2,
+                textTransform: "uppercase",
+              }}
+            >
+              Attested on 0G · Galileo · 16602
+            </span>
           </div>
+          {/* Display headline */}
           <h1
             className="al-landing-hero-title"
             style={{
-              fontSize: 72,
-              fontWeight: 700,
-              letterSpacing: "-0.035em",
-              lineHeight: 0.98,
-              marginBottom: 20,
-              maxWidth: 920,
+              fontFamily: "var(--yap-font-display)",
+              fontWeight: 400,
+              fontSize: "clamp(64px, 9vw, 132px)",
+              lineHeight: 0.88,
+              letterSpacing: "-1.5px",
+              textTransform: "uppercase",
+              margin: "0 0 24px",
+              color: "var(--yap-ink-50)",
+              maxWidth: 1100,
             }}
           >
-            AI fighters.
+            Verifiable
             <br />
-            <span style={{ color: "var(--tx-tertiary)" }}>Verifiable debate.</span>
+            <span style={{ color: "var(--yap-crimson)" }}>combat</span> for
             <br />
-            <span style={{ color: "var(--accent)" }}>Real stakes.</span>
+            talking AIs.
           </h1>
           <p
             style={{
               fontSize: 18,
-              color: "var(--tx-secondary)",
-              maxWidth: 620,
+              color: "var(--yap-ink-200)",
+              maxWidth: "52ch",
               lineHeight: 1.5,
-              marginBottom: 32,
+              margin: "0 0 32px",
             }}
           >
-            ERC-7857 character INFTs that argue, win, and grow. Pick a topic,
-            send your fighter into the arena, and let a TEE judge settle
-            the round on-chain. Spectators stake 0G on the call.
+            Mint a sealed persona. Stake on the outcome. Watch a TEE judge sign
+            the verdict on-chain, round by round. Outstanding moments mint as
+            collectibles.
           </p>
-          <div style={{ display: "flex", gap: 10 }}>
-            <Link href="/arenas">
+          <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+            <Link href="/mint">
               <Button
                 variant="primary"
                 size="lg"
                 trailing={<Icon name="arrowRight" size={14} />}
               >
-                Enter arena
+                Mint a fighter
               </Button>
             </Link>
-            <Link href="/mint">
-              <Button size="lg">Mint fighter</Button>
+            <Link href="/arenas">
+              <Button variant="ghost" size="lg">
+                Watch a battle
+              </Button>
             </Link>
           </div>
 
@@ -77,30 +125,71 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section style={{ padding: "64px 24px", borderBottom: "1px solid var(--bd-subtle)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div className="label" style={{ marginBottom: 8 }}>
-            How it works
-          </div>
-          <h2 style={{ fontSize: 28, marginBottom: 40, letterSpacing: "-0.01em" }}>
-            Three steps from seed to settlement.
-          </h2>
+      {/* HERO STATS — only stats with a real on-chain source. */}
+      <section
+        style={{
+          padding: "0 56px",
+          borderBottom: "1px solid var(--yap-ink-700)",
+        }}
+      >
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <LandingHeroStats />
+        </div>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <section
+        style={{
+          padding: "64px 56px",
+          borderBottom: "1px solid var(--yap-ink-700)",
+        }}
+      >
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <SectionHead num="§ 01" title="How it works" />
           <div
             className="al-stats-grid-3"
-            style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 20,
+            }}
           >
-            {[
-              ["01", "Mint", "Drop in a style seed — JSONL or plain lines. Your fighter is sealed as an ERC-7857 INFT, encrypted on 0G Storage in about five seconds."],
-              ["02", "Battle", "Pick an opponent and a topic. Arguments stream in real time; the TEE judge scores each round with cryptographic attestation."],
-              ["03", "Settle", "Winner takes rewards. Bettors paid in 0G. Every verdict is signed and verifiable on-chain."],
-            ].map(([n, t, d]) => (
-              <Card key={n} style={{ padding: 20 }}>
-                <div className="mono" style={{ fontSize: 11, color: "var(--accent)", marginBottom: 12 }}>
-                  {n}
+            {HOW_STEPS.map((s) => (
+              <Card key={s.n} style={{ padding: 28 }}>
+                <div
+                  style={{
+                    fontFamily: "var(--yap-font-display)",
+                    fontWeight: 400,
+                    fontSize: 56,
+                    lineHeight: 0.85,
+                    color: "var(--yap-crimson)",
+                    marginBottom: 16,
+                  }}
+                >
+                  {s.n}
                 </div>
-                <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 8 }}>{t}</div>
-                <div style={{ fontSize: 13, color: "var(--tx-secondary)", lineHeight: 1.55 }}>
-                  {d}
+                <div
+                  style={{
+                    fontFamily: "var(--yap-font-display)",
+                    fontWeight: 400,
+                    fontSize: 30,
+                    lineHeight: 1,
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                    marginBottom: 10,
+                    color: "var(--yap-ink-50)",
+                  }}
+                >
+                  {s.t}
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "var(--yap-ink-200)",
+                    lineHeight: 1.55,
+                  }}
+                >
+                  {s.d}
                 </div>
               </Card>
             ))}
@@ -108,52 +197,42 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section style={{ padding: "64px 24px", borderBottom: "1px solid var(--bd-subtle)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-end",
-              justifyContent: "space-between",
-              marginBottom: 24,
-            }}
-          >
-            <div>
-              <div className="label" style={{ marginBottom: 8 }}>
-                Top-ranked fighters
-              </div>
-              <h2 style={{ fontSize: 24, letterSpacing: "-0.01em" }}>Current leaderboard</h2>
-            </div>
+      {/* TOP FIGHTERS */}
+      <section
+        style={{
+          padding: "64px 56px",
+          borderBottom: "1px solid var(--yap-ink-700)",
+        }}
+      >
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <SectionHead num="§ 02" title="On the card" right={
             <Link href="/leaderboard">
-              <Button trailing={<Icon name="arrowRight" size={12} />}>Full ranking</Button>
+              <span
+                className="mono"
+                style={{
+                  color: "var(--yap-gold)",
+                  fontSize: 11,
+                  letterSpacing: 2,
+                  textTransform: "uppercase",
+                }}
+              >
+                Browse all →
+              </span>
             </Link>
-          </div>
+          } />
           <LandingTopFighters />
         </div>
       </section>
 
-      <section style={{ padding: "48px 24px", borderBottom: "1px solid var(--bd-subtle)" }}>
-        <div
-          className="al-stats-grid-4"
-          style={{
-            maxWidth: 1100,
-            margin: "0 auto",
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 12,
-          }}
-        >
-          <StatCard label="Total battles" value="—" sub="live counter" />
-          <StatCard label="0G staked" value="—" sub="lifetime pool volume" />
-          <StatCard label="Fighters minted" value="—" sub="0G INFT supply" />
-          <StatCard label="Active spectators" value="—" sub="real-time" />
-        </div>
-      </section>
-
-      <footer style={{ padding: "40px 24px", color: "var(--tx-tertiary)" }}>
+      <footer
+        style={{
+          padding: "40px 56px",
+          color: "var(--yap-ink-400)",
+        }}
+      >
         <div
           style={{
-            maxWidth: 1100,
+            maxWidth: 1200,
             margin: "0 auto",
             display: "flex",
             justifyContent: "space-between",
@@ -164,9 +243,19 @@ export default function LandingPage() {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <YapMark size={16} />
-            <span>© 2026 Yap · Built on 0G</span>
+            <span className="mono" style={{ letterSpacing: 1.5, textTransform: "uppercase" }}>
+              © 2026 Yap · Built on 0G
+            </span>
           </div>
-          <div style={{ display: "flex", gap: 20 }}>
+          <div
+            className="mono"
+            style={{
+              display: "flex",
+              gap: 20,
+              letterSpacing: 1.5,
+              textTransform: "uppercase",
+            }}
+          >
             <a>Docs</a>
             <a>Explorer</a>
             <a>Terms</a>
@@ -174,6 +263,64 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+/** Promoter section header — § num + Anton display title + crimson rule
+ *  + optional right-side action. */
+function SectionHead({
+  num,
+  title,
+  right,
+}: {
+  num: string;
+  title: string;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "baseline",
+        gap: 16,
+        marginBottom: 24,
+      }}
+    >
+      <span
+        className="mono"
+        style={{
+          fontSize: 11,
+          letterSpacing: 3,
+          color: "var(--yap-crimson)",
+          textTransform: "uppercase",
+        }}
+      >
+        {num}
+      </span>
+      <h2
+        style={{
+          fontFamily: "var(--yap-font-display)",
+          fontWeight: 400,
+          fontSize: 38,
+          lineHeight: 1,
+          textTransform: "uppercase",
+          letterSpacing: "-0.01em",
+          color: "var(--yap-ink-50)",
+          margin: 0,
+        }}
+      >
+        {title}
+      </h2>
+      <span
+        style={{
+          flex: 1,
+          height: 1,
+          background: "var(--yap-ink-600)",
+          marginLeft: 12,
+        }}
+      />
+      {right}
     </div>
   );
 }
