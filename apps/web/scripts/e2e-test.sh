@@ -26,7 +26,7 @@ set -euo pipefail
 
 WEB_DIR="/Users/tama/projects/yap/apps/web"
 CONTRACTS_DIR="/Users/tama/projects/yap/contracts"
-API_BASE="http://localhost:3000"
+API_BASE="${API_BASE:-http://localhost:3000}"
 CAST="/Users/tama/.foundry/bin/cast"
 
 # Load env
@@ -357,8 +357,36 @@ curl -s "$API_BASE/api/battle/$BATTLE_ID/state" | jq '{
   reasoning: .state.verdict.reasoning,
   txHash: .state.verdict.txHash,
   reactions: .state.reactions,
-  spectators: .spectators
+  spectators: .spectators,
+  hpA: .state.hpA,
+  hpB: .state.hpB,
+  hpDamage: .state.hpDamage,
+  tkoAtRound: .state.tkoAtRound
 }'
+
+# HP morale assertions — verify Path A + HP morale changes are wired.
+HP_BODY=$(curl -s "$API_BASE/api/battle/$BATTLE_ID/state")
+HP_A=$(echo "$HP_BODY" | jq -r '.state.hpA // "missing"')
+HP_B=$(echo "$HP_BODY" | jq -r '.state.hpB // "missing"')
+HP_DMG_LEN=$(echo "$HP_BODY" | jq -r '.state.hpDamage // [] | length')
+TKO_AT=$(echo "$HP_BODY" | jq -r '.state.tkoAtRound // "none"')
+echo ""
+echo "═══════════════════════════════════════════════"
+echo "HP MORALE assertions"
+echo "═══════════════════════════════════════════════"
+echo "hpA: $HP_A   hpB: $HP_B   damage_log_entries: $HP_DMG_LEN   tkoAtRound: $TKO_AT"
+if [[ "$HP_A" == "missing" || "$HP_B" == "missing" ]]; then
+  echo "✗ FAIL: hpA/hpB missing from state — Path A deploy didn't take"
+  exit 1
+fi
+if [[ "$HP_DMG_LEN" -lt 1 ]]; then
+  echo "⚠ WARN: hpDamage log empty — per-round scorer may have failed silently"
+else
+  echo "✓ hpDamage populated ($HP_DMG_LEN rounds scored)"
+fi
+if [[ "$TKO_AT" != "none" ]]; then
+  echo "✓ TKO triggered at round $TKO_AT — surviving fighter wins early"
+fi
 echo ""
 echo "Full transcript saved at .data/battle-state.json"
 echo "Done."
