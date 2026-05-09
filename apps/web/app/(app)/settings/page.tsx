@@ -30,7 +30,7 @@ export default function SettingsPage() {
           }}
         >
           <div>
-            <div style={{ fontSize: 13, fontWeight: 500 }}>Privy session</div>
+            <div style={{ fontSize: 13, fontWeight: 500 }}>Wallet session</div>
             {addr && <Hash value={addr} />}
           </div>
           <Button variant="destructive" size="sm" onClick={logout}>
