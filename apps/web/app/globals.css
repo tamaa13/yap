@@ -491,9 +491,12 @@ a { color: inherit; text-decoration: none; }
   will-change: transform;
 }
 .al-card-lift:hover {
-  transform: translateY(-2px) rotate(-0.4deg);
+  /* Promoter spec: crimson border + 2px lift. Drop the earlier
+   * 0.4deg rotate (motion-pilot stylistic flourish) — design
+   * system landed on translateY only. */
+  transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32);
-  border-color: var(--bd-strong);
+  border-color: var(--yap-crimson);
 }
 .al-card-lift:active {
   transform: translateY(0) rotate(0deg);
@@ -506,6 +509,59 @@ a { color: inherit; text-decoration: none; }
     transform: none;
     transition: none;
   }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   CARD — Promoter chrome.
+   Source: docs/design/project/design-system.html § cards.
+   Square corners (posters don't round), warm-ink ground, ink-600
+   border, optional .elevated bg shift + drop shadow, optional
+   .card-head/.card-title/.card-foot/.role-tag children.
+   The React Card component composes `.al-card` + optional
+   `.al-card-lift` + caller className.
+   ────────────────────────────────────────────────────────────── */
+.al-card {
+  background: var(--yap-ink-800);
+  border: 1px solid var(--yap-ink-600);
+  border-radius: 0;
+  /* No default padding — caller controls density via inline style
+   * (existing convention across the codebase). When ready to migrate,
+   * adopt `.card-pad` shorthand below. */
+}
+.al-card.elevated {
+  background: var(--yap-ink-700);
+  box-shadow: var(--yap-sh-2);
+}
+.al-card .card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--yap-s-3);
+  margin-bottom: var(--yap-s-4);
+  border-bottom: 1px solid var(--yap-ink-600);
+}
+.al-card .card-title {
+  font-family: var(--yap-font-display);
+  font-weight: 400;
+  font-size: 22px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+.al-card .card-foot {
+  margin-top: var(--yap-s-4);
+  padding-top: var(--yap-s-3);
+  border-top: 1px solid var(--yap-ink-600);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--yap-s-2);
+}
+.al-card .role-tag {
+  font-family: var(--yap-font-mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--yap-gold);
 }
 
 @keyframes al-shimmer {
