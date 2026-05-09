@@ -67,7 +67,7 @@ export default function ConnectPage() {
               alignItems: "center",
             }}
           >
-            <span>Sign in with Privy</span>
+            <span>Connect wallet</span>
             <Icon name="arrowRight" size={14} />
           </button>
         )}
