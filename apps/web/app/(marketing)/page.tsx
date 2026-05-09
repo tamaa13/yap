@@ -3,9 +3,18 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { YapMark } from "@/components/brand/yap-mark";
+import { activeChain } from "@/lib/chains";
 import { LandingHeroStats } from "./hero-stats";
 import { LandingLiveBoard } from "./live-board";
 import { LandingTopFighters } from "./top-fighters";
+
+// Footer link targets. Externalized so swapping a URL (e.g. moving
+// from a placeholder GitBook to the real published handle) is a one-line
+// change. GitHub is the public hackathon repo; Docs points at the
+// project's GitBook space; Explorer threads through `activeChain` so
+// testnet renders chainscan-galileo and mainnet flips to chainscan.
+const DOCS_URL = "https://yap-0g.gitbook.io";
+const GITHUB_URL = "https://github.com/tamaa13/yap";
 
 const HOW_STEPS = [
   {
@@ -256,10 +265,33 @@ export default function LandingPage() {
               textTransform: "uppercase",
             }}
           >
-            <a>Docs</a>
-            <a>Explorer</a>
-            <a>Terms</a>
-            <a>GitHub</a>
+            <a
+              href={DOCS_URL}
+              target="_blank"
+              rel="noreferrer"
+              data-cursor="link"
+              data-cursor-tag="DOCS"
+            >
+              Docs
+            </a>
+            <a
+              href={activeChain.blockExplorers.default.url}
+              target="_blank"
+              rel="noreferrer"
+              data-cursor="link"
+              data-cursor-tag="EXPLORER"
+            >
+              Explorer
+            </a>
+            <a
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noreferrer"
+              data-cursor="link"
+              data-cursor-tag="GITHUB"
+            >
+              GitHub
+            </a>
           </div>
         </div>
       </footer>
