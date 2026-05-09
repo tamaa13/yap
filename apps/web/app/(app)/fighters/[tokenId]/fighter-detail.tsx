@@ -17,6 +17,7 @@ import { Breadcrumbs } from "@/components/shell/breadcrumbs";
 import { PageContainer } from "@/components/shell/page-container";
 import { useBuyFighter } from "@/hooks/use-buy-fighter";
 import { useCancelListing } from "@/hooks/use-cancel-listing";
+import { useFighterMintTx } from "@/hooks/use-fighter-mint-tx";
 import { useListFighter } from "@/hooks/use-list-fighter";
 import { useListForRent } from "@/hooks/use-list-for-rent";
 import { useListing } from "@/hooks/use-listing";
@@ -95,6 +96,13 @@ export function FighterDetail({
   const { label: subnameLabel, fullName: subnameFullName, refetch: refetchSubname } =
     useSubname(fighter.id);
   const releaseSubname = useReleaseSubname();
+
+  // For legacy fighters whose server meta lost mintTxHash, recover it from
+  // the on-chain Minted event so "View on 0G Explorer" still lands on a
+  // real tx page instead of the contract address fallback. No-op (returns
+  // undefined immediately) when fighter.mintTxHash is already known.
+  const { mintTxHash: recoveredMintTx, isLoading: recoveredMintTxLoading } =
+    useFighterMintTx(fighter.mintTxHash ? null : fighter.id);
 
   // Live on-chain listing state from the Marketplace contract.
   const { data: chainListing, refetch: refetchListing } = useListing(fighter.id);
@@ -793,19 +801,24 @@ export function FighterDetail({
               size="sm"
               leading={<Icon name="external" size={12} />}
               onClick={() => {
-                // Prefer the real mint tx hash (from server meta) — that's what
-                // users want to see. Fall back to the NFT instance page when
-                // the tx hash isn't known. Never link the metadataHash; it's
-                // keccak(JSON) and won't resolve in the explorer's tx index.
+                // Prefer the real mint tx hash (from server meta) → fall back
+                // to chain-recovered Minted event tx (for legacy fighters
+                // whose meta got lost) → finally the contract address page.
+                // Never the /token/<addr>/instance/<id> URL — chainscan-galileo
+                // returns the SPA shell for that path and renders 404 client-
+                // side. Never the metadataHash either; it's keccak(JSON) and
+                // won't resolve in any explorer index.
                 const base = activeChain.blockExplorers.default.url;
                 const contract = FIGHTER_INFT_ADDRESS;
-                const url = fighter.mintTxHash
-                  ? `${base}/tx/${fighter.mintTxHash}`
+                const txHash = fighter.mintTxHash ?? recoveredMintTx;
+                const url = txHash
+                  ? `${base}/tx/${txHash}`
                   : contract
-                    ? `${base}/token/${contract}/instance/${fighter.id}`
+                    ? `${base}/address/${contract}`
                     : base;
                 window.open(url, "_blank", "noopener,noreferrer");
               }}
+              disabled={recoveredMintTxLoading && !fighter.mintTxHash}
               style={{ width: "100%", justifyContent: "center" }}
             >
               View on 0G Explorer
