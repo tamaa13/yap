@@ -1,0 +1,18 @@
+# GitBook config — picks up the docs site from /docs.
+#
+# Maps the repo's `docs/` folder as the GitBook content root.
+# README.md is the landing page; SUMMARY.md is the navigation tree.
+# Files not listed in SUMMARY.md (e.g. DEMO.md, SUBMISSION.md,
+# X-POST.md) are intentionally excluded — they're internal hackathon
+# artifacts, not public docs.
+#
+# After Tama claims the GitBook handle and connects this repo:
+# 1. GitBook detects this file and uses /docs as the content root
+# 2. README.md renders as the landing page
+# 3. SUMMARY.md drives the left-nav
+# 4. Pushes to main auto-deploy to the published GitBook
+root: ./docs/
+
+structure:
+  readme: README.md
+  summary: SUMMARY.md
