@@ -20,9 +20,9 @@ export function CardSkel({ style }: { style?: CSSProperties }) {
     <div
       style={{
         padding: 14,
-        background: "var(--bg-surface)",
-        border: "1px solid var(--bd-default)",
-        borderRadius: 6,
+        background: "var(--yap-ink-800)",
+        border: "1px solid var(--yap-ink-600)",
+        borderRadius: 0,
         ...style,
       }}
     >
@@ -49,9 +49,9 @@ export function TableSkel({ rows = 6, cols = 5 }: { rows?: number; cols?: number
     <div
       style={{
         padding: "6px 0",
-        background: "var(--bg-surface)",
-        border: "1px solid var(--bd-default)",
-        borderRadius: 6,
+        background: "var(--yap-ink-800)",
+        border: "1px solid var(--yap-ink-600)",
+        borderRadius: 0,
       }}
     >
       {Array.from({ length: rows }).map((_, r) => (
@@ -83,9 +83,9 @@ export function StatCardSkel() {
     <div
       style={{
         padding: 16,
-        background: "var(--bg-surface)",
-        border: "1px solid var(--bd-default)",
-        borderRadius: 6,
+        background: "var(--yap-ink-800)",
+        border: "1px solid var(--yap-ink-600)",
+        borderRadius: 0,
       }}
     >
       <Skel w={80} h={10} style={{ marginBottom: 8 }} />
@@ -99,9 +99,9 @@ export function FighterCardSkel() {
     <div
       style={{
         padding: 14,
-        background: "var(--bg-surface)",
-        border: "1px solid var(--bd-default)",
-        borderRadius: 6,
+        background: "var(--yap-ink-800)",
+        border: "1px solid var(--yap-ink-600)",
+        borderRadius: 0,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
@@ -127,9 +127,9 @@ export function SkeletonCard({ height = 120 }: { height?: number }) {
     <div
       style={{
         padding: 16,
-        background: "var(--bg-surface)",
-        border: "1px solid var(--bd-default)",
-        borderRadius: 6,
+        background: "var(--yap-ink-800)",
+        border: "1px solid var(--yap-ink-600)",
+        borderRadius: 0,
         display: "flex",
         flexDirection: "column",
         gap: 10,

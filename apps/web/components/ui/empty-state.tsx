@@ -8,18 +8,69 @@ export interface EmptyStateProps {
   icon?: IconName;
 }
 
-export function EmptyState({ title, body, cta, icon = "alert" }: EmptyStateProps) {
+/**
+ * Promoter empty state — dashed ink-500 border on ink-800 ground, big
+ * dashed glyph well, Anton display title, mono body, opt-in CTA.
+ * Per STYLE.md voice: opinionated copy + clear CTA, never "no items
+ * found".
+ */
+export function EmptyState({
+  title,
+  body,
+  cta,
+  icon = "alert",
+}: EmptyStateProps) {
   return (
-    <div style={{ padding: "48px 24px", textAlign: "center", color: "var(--tx-secondary)" }}>
-      <Icon
-        name={icon}
-        size={28}
-        style={{ color: "var(--tx-tertiary)", margin: "0 auto 12px", display: "block" }}
-      />
-      <div style={{ fontSize: 15, color: "var(--tx-primary)", fontWeight: 500, marginBottom: 6 }}>
+    <div
+      style={{
+        background: "var(--yap-ink-800)",
+        border: "1px dashed var(--yap-ink-500)",
+        padding: "48px 32px",
+        textAlign: "center",
+        color: "var(--yap-ink-300)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 16,
+      }}
+    >
+      <div
+        style={{
+          width: 64,
+          height: 64,
+          border: "2px dashed var(--yap-ink-500)",
+          display: "grid",
+          placeItems: "center",
+          color: "var(--yap-ink-400)",
+        }}
+      >
+        <Icon name={icon} size={28} />
+      </div>
+      <div
+        style={{
+          fontFamily: "var(--yap-font-display)",
+          fontWeight: 400,
+          fontSize: 28,
+          lineHeight: 1,
+          textTransform: "uppercase",
+          letterSpacing: 0.5,
+          color: "var(--yap-ink-50)",
+        }}
+      >
         {title}
       </div>
-      {body && <div style={{ fontSize: 13, maxWidth: 360, margin: "0 auto 16px" }}>{body}</div>}
+      {body && (
+        <div
+          style={{
+            fontSize: 13,
+            color: "var(--yap-ink-300)",
+            lineHeight: 1.55,
+            maxWidth: 380,
+          }}
+        >
+          {body}
+        </div>
+      )}
       {cta}
     </div>
   );
