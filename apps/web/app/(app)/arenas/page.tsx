@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
+import { Pagination, usePageFromUrl } from "@/components/ui/pagination";
 import { CardSkel } from "@/components/ui/skeleton";
 import { Tabs } from "@/components/ui/tabs";
 import { PageContainer } from "@/components/shell/page-container";
 import { useBattles } from "@/hooks/use-battles";
 import { openConnectPanel, useWallet } from "@/hooks/use-wallet";
+import { CARD_GRID_PAGE_SIZE, pageToOffset } from "@/lib/pagination";
 import type { BattleStatus } from "@/lib/types";
 import { BattleCard } from "./battle-card";
 
@@ -25,6 +27,12 @@ export default function ArenasPage() {
 
   const { data: allBattles, isLoading } = useBattles({ limit: 128 });
 
+  // Per-tab page key so live/upcoming/past each remember their own page.
+  // Switching tab snaps to page 1 of that tab without losing the others.
+  const pageKey = `page-${tab}`;
+  const page = usePageFromUrl(pageKey);
+  const offset = pageToOffset(page, CARD_GRID_PAGE_SIZE);
+
   const counts = {
     live: allBattles.filter((b) => b.status === "live").length,
     upcoming: allBattles.filter((b) => b.status === "upcoming").length,
@@ -37,6 +45,7 @@ export default function ArenasPage() {
   const sorted = [...filtered].sort((a, b) =>
     sort === "pool" ? b.pool - a.pool : (b.spectators ?? 0) - (a.spectators ?? 0),
   );
+  const visible = sorted.slice(offset, offset + CARD_GRID_PAGE_SIZE);
 
   const startCreate = () => {
     if (connected) router.push("/battle/new");
@@ -135,17 +144,25 @@ export default function ArenasPage() {
           }
         />
       ) : (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-            gap: 12,
-          }}
-        >
-          {sorted.map((b) => (
-            <BattleCard key={b.id} battle={b} />
-          ))}
-        </div>
+        <>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+              gap: 12,
+            }}
+          >
+            {visible.map((b) => (
+              <BattleCard key={b.id} battle={b} />
+            ))}
+          </div>
+          <Pagination
+            total={sorted.length}
+            limit={CARD_GRID_PAGE_SIZE}
+            paramKey={pageKey}
+            noun={tab === "live" ? "live" : tab === "upcoming" ? "upcoming" : "past"}
+          />
+        </>
       )}
     </PageContainer>
   );
