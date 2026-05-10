@@ -45,15 +45,19 @@ export default function BattleNewPage() {
 
   const myList = myFighters.data;
 
+  const opponentsLoading = allFighters.isLoading || myFighters.isLoading;
+
   const opponents = useMemo(() => {
-    if (!addr) return [];
+    if (!addr || opponentsLoading) return [];
     const myAddr = addr.toLowerCase();
+    const myIdSet = new Set(myFighters.data.map((f) => f.id));
     return allFighters.data.filter(
       (f) =>
+        !myIdSet.has(f.id) &&
         f.owner.toLowerCase() !== myAddr &&
         (!f.rentedBy || f.rentedBy.toLowerCase() !== myAddr),
     );
-  }, [allFighters.data, addr]);
+  }, [allFighters.data, myFighters.data, addr, opponentsLoading]);
 
   if (ready && !connected) {
     return <GateScreen action="the battle setup" icon="sword" />;
@@ -192,7 +196,7 @@ export default function BattleNewPage() {
         {step === 2 && (
           <div>
             <div className="label" style={{ marginBottom: 12 }}>Challengeable opponents</div>
-            {allFighters.isLoading ? (
+            {opponentsLoading ? (
               <div style={{ textAlign: "center", padding: 40, color: "var(--tx-tertiary)", fontSize: 13 }}>
                 Loading fighters…
               </div>
