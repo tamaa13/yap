@@ -89,6 +89,10 @@ export type ReactionKey = (typeof REACTION_KEYS)[number];
 export interface BattleState {
   battleId: number;
   topic: string;
+  /** Which side the challenger (Fighter A) is arguing. Defender (Fighter B) gets
+   *  the opposite. Set at battle creation time; null means legacy battle
+   *  created before this field existed. */
+  challengerSide?: "pro" | "con";
   fighterA: FighterSnapshot;
   fighterB: FighterSnapshot;
   maxRounds: number;

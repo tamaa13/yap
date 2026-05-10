@@ -15,6 +15,7 @@ import { GateScreen } from "@/components/wallet/gate-screen";
 import { useCreateBattle } from "@/hooks/use-create-battle";
 import { useFighters } from "@/hooks/use-fighters";
 import { useWallet } from "@/hooks/use-wallet";
+import { usePublicClient } from "wagmi";
 
 const TOPIC_SUGGESTIONS = [
   "Is pineapple pizza a crime against humanity?",
@@ -34,9 +35,11 @@ export default function BattleNewPage() {
   const [mine, setMine] = useState<number | null>(null);
   const [opponent, setOpponent] = useState<number | null>(null);
   const [topic, setTopic] = useState(TOPIC_SUGGESTIONS[0]);
+  const [stance, setStance] = useState<"pro" | "con" | null>(null);
   const [stakeInput, setStakeInput] = useState("1");
   const [roundsCount, setRoundsCount] = useState(3);
 
+  const publicClient = usePublicClient();
   const myFighters = useFighters({ owner: addr, limit: 32 });
   const allFighters = useFighters({ limit: 64 });
 
@@ -50,34 +53,49 @@ export default function BattleNewPage() {
     return <GateScreen action="the battle setup" icon="sword" />;
   }
 
-  const stepLabels = ["1 Fighter", "2 Opponent", "3 Topic", "4 Stake", "5 Review"];
+  const stepLabels = ["1 Fighter", "2 Opponent", "3 Topic", "4 Stance", "5 Stake", "6 Review"];
   const chosenMine = myList.find((f) => f.id === mine);
   const chosenOpp = opponents.find((f) => f.id === opponent);
 
   const startBattle = async () => {
-    if (mine == null || opponent == null || !topic.trim()) return;
+    if (mine == null || opponent == null || !topic.trim() || !stance) return;
     try {
       const stakeNum = Number(stakeInput);
       if (!Number.isFinite(stakeNum) || stakeNum <= 0) {
         push({ kind: "error", text: "Stake has to be more than zero." });
         return;
       }
-      await create.write({
+      const txHash = await create.write({
         fighterA: mine,
         fighterB: opponent,
         topic: topic.trim(),
         maxRounds: roundsCount,
         stakeEth: stakeInput,
       });
-      push({
-        kind: "success",
-        text: "Challenge thrown. Defender's on the clock.",
-      });
-      // Route to Vault → Challenges (outgoing tab) so the challenger sees
-      // their pending challenge listed with an expiry countdown. Going to
-      // the arena page before the challenge is accepted would show a
-      // "pending" state which is now also available there, but the Vault
-      // is the more natural home for managing your own challenges.
+      // Parse battleId from BattleCreated event and save stance best-effort.
+      if (txHash && publicClient) {
+        try {
+          const { parseEventLogs } = await import("viem");
+          const { BATTLE_ESCROW_ABI } = await import("@/lib/contracts");
+          const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash as `0x${string}` });
+          const logs = parseEventLogs({
+            abi: BATTLE_ESCROW_ABI,
+            logs: receipt.logs,
+            eventName: "BattleCreated",
+          });
+          if (logs.length > 0) {
+            const battleId = Number((logs[0].args as { battleId: bigint }).battleId);
+            await fetch(`/api/battle/${battleId}/stance`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ side: stance }),
+            });
+          }
+        } catch {
+          // stance save is best-effort; battle still proceeds
+        }
+      }
+      push({ kind: "success", text: "Challenge thrown. Defender's on the clock." });
       setTimeout(() => router.push("/vault?tab=challenges"), 800);
     } catch (e) {
       push({
@@ -249,6 +267,39 @@ export default function BattleNewPage() {
         )}
 
         {step === 4 && (
+          <div>
+            <div className="label" style={{ marginBottom: 12 }}>Your stance on this topic</div>
+            <div style={{ fontSize: 13, color: "var(--tx-secondary)", marginBottom: 16, lineHeight: 1.6 }}>
+              Your fighter will argue this position every round. The opponent is locked into the opposite side — no same-stance battles.
+            </div>
+            <div style={{ display: "flex", gap: 12 }}>
+              {(["pro", "con"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setStance(s)}
+                  style={{
+                    flex: 1,
+                    padding: "20px 14px",
+                    textAlign: "center",
+                    background: stance === s ? "var(--accent-muted)" : "var(--bg-sunken)",
+                    border: `1px solid ${stance === s ? "var(--accent-border)" : "var(--bd-default)"}`,
+                    borderRadius: 4,
+                    cursor: "pointer",
+                  }}
+                >
+                  <div style={{ fontSize: 18, fontWeight: 700, color: stance === s ? "var(--accent)" : "var(--tx-primary)", marginBottom: 4 }}>
+                    {s === "pro" ? "PRO" : "CON"}
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--tx-tertiary)" }}>
+                    {s === "pro" ? "Argue in favour of the topic" : "Argue against the topic"}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {step === 5 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div>
               <div className="label" style={{ marginBottom: 12 }}>
@@ -321,7 +372,7 @@ export default function BattleNewPage() {
           </div>
         )}
 
-        {step === 5 && (
+        {step === 6 && (
           <div>
             <div className="label" style={{ marginBottom: 12 }}>Review</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 13 }}>
@@ -336,6 +387,12 @@ export default function BattleNewPage() {
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ color: "var(--tx-secondary)" }}>Topic</span>
                 <span style={{ maxWidth: 400, textAlign: "right" }}>{topic}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "var(--tx-secondary)" }}>Your stance</span>
+                <span style={{ fontWeight: 600, color: stance === "pro" ? "var(--success)" : "var(--danger)" }}>
+                  {stance?.toUpperCase() ?? "—"} · Opponent: {stance === "pro" ? "CON" : stance === "con" ? "PRO" : "—"}
+                </span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ color: "var(--tx-secondary)" }}>Debate length</span>
@@ -370,10 +427,14 @@ export default function BattleNewPage() {
         <Button onClick={() => (step > 1 ? setStep(step - 1) : router.push("/arenas"))}>
           {step > 1 ? "Back" : "Cancel"}
         </Button>
-        {step < 5 ? (
+        {step < 6 ? (
           <Button
             variant="primary"
-            disabled={(step === 1 && mine == null) || (step === 2 && opponent == null)}
+            disabled={
+              (step === 1 && mine == null) ||
+              (step === 2 && opponent == null) ||
+              (step === 4 && stance == null)
+            }
             onClick={() => setStep(step + 1)}
             trailing={<Icon name="arrowRight" size={14} />}
           >
@@ -383,7 +444,7 @@ export default function BattleNewPage() {
           <Button
             variant="primary"
             onClick={startBattle}
-            disabled={create.isPending || create.isConfirming || mine == null || opponent == null}
+            disabled={create.isPending || create.isConfirming || mine == null || opponent == null || !stance}
           >
             {create.isPending
               ? "Sign in your wallet…"
