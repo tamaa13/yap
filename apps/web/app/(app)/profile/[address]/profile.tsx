@@ -4,10 +4,12 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Hash } from "@/components/ui/hash";
+import { Pagination, usePageFromUrl } from "@/components/ui/pagination";
 import { Sigil } from "@/components/ui/sigil";
 import { Breadcrumbs } from "@/components/shell/breadcrumbs";
 import { PageContainer } from "@/components/shell/page-container";
 import { fmtAddr } from "@/lib/format";
+import { CARD_GRID_PAGE_SIZE, pageToOffset } from "@/lib/pagination";
 import type { Fighter } from "@/lib/types";
 
 export function Profile({
@@ -20,6 +22,9 @@ export function Profile({
   ownedFighters: Fighter[];
 }) {
   const router = useRouter();
+  const page = usePageFromUrl();
+  const offset = pageToOffset(page, CARD_GRID_PAGE_SIZE);
+  const visible = ownedFighters.slice(offset, offset + CARD_GRID_PAGE_SIZE);
 
   return (
     <PageContainer>
@@ -56,30 +61,37 @@ export function Profile({
           body={isSelf ? "Mint a fighter and stake your claim." : "Hasn't minted a fighter yet."}
         />
       ) : (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-            gap: 12,
-          }}
-        >
-          {ownedFighters.map((f) => (
-            <Card
-              key={f.id}
-              interactive
-              onClick={() => router.push(`/fighters/${f.id}`)}
-              style={{ padding: 14, display: "flex", gap: 10, alignItems: "center" }}
-            >
-              <Sigil seed={f.name} size={44} color={f.color} />
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{f.name}</div>
-                <div className="mono" style={{ fontSize: 11, color: "var(--tx-tertiary)" }}>
-                  ELO {f.elo}
+        <>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+              gap: 12,
+            }}
+          >
+            {visible.map((f) => (
+              <Card
+                key={f.id}
+                interactive
+                onClick={() => router.push(`/fighters/${f.id}`)}
+                style={{ padding: 14, display: "flex", gap: 10, alignItems: "center" }}
+              >
+                <Sigil seed={f.name} size={44} color={f.color} />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{f.name}</div>
+                  <div className="mono" style={{ fontSize: 11, color: "var(--tx-tertiary)" }}>
+                    ELO {f.elo}
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+          <Pagination
+            total={ownedFighters.length}
+            limit={CARD_GRID_PAGE_SIZE}
+            noun="fighters"
+          />
+        </>
       )}
     </PageContainer>
   );
