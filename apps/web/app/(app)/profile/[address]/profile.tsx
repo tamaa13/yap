@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Hash } from "@/components/ui/hash";
 import { Pagination, usePageFromUrl } from "@/components/ui/pagination";
 import { Sigil } from "@/components/ui/sigil";
+import { FighterCardSkel, Skel } from "@/components/ui/skeleton";
 import { Breadcrumbs } from "@/components/shell/breadcrumbs";
 import { PageContainer } from "@/components/shell/page-container";
 import { fmtAddr } from "@/lib/format";
@@ -16,10 +17,12 @@ export function Profile({
   address,
   isSelf,
   ownedFighters,
+  isLoading,
 }: {
   address: string;
   isSelf: boolean;
   ownedFighters: Fighter[];
+  isLoading: boolean;
 }) {
   const router = useRouter();
   const page = usePageFromUrl();
@@ -44,9 +47,13 @@ export function Profile({
             <Hash value={address} copy />
             <div style={{ marginTop: 16 }}>
               <div className="label">Fighters owned</div>
-              <div className="num" style={{ fontSize: 22, fontWeight: 600 }}>
-                {ownedFighters.length}
-              </div>
+              {isLoading ? (
+                <Skel w={48} h={26} style={{ marginTop: 4 }} />
+              ) : (
+                <div className="num" style={{ fontSize: 22, fontWeight: 600 }}>
+                  {ownedFighters.length}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -54,7 +61,19 @@ export function Profile({
       <div className="label" style={{ marginBottom: 10 }}>
         Fighters owned
       </div>
-      {ownedFighters.length === 0 ? (
+      {isLoading ? (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+            gap: 12,
+          }}
+        >
+          {Array.from({ length: 6 }).map((_, i) => (
+            <FighterCardSkel key={i} />
+          ))}
+        </div>
+      ) : ownedFighters.length === 0 ? (
         <EmptyState
           icon="user"
           title={isSelf ? "Empty roster" : "Quiet profile"}
