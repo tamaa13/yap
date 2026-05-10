@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -16,6 +16,11 @@ import { useCreateBattle } from "@/hooks/use-create-battle";
 import { useFighters } from "@/hooks/use-fighters";
 import { useWallet } from "@/hooks/use-wallet";
 import { usePublicClient } from "wagmi";
+
+// Step-internal pagination size for the opponent picker. Smaller than
+// the global card-grid 24 so it stays inside the wizard card without
+// pushing the Next button below the fold. 4×3 grid at desktop width.
+const OPPONENT_PAGE_SIZE = 12;
 
 const TOPIC_SUGGESTIONS = [
   "Is pineapple pizza a crime against humanity?",
@@ -58,6 +63,25 @@ export default function BattleNewPage() {
         (!f.rentedBy || f.rentedBy.toLowerCase() !== myAddr),
     );
   }, [allFighters.data, myFighters.data, addr, opponentsLoading]);
+
+  // Local-state opponent pagination — wizard already owns the URL via
+  // ?fighter & ?opponent, so paging stays in component state to avoid
+  // tangling step-internal navigation with the wizard's own deep links.
+  const [opponentPage, setOpponentPage] = useState(1);
+  const opponentTotalPages = Math.max(
+    1,
+    Math.ceil(opponents.length / OPPONENT_PAGE_SIZE),
+  );
+  // Snap back to a valid page if the underlying list shrinks (e.g.,
+  // search filter, or a fighter selected & removed from the pool).
+  useEffect(() => {
+    if (opponentPage > opponentTotalPages) setOpponentPage(opponentTotalPages);
+  }, [opponentPage, opponentTotalPages]);
+  const opponentOffset = (opponentPage - 1) * OPPONENT_PAGE_SIZE;
+  const opponentsVisible = opponents.slice(
+    opponentOffset,
+    opponentOffset + OPPONENT_PAGE_SIZE,
+  );
 
   if (ready && !connected) {
     return <GateScreen action="the battle setup" icon="sword" />;
@@ -207,38 +231,100 @@ export default function BattleNewPage() {
                 body="Hang tight while others mint, or come back and self-battle."
               />
             ) : (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-                  gap: 10,
-                }}
-              >
-                {opponents.map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => setOpponent(f.id)}
+              <>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                    gap: 10,
+                  }}
+                >
+                  {opponentsVisible.map((f) => (
+                    <button
+                      key={f.id}
+                      onClick={() => setOpponent(f.id)}
+                      style={{
+                        padding: 14,
+                        textAlign: "left",
+                        background: opponent === f.id ? "var(--accent-muted)" : "var(--bg-sunken)",
+                        border: `1px solid ${opponent === f.id ? "var(--accent-border)" : "var(--bd-default)"}`,
+                        borderRadius: 4,
+                        display: "flex",
+                        gap: 10,
+                        alignItems: "center",
+                      }}
+                    >
+                      <Sigil seed={f.name} size={40} color={f.color} />
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{f.name}</div>
+                        <div className="num" style={{ fontSize: 11, color: "var(--tx-tertiary)" }}>
+                          ELO {f.elo}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                {opponents.length > OPPONENT_PAGE_SIZE && (
+                  <div
                     style={{
-                      padding: 14,
-                      textAlign: "left",
-                      background: opponent === f.id ? "var(--accent-muted)" : "var(--bg-sunken)",
-                      border: `1px solid ${opponent === f.id ? "var(--accent-border)" : "var(--bd-default)"}`,
-                      borderRadius: 4,
                       display: "flex",
-                      gap: 10,
                       alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 16,
+                      padding: "12px 0 0",
+                      flexWrap: "wrap",
                     }}
                   >
-                    <Sigil seed={f.name} size={40} color={f.color} />
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{f.name}</div>
-                      <div className="num" style={{ fontSize: 11, color: "var(--tx-tertiary)" }}>
-                        ELO {f.elo}
-                      </div>
+                    <div
+                      className="mono"
+                      style={{
+                        fontSize: 11,
+                        letterSpacing: 1.5,
+                        color: "var(--yap-ink-300)",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Page{" "}
+                      <span style={{ color: "var(--yap-ink-50)" }}>
+                        {String(opponentPage).padStart(2, "0")}
+                      </span>{" "}
+                      / {String(opponentTotalPages).padStart(2, "0")}
+                      <span style={{ marginLeft: 12, color: "var(--yap-ink-400)" }}>
+                        {opponentOffset + 1}–
+                        {Math.min(
+                          opponents.length,
+                          opponentOffset + OPPONENT_PAGE_SIZE,
+                        )}{" "}
+                        of {opponents.length} fighters
+                      </span>
                     </div>
-                  </button>
-                ))}
-              </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        leading={<Icon name="chevronLeft" size={12} />}
+                        onClick={() => setOpponentPage((p) => Math.max(1, p - 1))}
+                        disabled={opponentPage <= 1}
+                      >
+                        Prev
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        trailing={<Icon name="chevronRight" size={12} />}
+                        onClick={() =>
+                          setOpponentPage((p) =>
+                            Math.min(opponentTotalPages, p + 1),
+                          )
+                        }
+                        disabled={opponentPage >= opponentTotalPages}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
