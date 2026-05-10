@@ -44,10 +44,16 @@ export default function BattleNewPage() {
   const allFighters = useFighters({ limit: 64 });
 
   const myList = myFighters.data;
-  const opponents = useMemo(
-    () => allFighters.data.filter((f) => !myList.some((m) => m.id === f.id)),
-    [allFighters.data, myList],
-  );
+
+  const opponents = useMemo(() => {
+    if (!addr) return [];
+    const myAddr = addr.toLowerCase();
+    return allFighters.data.filter(
+      (f) =>
+        f.owner.toLowerCase() !== myAddr &&
+        (!f.rentedBy || f.rentedBy.toLowerCase() !== myAddr),
+    );
+  }, [allFighters.data, addr]);
 
   if (ready && !connected) {
     return <GateScreen action="the battle setup" icon="sword" />;
@@ -186,7 +192,11 @@ export default function BattleNewPage() {
         {step === 2 && (
           <div>
             <div className="label" style={{ marginBottom: 12 }}>Challengeable opponents</div>
-            {opponents.length === 0 ? (
+            {allFighters.isLoading ? (
+              <div style={{ textAlign: "center", padding: 40, color: "var(--tx-tertiary)", fontSize: 13 }}>
+                Loading fighters…
+              </div>
+            ) : opponents.length === 0 ? (
               <EmptyState
                 icon="users"
                 title="Nobody to fight. Yet."
