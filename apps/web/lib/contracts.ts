@@ -9,7 +9,6 @@ import escrowAbi from "./abi/BattleEscrow.json";
 import registryAbi from "./abi/BattleRegistry.json";
 import marketplaceAbi from "./abi/YapMarketplace.json";
 import rentalEscrowAbi from "./abi/RentalEscrow.json";
-import fighterTrainerAbi from "./abi/FighterTrainer.json";
 import yapInboxAbi from "./abi/YapInbox.json";
 import yapSubnameAbi from "./abi/YapSubnameRegistrar.json";
 import momentInftAbi from "./abi/MomentINFT.json";
@@ -41,11 +40,6 @@ export const MARKETPLACE_ADDRESS = pick(
 export const RENTAL_ESCROW_ADDRESS = pick(
   process.env.NEXT_PUBLIC_RENTAL_ESCROW_ADDR_MAINNET,
   process.env.NEXT_PUBLIC_RENTAL_ESCROW_ADDR_TESTNET,
-);
-
-export const FIGHTER_TRAINER_ADDRESS = pick(
-  process.env.NEXT_PUBLIC_FIGHTER_TRAINER_ADDR_MAINNET,
-  process.env.NEXT_PUBLIC_FIGHTER_TRAINER_ADDR_TESTNET,
 );
 
 /// CREATE2-deployed YapInbox — same address on testnet + mainnet.
@@ -82,7 +76,6 @@ export const BATTLE_ESCROW_ABI = escrowAbi as Abi;
 export const BATTLE_REGISTRY_ABI = registryAbi as Abi;
 export const MARKETPLACE_ABI = marketplaceAbi as Abi;
 export const RENTAL_ESCROW_ABI = rentalEscrowAbi as Abi;
-export const FIGHTER_TRAINER_ABI = fighterTrainerAbi as Abi;
 export const YAP_INBOX_ABI = yapInboxAbi as Abi;
 export const YAP_SUBNAME_ABI = yapSubnameAbi as Abi;
 export const MOMENT_INFT_ABI = momentInftAbi as Abi;

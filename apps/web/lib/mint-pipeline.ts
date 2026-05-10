@@ -1,12 +1,8 @@
 // Shared mint preparation pipeline.
 //
-// Phase 2 pivot (2026-05-08): fine-tune dropped. The pipeline now seals
-// the user's style seed directly — encrypt the JSONL, upload to 0G
-// Storage, return the (encryptedURI, metadataHash, sealedKey) payload
-// the client needs to call `YapFighter.mint(...)` from their wallet.
-// Same shape is reused by `FighterTrainer.train(...)` for continuous
-// learning sessions; the contract event log is the source of truth for
-// the fighter's evolution timeline.
+// Seals the user's style seed — encrypt the JSONL, upload to 0G Storage,
+// return the (encryptedURI, metadataHash, sealedKey) payload the client
+// needs to call `YapFighter.mint(...)` from their wallet.
 
 import "server-only";
 import { keccak256, toUtf8Bytes, hexlify } from "ethers";
@@ -30,8 +26,7 @@ export interface MintPipelineArgs {
 /**
  * Run the mint preparation pipeline: upload seed → encrypt seed →
  * upload encrypted blob → derive metadataHash + sealedKey. Returns the
- * payload the client signs into `YapFighter.mint(...)` (or
- * `FighterTrainer.train(...)` for continuous training sessions).
+ * payload the client signs into `YapFighter.mint(...)`.
  *
  * If `jobId` is provided, advances that job's status as each phase
  * completes and writes the final result back via setMintJobResult /

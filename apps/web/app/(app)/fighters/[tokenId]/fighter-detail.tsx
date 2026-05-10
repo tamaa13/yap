@@ -30,8 +30,6 @@ import { FIGHTER_INFT_ADDRESS, YAP_SUBNAME_ADDRESS } from "@/lib/contracts";
 import { BattleHistoryTable } from "./battle-history-table";
 import { DisputePanel } from "./dispute-panel";
 import { SubnameModal } from "./subname-modal";
-import { TrainModal } from "./train-modal";
-import { TrainingHistory } from "./training-history";
 import { fmtNum, fmtRemaining, fmtTime } from "@/lib/format";
 import type { Address } from "viem";
 import type { Battle, Fighter, FighterArchetype } from "@/lib/types";
@@ -78,7 +76,6 @@ export function FighterDetail({
   const [tab, setTab] = useState<DetailTab>("overview");
   const [listOpen, setListOpen] = useState(false);
   const [rentOpen, setRentOpen] = useState(false); // owner: list for rent
-  const [trainOpen, setTrainOpen] = useState(false); // owner: continuous-learning re-seal session
   const [subnameOpen, setSubnameOpen] = useState(false); // owner: claim a <label>.yap.0g
   const [rentNowOpen, setRentNowOpen] = useState(false); // non-owner: rent duration
   const [rentDurationInput, setRentDurationInput] = useState(3); // for renter
@@ -433,13 +430,6 @@ export function FighterDetail({
                       Rent out
                     </Button>
                   )}
-                  <Button
-                    leading={<Icon name="zap" size={14} />}
-                    onClick={() => setTrainOpen(true)}
-                    title="Re-seal this fighter's persona with new style lines and emit a FighterTrained event"
-                  >
-                    Train fighter
-                  </Button>
                   {YAP_SUBNAME_ADDRESS !== "" && (
                     <Button
                       leading={<Icon name="tag" size={14} />}
@@ -582,7 +572,6 @@ export function FighterDetail({
 
           {tab === "overview" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <TrainingHistory tokenId={fighter.id} />
               <Card style={{ padding: 20 }}>
                 <div
                   style={{
@@ -1085,16 +1074,6 @@ export function FighterDetail({
           )}
         </div>
       </Modal>
-
-      <TrainModal
-        open={trainOpen}
-        onClose={() => setTrainOpen(false)}
-        tokenId={fighter.id}
-        owner={fighter.owner as Address}
-        fighterName={fighter.name}
-        archetype={fighter.arch}
-        priorSignature={fighter.style ?? []}
-      />
 
       <SubnameModal
         open={subnameOpen}
