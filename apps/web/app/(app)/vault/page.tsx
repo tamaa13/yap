@@ -10,6 +10,7 @@ import { Icon } from "@/components/ui/icon";
 import { Sigil } from "@/components/ui/sigil";
 import { StatCard } from "@/components/ui/stat-card";
 import { Tabs } from "@/components/ui/tabs";
+import { Pagination, usePageFromUrl } from "@/components/ui/pagination";
 import { PageContainer } from "@/components/shell/page-container";
 import { GateScreen } from "@/components/wallet/gate-screen";
 import { useFighters } from "@/hooks/use-fighters";
@@ -23,6 +24,11 @@ import { useToast } from "@/components/ui/toast";
 import { Hash } from "@/components/ui/hash";
 import { fmtRemaining } from "@/lib/format";
 import { useWallet } from "@/hooks/use-wallet";
+import {
+  CARD_GRID_PAGE_SIZE,
+  TABLE_PAGE_SIZE,
+  pageToOffset,
+} from "@/lib/pagination";
 
 type VaultTab =
   | "owned"
@@ -96,6 +102,38 @@ export default function VaultPage() {
   const { labels: subnameLabels } = useSubnameBatch(allTokenIds);
   const { data: myMoments, isLoading: momentsLoading } = useMyMoments();
 
+  // Per-tab pagination key. Switching tabs picks up that tab's own
+  // page state so jumping back to "owned" after browsing "history"
+  // doesn't reset position. Card-tab pages are 24-wide, table-tab
+  // pages 50-wide.
+  const cardPageKey = `page-${tab}`;
+  const cardPage = usePageFromUrl(cardPageKey);
+  const cardOffset = pageToOffset(cardPage, CARD_GRID_PAGE_SIZE);
+  const tablePageKey = `page-${tab}`;
+  const tablePage = usePageFromUrl(tablePageKey);
+  const tableOffset = pageToOffset(tablePage, TABLE_PAGE_SIZE);
+  const ownedPage = owned.slice(cardOffset, cardOffset + CARD_GRID_PAGE_SIZE);
+  const rentedOutPage = rentedOut.slice(
+    cardOffset,
+    cardOffset + CARD_GRID_PAGE_SIZE,
+  );
+  const rentedInPage = rentedIn.slice(
+    cardOffset,
+    cardOffset + CARD_GRID_PAGE_SIZE,
+  );
+  const momentsPage = myMoments.slice(
+    cardOffset,
+    cardOffset + CARD_GRID_PAGE_SIZE,
+  );
+  const activeBetsPage = activeBets.slice(
+    tableOffset,
+    tableOffset + TABLE_PAGE_SIZE,
+  );
+  const settledBetsPage = settledBets.slice(
+    tableOffset,
+    tableOffset + TABLE_PAGE_SIZE,
+  );
+
   return (
     <PageContainer>
       <h1 style={{ fontSize: 24, marginBottom: 4 }}>Vault</h1>
@@ -168,7 +206,7 @@ export default function VaultPage() {
               gap: 12,
             }}
           >
-            {owned.map((f) => (
+            {ownedPage.map((f) => (
               <Card key={f.id} style={{ padding: 16 }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                   <Sigil seed={f.name} size={56} color={f.color} />
@@ -233,6 +271,14 @@ export default function VaultPage() {
             ))}
           </div>
         ))}
+      {tab === "owned" && (
+        <Pagination
+          total={owned.length}
+          limit={CARD_GRID_PAGE_SIZE}
+          paramKey={cardPageKey}
+          noun="fighters"
+        />
+      )}
 
       {tab === "rentedOut" &&
         (rentedOut.length === 0 ? (
@@ -248,7 +294,7 @@ export default function VaultPage() {
               gap: 12,
             }}
           >
-            {rentedOut.map((f) => (
+            {rentedOutPage.map((f) => (
               <Card key={f.id} style={{ padding: 16 }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                   <Sigil seed={f.name} size={56} color={f.color} />
@@ -287,6 +333,14 @@ export default function VaultPage() {
             ))}
           </div>
         ))}
+      {tab === "rentedOut" && (
+        <Pagination
+          total={rentedOut.length}
+          limit={CARD_GRID_PAGE_SIZE}
+          paramKey={cardPageKey}
+          noun="rentals"
+        />
+      )}
 
       {tab === "rentedIn" &&
         (rentedIn.length === 0 ? (
@@ -302,7 +356,7 @@ export default function VaultPage() {
               gap: 12,
             }}
           >
-            {rentedIn.map((f) => {
+            {rentedInPage.map((f) => {
               const expiresIn = f.rentExpiresAt
                 ? Math.max(0, f.rentExpiresAt - Date.now())
                 : 0;
@@ -358,6 +412,14 @@ export default function VaultPage() {
             })}
           </div>
         ))}
+      {tab === "rentedIn" && (
+        <Pagination
+          total={rentedIn.length}
+          limit={CARD_GRID_PAGE_SIZE}
+          paramKey={cardPageKey}
+          noun="rentals"
+        />
+      )}
 
       {tab === "challenges" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -526,7 +588,7 @@ export default function VaultPage() {
                 </tr>
               </thead>
               <tbody>
-                {activeBets.map((b) => (
+                {activeBetsPage.map((b) => (
                   <tr
                     key={b.id}
                     onClick={() => router.push(`/arenas/${b.battleId}`)}
@@ -564,6 +626,14 @@ export default function VaultPage() {
             </table>
           </Card>
         ))}
+      {tab === "bets" && (
+        <Pagination
+          total={activeBets.length}
+          limit={TABLE_PAGE_SIZE}
+          paramKey={tablePageKey}
+          noun="bets"
+        />
+      )}
 
       {tab === "history" &&
         (settledBets.length === 0 ? (
@@ -596,7 +666,7 @@ export default function VaultPage() {
                 </tr>
               </thead>
               <tbody>
-                {settledBets.map((b) => (
+                {settledBetsPage.map((b) => (
                   <tr key={b.id} style={{ borderTop: "1px solid var(--bd-subtle)" }}>
                     <td style={{ padding: "10px 14px" }}>
                       <div className="mono" style={{ fontSize: 12 }}>
@@ -630,6 +700,14 @@ export default function VaultPage() {
             </table>
           </Card>
         ))}
+      {tab === "history" && (
+        <Pagination
+          total={settledBets.length}
+          limit={TABLE_PAGE_SIZE}
+          paramKey={tablePageKey}
+          noun="receipts"
+        />
+      )}
 
       {tab === "moments" &&
         (momentsLoading && myMoments.length === 0 ? (
@@ -650,7 +728,7 @@ export default function VaultPage() {
               gap: 12,
             }}
           >
-            {myMoments.map((m) => (
+            {momentsPage.map((m) => (
               <Card key={m.tokenId} style={{ padding: 16 }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                   <Sigil
@@ -707,6 +785,14 @@ export default function VaultPage() {
             ))}
           </div>
         ))}
+      {tab === "moments" && (
+        <Pagination
+          total={myMoments.length}
+          limit={CARD_GRID_PAGE_SIZE}
+          paramKey={cardPageKey}
+          noun="moments"
+        />
+      )}
     </PageContainer>
   );
 }
