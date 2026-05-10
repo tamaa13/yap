@@ -21,7 +21,7 @@ import "server-only";
 import { Contract, type Provider } from "ethers";
 import type { Notification } from "./types";
 
-const PADDED = (n: number): string => String(n).padStart(4, "0");
+const PADDED = (n: number): string => n.toString(16).padStart(4, "0");
 
 export interface ScannerState {
   caredBattleIds: Set<number>;
