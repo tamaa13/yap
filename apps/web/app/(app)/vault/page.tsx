@@ -10,6 +10,7 @@ import { Icon } from "@/components/ui/icon";
 import { Sigil } from "@/components/ui/sigil";
 import { StatCard } from "@/components/ui/stat-card";
 import { Tabs } from "@/components/ui/tabs";
+import { FighterCardSkel, TableSkel } from "@/components/ui/skeleton";
 import { Pagination, usePageFromUrl } from "@/components/ui/pagination";
 import { PageContainer } from "@/components/shell/page-container";
 import { GateScreen } from "@/components/wallet/gate-screen";
@@ -64,10 +65,15 @@ export default function VaultPage() {
     }
   }, [searchParams]);
 
-  const { data: mine } = useFighters({ owner: addr });
-  const { data: myBets } = useMyBets();
-  const { incoming: incomingChallenges, outgoing: outgoingChallenges } =
-    usePendingChallenges(addr);
+  const { data: mine, isLoading: fightersLoading } = useFighters({
+    owner: addr,
+  });
+  const { data: myBets, isLoading: betsLoading } = useMyBets();
+  const {
+    incoming: incomingChallenges,
+    outgoing: outgoingChallenges,
+    isLoading: challengesLoading,
+  } = usePendingChallenges(addr);
   const decline = useDeclineBattle();
   const { push } = useToast();
 
@@ -188,7 +194,9 @@ export default function VaultPage() {
       />
 
       {tab === "owned" &&
-        (owned.length === 0 ? (
+        (fightersLoading ? (
+          <CardGridSkel count={6} />
+        ) : owned.length === 0 ? (
           <EmptyState
             title="Empty corner"
             body="Mint a fighter and find out who you are in the ring."
@@ -281,7 +289,9 @@ export default function VaultPage() {
       )}
 
       {tab === "rentedOut" &&
-        (rentedOut.length === 0 ? (
+        (fightersLoading ? (
+          <CardGridSkel count={6} />
+        ) : rentedOut.length === 0 ? (
           <EmptyState
             title="No fighters out for hire"
             body="List a fighter for rent. Earn 0G while it works for someone else."
@@ -343,7 +353,9 @@ export default function VaultPage() {
       )}
 
       {tab === "rentedIn" &&
-        (rentedIn.length === 0 ? (
+        (fightersLoading ? (
+          <CardGridSkel count={6} />
+        ) : rentedIn.length === 0 ? (
           <EmptyState
             title="No borrowed fighters"
             body="Rent one from the marketplace and battle without committing to a mint. Your wallet keeps every win."
@@ -427,7 +439,9 @@ export default function VaultPage() {
             <div className="label" style={{ marginBottom: 10 }}>
               Incoming challenges — {incomingChallenges.length}
             </div>
-            {incomingChallenges.length === 0 ? (
+            {challengesLoading ? (
+              <ChallengesListSkel />
+            ) : incomingChallenges.length === 0 ? (
               <EmptyState
                 title="Nobody's calling you out. Yet."
                 body="Challenges to your fighters land here for accept or decline."
@@ -520,7 +534,9 @@ export default function VaultPage() {
             <div className="label" style={{ marginBottom: 10 }}>
               Outgoing challenges — {outgoingChallenges.length}
             </div>
-            {outgoingChallenges.length === 0 ? (
+            {challengesLoading ? (
+              <ChallengesListSkel />
+            ) : outgoingChallenges.length === 0 ? (
               <EmptyState
                 title="You haven't picked a fight. Yet."
                 body="Open challenges sit here until the defender accepts or the clock runs out."
@@ -558,7 +574,9 @@ export default function VaultPage() {
       )}
 
       {tab === "bets" &&
-        (activeBets.length === 0 ? (
+        (betsLoading ? (
+          <TableSkel rows={6} cols={6} />
+        ) : activeBets.length === 0 ? (
           <EmptyState
             title="Nothing on the table"
             body="Pick a battle, place a stake. Live bets show up here."
@@ -636,7 +654,9 @@ export default function VaultPage() {
       )}
 
       {tab === "history" &&
-        (settledBets.length === 0 ? (
+        (betsLoading ? (
+          <TableSkel rows={6} cols={5} />
+        ) : settledBets.length === 0 ? (
           <EmptyState
             title="Receipts pending"
             body="Settled battles land here. Win or lose, every call is on-chain."
@@ -711,10 +731,7 @@ export default function VaultPage() {
 
       {tab === "moments" &&
         (momentsLoading && myMoments.length === 0 ? (
-          <EmptyState
-            title="Reading the chain…"
-            body="Pulling Moment INFTs you've collected."
-          />
+          <CardGridSkel count={6} />
         ) : myMoments.length === 0 ? (
           <EmptyState
             title="No moments minted"
@@ -794,5 +811,52 @@ export default function VaultPage() {
         />
       )}
     </PageContainer>
+  );
+}
+
+// Card-grid placeholder used while owned/rented/moments are still loading
+// from chain. Six tiles by default — matches the typical above-fold count
+// without overpromising data that isn't there yet.
+function CardGridSkel({ count = 6 }: { count?: number }) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+        gap: 12,
+      }}
+    >
+      {Array.from({ length: count }).map((_, i) => (
+        <FighterCardSkel key={i} />
+      ))}
+    </div>
+  );
+}
+
+// Stacked-row placeholder used by the challenges sub-lists. Slim rows that
+// match the actual incoming/outgoing card density.
+function ChallengesListSkel() {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div
+          key={i}
+          style={{
+            padding: 14,
+            background: "var(--yap-ink-800)",
+            border: "1px solid var(--yap-ink-600)",
+          }}
+        >
+          <div
+            className="al-skel"
+            style={{ height: 12, width: "60%", marginBottom: 8, borderRadius: 3 }}
+          />
+          <div
+            className="al-skel"
+            style={{ height: 10, width: "35%", borderRadius: 3 }}
+          />
+        </div>
+      ))}
+    </div>
   );
 }
