@@ -40,8 +40,8 @@ export default function BattleNewPage() {
   const [roundsCount, setRoundsCount] = useState(3);
 
   const publicClient = usePublicClient();
-  const myFighters = useFighters({ owner: addr, limit: 32 });
-  const allFighters = useFighters({ limit: 64 });
+  const myFighters = useFighters({ owner: addr, limit: 200 });
+  const allFighters = useFighters({ limit: 200 });
 
   const myList = myFighters.data;
 
@@ -210,7 +210,7 @@ export default function BattleNewPage() {
                   gap: 10,
                 }}
               >
-                {opponents.slice(0, 12).map((f) => (
+                {opponents.map((f) => (
                   <button
                     key={f.id}
                     onClick={() => setOpponent(f.id)}
