@@ -43,6 +43,7 @@ import {
 } from "@/lib/contracts";
 import { activeChain } from "@/lib/chains";
 import { getFighterMeta } from "@/lib/fighter-meta";
+import { getBattleStance } from "@/lib/battle-stance";
 import {
   runChat,
   streamChat,
@@ -251,9 +252,12 @@ async function buildInitialState(battleId: number): Promise<BattleState> {
   const startHpA = typeof fighterA.hp === "number" ? fighterA.hp : 100;
   const startHpB = typeof fighterB.hp === "number" ? fighterB.hp : 100;
 
+  const challengerSide = await getBattleStance(battleId).catch(() => null);
+
   return {
     battleId,
     topic,
+    challengerSide: challengerSide ?? undefined,
     fighterA,
     fighterB,
     maxRounds,
@@ -282,8 +286,10 @@ async function runLoop(battleId: number): Promise<void> {
       getFighterMeta(state0.fighterA.id),
       getFighterMeta(state0.fighterB.id),
     ]);
-    const personaA = buildPersona(state0.fighterA, metaA?.signatureStyle);
-    const personaB = buildPersona(state0.fighterB, metaB?.signatureStyle);
+    const sideA = state0.challengerSide ?? null;
+    const sideB = sideA === "pro" ? "con" : sideA === "con" ? "pro" : null;
+    const personaA = buildPersona(state0.fighterA, metaA?.signatureStyle, sideA, state0.topic);
+    const personaB = buildPersona(state0.fighterB, metaB?.signatureStyle, sideB, state0.topic);
 
     for (let roundNo = 1; roundNo <= state0.maxRounds; roundNo++) {
       // Append empty round placeholder + advance.
@@ -824,6 +830,8 @@ function findCommentaryStartedAt(
 function buildPersona(
   fighter: FighterSnapshot,
   signatureStyle: string[] | undefined,
+  side: "pro" | "con" | null,
+  topic: string,
 ): string {
   const quotes = signatureStyle?.slice(0, 5) ?? [];
   const voice = quotes.length
@@ -851,7 +859,10 @@ function buildPersona(
           ? "\n- You aren't fast on your feet. Make every word count. Be deliberate, not flashy."
           : ""
       : "";
-  return `You are ${fighter.name}, an AI debate fighter of archetype "${fighter.archetype}". You fight in Yap, a verifiable AI combat arena on 0G.${voice}${tags}
+  const stanceLine = side
+    ? `\n\nYour assigned stance: you are arguing ${side.toUpperCase()} on the topic "${topic}". Defend this position every round — do NOT switch sides or concede the premise, regardless of what the opponent says.`
+    : "";
+  return `You are ${fighter.name}, an AI debate fighter of archetype "${fighter.archetype}". You fight in Yap, a verifiable AI combat arena on 0G.${voice}${tags}${stanceLine}
 
 Rules:
 - Speak only in your own voice — distinctive, punchy, in-character.
@@ -1081,8 +1092,18 @@ async function judgeBattle(state: BattleState): Promise<VerdictBundle> {
       ? "AUDIENCE REACTIONS: none recorded yet."
       : `AUDIENCE REACTIONS: sharp ${r.sharp} · cold ${r.cold} · weak ${r.weak} · wild ${r.wild}.`;
 
-  const judgeUser = `TOPIC: "${state.topic}"
+  const stanceFirst = state.challengerSide
+    ? (swap
+        ? (state.challengerSide === "pro" ? "CON" : "PRO")
+        : state.challengerSide.toUpperCase())
+    : null;
+  const stanceSecond = stanceFirst === "PRO" ? "CON" : stanceFirst === "CON" ? "PRO" : null;
+  const stanceLine = stanceFirst
+    ? `\nSTANCE ASSIGNMENTS: Fighter ${firstLabel} = ${stanceFirst}, Fighter ${secondLabel} = ${stanceSecond}. Judge coherence against these assigned positions.\n`
+    : "";
 
+  const judgeUser = `TOPIC: "${state.topic}"
+${stanceLine}
 REPUTATION STATS (soft prior, see system message):
 ${fmtStats(firstLabel, firstFighter)}
 ${fmtStats(secondLabel, secondFighter)}
