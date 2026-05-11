@@ -608,6 +608,37 @@ contract BattleEscrowTest is Test {
         assertEq(uint8(b.status), uint8(BattleEscrow.Status.Verdict));
     }
 
+    // ---------------- 0G DA epoch anchoring ----------------
+
+    /// On chains where the DASigners precompile (0x...1000) is live, the
+    /// epoch returned by the precompile is mirrored into battleDAEpoch and
+    /// surfaced via BattleDAAnchored.
+    function test_SubmitVerdict_AnchorsDAEpoch() public {
+        uint256 id = _create();
+        uint256 expectedEpoch = 4242;
+        vm.mockCall(
+            escrow.DA_SIGNERS_PRECOMPILE(),
+            abi.encodeWithSignature("epochNumber()"),
+            abi.encode(expectedEpoch)
+        );
+        vm.expectEmit(true, false, false, true, address(escrow));
+        emit BattleEscrow.BattleDAAnchored(id, uint64(expectedEpoch));
+        _submitVerdict(id, 0);
+        assertEq(escrow.battleDAEpoch(id), expectedEpoch);
+    }
+
+    /// Without a precompile (default local Anvil), the staticcall fails
+    /// silently and the epoch records as 0 — verdict flow still completes.
+    function test_SubmitVerdict_AnchorDefaultsZeroWithoutPrecompile() public {
+        uint256 id = _create();
+        vm.expectEmit(true, false, false, true, address(escrow));
+        emit BattleEscrow.BattleDAAnchored(id, uint64(0));
+        _submitVerdict(id, 0);
+        assertEq(escrow.battleDAEpoch(id), 0);
+        BattleEscrow.Battle memory b = escrow.getBattle(id);
+        assertEq(uint8(b.status), uint8(BattleEscrow.Status.Verdict));
+    }
+
     function test_SubmitVerdict_RevertsOnTamperedResponseBody() public {
         uint256 id = _create();
         VerdictArgs memory v = _buildVerdictArgs(id, 0, MOCK_VERDICT_HASH, ORACLE_PRIV_KEY);

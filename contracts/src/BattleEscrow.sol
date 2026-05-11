@@ -24,6 +24,14 @@ interface IFighter {
     function isExecutor(uint256 tokenId, address executor) external view returns (bool);
 }
 
+/// @dev Minimal 0G DA layer precompile surface (the DASigners registry on
+///      Galileo/Aristotle). We only need {epochNumber} to anchor a verdict to
+///      the DA committee epoch in effect at signing time. Full interface lives
+///      at github.com/0gfoundation/0g-da-contract.
+interface IDASigners {
+    function epochNumber() external view returns (uint256);
+}
+
 /// @title BattleEscrow — pool + pro-rata payout for Yap fighter battles.
 /// @notice Anyone can create a battle between two fighters and pick a side.
 ///         A 0G Compute TEE provider judges the battle and signs the verdict
@@ -150,6 +158,21 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
     IFighter public immutable fighter;
     uint256 public nextBattleId;
 
+    /// @notice 0G DA-layer DASigners precompile address. Live on Galileo
+    ///         (chainId 16602) and Aristotle (chainId 16661). On chains where
+    ///         the precompile isn't deployed (local Anvil, third-party forks),
+    ///         the staticcall in {submitVerdict} gracefully fails and we record
+    ///         a zero epoch — the verdict flow is unaffected.
+    address public constant DA_SIGNERS_PRECOMPILE =
+        0x0000000000000000000000000000000000001000;
+
+    /// @notice 0G DA epoch in effect when this contract accepted the verdict.
+    ///         Lets downstream verifiers reconstruct the DA-committee context
+    ///         for the block height that finalised the verdict transcript.
+    ///         Zero means the precompile was unreachable (test chain) — the
+    ///         {BattleDAAnchored} event was still emitted as an audit anchor.
+    mapping(uint256 => uint256) public battleDAEpoch;
+
     /// @notice TEE signer address whose ECDSA signature is required on verdict
     ///         submissions. Set to the 0G Compute provider's teeSignerAddress
     ///         (registered in the 0G ServingContract for the chosen judge
@@ -181,6 +204,10 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
         bytes32 verdictHash,
         bytes teeSignature
     );
+    /// @notice Records the 0G DA epoch that was current when {submitVerdict}
+    ///         accepted the verdict. Anchors the verdict transcript to the
+    ///         data-availability committee responsible for that epoch.
+    event BattleDAAnchored(uint256 indexed battleId, uint64 epoch);
     event BattleSettled(uint256 indexed battleId, uint8 winner, uint256 fee);
     event SettlementPaused(uint256 indexed battleId, uint64 newDeadline);
     event DisputeFiled(
@@ -477,6 +504,21 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
         bytes memory canonical = _verdictCanonicalText(battleId, winner, verdictHash);
         _verifyCanonicalAtOffset(responseBody, contentOffset, canonical);
 
+        // 4. Anchor verdict to current 0G DA epoch. Best-effort: low-level
+        //    staticcall bypasses Solidity's extcodesize auto-check so the
+        //    flow survives chains where the precompile isn't deployed
+        //    (local Anvil, third-party forks). Empty / undersized responses
+        //    fall back to zero; the event still fires so off-chain indexers
+        //    can detect the anchoring attempt regardless of chain support.
+        uint256 daEpoch = 0;
+        (bool ok, bytes memory ret) = DA_SIGNERS_PRECOMPILE.staticcall(
+            abi.encodeWithSelector(IDASigners.epochNumber.selector)
+        );
+        if (ok && ret.length >= 32) {
+            daEpoch = abi.decode(ret, (uint256));
+        }
+        battleDAEpoch[battleId] = daEpoch;
+
         b.status = Status.Verdict;
         b.winner = winner;
         b.verdictTime = uint64(block.timestamp);
@@ -484,6 +526,7 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
         b.verdictHash = verdictHash;
 
         emit VerdictSubmitted(battleId, winner, verdictHash, teeSignature);
+        emit BattleDAAnchored(battleId, uint64(daEpoch));
     }
 
     /// @dev Converts 64 ASCII hex characters at `data[offset..offset+64]` into a
