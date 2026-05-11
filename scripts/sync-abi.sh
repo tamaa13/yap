@@ -14,7 +14,7 @@ fi
 
 mkdir -p "$ABI_DIR"
 
-for c in YapFighter BattleEscrow BattleRegistry YapMarketplace RentalEscrow FighterTrainer YapInbox MomentINFT YapSubnameRegistrar; do
+for c in YapFighter BattleEscrow BattleRegistry YapMarketplace RentalEscrow YapInbox MomentINFT YapSubnameRegistrar; do
   src="$OUT/$c.sol/$c.json"
   if [ ! -f "$src" ]; then
     echo "Missing: $src"
