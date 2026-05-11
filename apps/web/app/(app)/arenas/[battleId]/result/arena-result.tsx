@@ -12,6 +12,7 @@ import { Sigil } from "@/components/ui/sigil";
 import { useToast } from "@/components/ui/toast";
 import { Breadcrumbs } from "@/components/shell/breadcrumbs";
 import { PageContainer } from "@/components/shell/page-container";
+import { useBattleDAEpoch } from "@/hooks/use-battle-da-epoch";
 import { useBattleState } from "@/hooks/use-battle-state";
 import { useClaimPayout } from "@/hooks/use-claim-payout";
 import { useMintMoment, useMomentClaimed } from "@/hooks/use-mint-moment";
@@ -170,6 +171,13 @@ export function ArenaResult({
     | `0x${string}`
     | null;
   const verdictAttestationId = liveVerdict?.zgAttestation ?? null;
+
+  // 0G DA epoch — anchored on verdict submission (post-redeploy contract).
+  // Returns null for pre-redeploy battles so the badge stays dark until
+  // BattleEscrow's BattleDAAnchored side-call has fired against the new
+  // address. View fallback handles already-anchored battles loaded after
+  // the event window; live event subscription captures freshly-settled.
+  const daEpoch = useBattleDAEpoch(battleIdNumber);
 
   // 0G KV mirror state — when KV is enabled in the deployment, the runner
   // also writes a public snapshot per round. Surface a small badge once
@@ -447,6 +455,41 @@ export function ArenaResult({
                     &nbsp;0G KV
                   </Badge>
                   <span>Durable snapshot mirrored to 0G KV stream</span>
+                </div>
+              )}
+              {daEpoch && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    fontSize: 11,
+                    color: "var(--tx-tertiary)",
+                    fontFamily: "var(--mono)",
+                    letterSpacing: 0.04,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Stamp tone="gold">
+                    <Icon name="shield" size={10} />
+                    &nbsp;0G DA · Epoch #{daEpoch.epoch}
+                  </Stamp>
+                  <span>Verdict anchored on 0G Data Availability layer</span>
+                  {daEpoch.txHash && (
+                    <a
+                      href={`${activeChain.blockExplorers.default.url}/tx/${daEpoch.txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: "var(--yap-gold)",
+                        textDecoration: "underline",
+                        textUnderlineOffset: 2,
+                      }}
+                    >
+                      View tx
+                    </a>
+                  )}
                 </div>
               )}
             </div>
