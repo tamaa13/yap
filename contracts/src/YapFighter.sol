@@ -42,6 +42,26 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
     ///         mint N clones from one attestation.
     mapping(bytes32 => bool) private _proofConsumed;
 
+    /// @notice Monotonic per-token counter of audited persona accesses.
+    ///         Incremented by {logAccess} once per persona-decryption event
+    ///         (one per battle round on the runner side). Exposed via
+    ///         {getAccessCount} so UIs can render lifetime usage stats
+    ///         without scanning logs.
+    mapping(uint256 => uint256) private _accessCount;
+
+    /// @notice Emitted once per audited persona-decryption event. The
+    ///         off-chain runner calls {logAccess} after pulling a fighter's
+    ///         encrypted weights for an inference round, providing a public
+    ///         audit trail of every battle the persona participated in. The
+    ///         {battleId} is the BattleEscrow id (or 0 for off-battle
+    ///         training accesses).
+    event PersonaAccessed(
+        uint256 indexed tokenId,
+        address indexed accessor,
+        uint256 indexed battleId,
+        uint64 timestamp
+    );
+
     error InvalidProof();
     error ProofExpired();
     error ProofAlreadyConsumed();
@@ -272,6 +292,33 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
 
     function executorsOf(uint256 tokenId) external view returns (address[] memory) {
         return _executors[tokenId];
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // Persona audit log
+    // --------------------------------------------------------------------------------------------
+
+    /// @notice Record a persona-access event. Gated to the token owner OR an
+    ///         authorized executor so a third party cannot pollute the audit
+    ///         trail. The runner (typically an executor authorized for a
+    ///         rental window) calls this once per round on its way through
+    ///         the inference path; the contract emits a PersonaAccessed log
+    ///         the indexer can fan out into transparency UIs.
+    /// @param tokenId  The fighter being decrypted.
+    /// @param battleId BattleEscrow id this access belongs to (0 for
+    ///                 non-battle training/test accesses).
+    function logAccess(uint256 tokenId, uint256 battleId) external {
+        bool isOwner_ = ownerOf(tokenId) == msg.sender;
+        bool isExecutor_ = _executorIndex[tokenId][msg.sender] != 0;
+        if (!isOwner_ && !isExecutor_) revert NotAuthorized();
+        unchecked {
+            _accessCount[tokenId] += 1;
+        }
+        emit PersonaAccessed(tokenId, msg.sender, battleId, uint64(block.timestamp));
+    }
+
+    function getAccessCount(uint256 tokenId) external view returns (uint256) {
+        return _accessCount[tokenId];
     }
 
     // --------------------------------------------------------------------------------------------
