@@ -52,6 +52,7 @@ import {
   findCanonicalContentOffset,
 } from "@/lib/0g/inference";
 import { RPC } from "@/lib/0g/storage";
+import { writeBattleSnapshot } from "@/lib/0g/kv";
 import { getBattleStore } from "./store";
 import type {
   BattleRound,
@@ -368,12 +369,18 @@ async function runLoop(battleId: number): Promise<void> {
         }),
       });
 
-      await store.update(battleId, (s) => ({
+      const afterRound = await store.update(battleId, (s) => ({
         ...s,
         phase: "round_complete",
         rounds: setRoundArg(s.rounds, roundNo, "b", argB),
       }));
       store.publish(battleId, { type: "round-complete", round: roundNo });
+
+      // Durable replay surface — write the public snapshot to 0G KV.
+      // Fire-and-forget: KV is a parallel durability story, not on the
+      // settlement critical path. writeBattleSnapshot swallows errors
+      // internally, so we don't need a .catch() here.
+      void writeBattleSnapshot(afterRound);
 
       // ── Score the round + apply HP damage ─────────────────────────────
       // Quick A-or-B inference call to pick this round's winner, then
@@ -509,12 +516,16 @@ async function runLoop(battleId: number): Promise<void> {
       settledAt: Date.now(),
     };
 
-    await store.update(battleId, (s) => ({
+    const settledState = await store.update(battleId, (s) => ({
       ...s,
       phase: "settled",
       verdict: settledVerdict,
     }));
     store.publish(battleId, { type: "verdict", verdict: settledVerdict });
+
+    // Final KV snapshot — captures the verdict, txHash, and full transcript
+    // so the durable record matches the settled on-chain state.
+    void writeBattleSnapshot(settledState);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error("[battle-runner]", battleId, message);

@@ -171,6 +171,37 @@ export function ArenaResult({
     | null;
   const verdictAttestationId = liveVerdict?.zgAttestation ?? null;
 
+  // 0G KV mirror state — when KV is enabled in the deployment, the runner
+  // also writes a public snapshot per round. Surface a small badge once
+  // the durable record lands so judges/spectators can see the 4th 0G
+  // primitive in use, not just the 3 (Storage/Compute/Chain) on screen.
+  const [kvMirror, setKvMirror] = useState<{
+    kvEnabled: boolean;
+    settledAt?: number;
+  } | null>(null);
+  useEffect(() => {
+    if (battleIdNumber === null) return;
+    let cancelled = false;
+    fetch(`/api/battle/${battleIdNumber}/kv-snapshot`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        setKvMirror({
+          kvEnabled: !!data.kvEnabled,
+          settledAt: data.snapshot?.verdict?.settledAt,
+        });
+      })
+      .catch(() => {
+        // KV is best-effort. If the read fails, the badge just stays
+        // hidden — verdict still verifies via on-chain tx + attestation.
+      });
+    return () => {
+      cancelled = true;
+    };
+    // Re-poll once the verdict tx lands so the badge picks up the final
+    // post-settle snapshot if the runner hasn't finished writing yet.
+  }, [battleIdNumber, effectiveVerdictTxHash]);
+
   return (
     <PageContainer>
       <Breadcrumbs
@@ -396,6 +427,26 @@ export function ArenaResult({
                   }}
                 >
                   0G Compute attestation chatID: {verdictAttestationId}
+                </div>
+              )}
+              {kvMirror?.kvEnabled && kvMirror.settledAt && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    fontSize: 11,
+                    color: "var(--tx-tertiary)",
+                    fontFamily: "var(--mono)",
+                    letterSpacing: 0.04,
+                  }}
+                >
+                  <Badge mono tone="success">
+                    <Icon name="shield" size={10} />
+                    &nbsp;0G KV
+                  </Badge>
+                  <span>Durable snapshot mirrored to 0G KV stream</span>
                 </div>
               )}
             </div>
