@@ -258,17 +258,24 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   cursor: none;
+  /* `isolation: isolate` scopes the negative-z ::before pseudo to
+   * body's stacking context so it can't crawl behind <html>. Lets us
+   * stack the paper-grain at z-index -1 underneath every child
+   * without needing to force `body > * { z-index: 2 }` — that rule
+   * traps RainbowKit's modal portal in a stacking context below
+   * our other portals (connect-panel etc.) and breaks wallet UI. */
+  isolation: isolate;
 }
-/* Risograph paper grain — fixed dotted-ink overlay across the
- * viewport. Pulls every coloured surface (cobalt / fluo / plum)
- * into a printed-on-paper feel via the underlying paper noise
- * showing through `mix-blend-mode: multiply` accents. */
+/* Risograph paper grain — fixed dotted-ink overlay. Sits at z-index
+ * -1 *inside body's stacking context* (thanks to `isolation: isolate`
+ * above), so paper noise paints behind all children but doesn't
+ * intercept any pointer events or z-index logic. */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 1;
+  z-index: -1;
   opacity: 0.55;
   background-image:
     radial-gradient(rgba(26, 24, 20, 0.06) 1px, transparent 1px),
@@ -276,7 +283,6 @@ body::before {
   background-size: 3px 3px, 7px 7px;
   background-position: 0 0, 1.5px 1.5px;
 }
-body > * { position: relative; z-index: 2; }
 @media (hover: hover) and (pointer: fine) {
   /* Aggressive override — any element with its own `cursor: pointer`
    * (e.g. <tr onClick> rows in tables) would otherwise stack on top
