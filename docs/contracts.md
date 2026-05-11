@@ -15,7 +15,6 @@ clears upstream. See [bug catalog](bug-catalog.md).
 | `BattleRegistry` | On-chain match history + ELO ledger | `0x755ef230d456b6cc991ccfff38ec5c6b0133d37b` |
 | `YapMarketplace` | Buy / sell escrow for fighters | `0x076e42a64e4ba43700ebb0830086138468dfa275` |
 | `RentalEscrow` | Custody-based rentals + co-signed dispute resolution | `0xe5Df2d51ef75A268daAd122038D94cEA9c3111EA` |
-| `FighterTrainer` | Continuous-learning re-seal sessions (additive) | `0xC10bd77cdA8300877898612B00608bA522d5a460` |
 | `MomentINFT` | ERC-7857 sibling — round highlights as collectibles | `0xf6cadAb5276A16b7C8213CD7B6BBB547f55be4AC` |
 | `MomentMarketplace` | Buy / sell escrow for Battle Moments | `0x18653aa16a4ffc7093be0270ab427688dfd2fb81` |
 | `YapSubnameRegistrar` | `<label>.yap.0g` ENS-style subname registry | `0xb84c024c3456b7c82ad8a08bf4b7c69804bbd56f` |
