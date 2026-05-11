@@ -28,13 +28,15 @@ import { useWalletGate, useWallet } from "@/hooks/use-wallet";
 import { activeChain } from "@/lib/chains";
 import { FIGHTER_INFT_ADDRESS, YAP_SUBNAME_ADDRESS } from "@/lib/contracts";
 import { BattleHistoryTable } from "./battle-history-table";
+import { AccessLogTable } from "./access-log-table";
 import { DisputePanel } from "./dispute-panel";
 import { SubnameModal } from "./subname-modal";
+import { useFighterAccessCount } from "@/hooks/use-fighter-access-log";
 import { fmtNum, fmtRemaining, fmtTime } from "@/lib/format";
 import type { Address } from "viem";
 import type { Battle, Fighter, FighterArchetype } from "@/lib/types";
 
-type DetailTab = "overview" | "history" | "earnings";
+type DetailTab = "overview" | "history" | "earnings" | "access";
 
 // Map a 0-100 trait value to one of the app's semantic colors. Low = danger,
 // mid = warning, upper-mid = accent (amber), high = success.
@@ -74,6 +76,10 @@ export function FighterDetail({
   const gate = useWalletGate();
 
   const [tab, setTab] = useState<DetailTab>("overview");
+  // Lightweight access count for the tab badge — uses the view, not the
+  // event scan, so the tab can render its badge without paying for the
+  // full log fetch until the tab is actually opened.
+  const accessCount = useFighterAccessCount(fighter.id);
   const [listOpen, setListOpen] = useState(false);
   const [rentOpen, setRentOpen] = useState(false); // owner: list for rent
   const [subnameOpen, setSubnameOpen] = useState(false); // owner: claim a <label>.yap.0g
@@ -566,6 +572,7 @@ export function FighterDetail({
               { value: "overview", label: "Overview" },
               { value: "history", label: "Battle history", count: fighter.battles },
               { value: "earnings", label: "Earnings" },
+              { value: "access", label: "Access log", count: accessCount },
             ]}
             style={{ marginBottom: 16 }}
           />
@@ -735,6 +742,8 @@ export function FighterDetail({
               )}
             </Card>
           )}
+
+          {tab === "access" && <AccessLogTable fighterId={fighter.id} />}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
