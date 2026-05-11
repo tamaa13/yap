@@ -14,9 +14,10 @@ import { FighterCardSkel, TableSkel } from "@/components/ui/skeleton";
 import { Pagination, usePageFromUrl } from "@/components/ui/pagination";
 import { PageContainer } from "@/components/shell/page-container";
 import { GateScreen } from "@/components/wallet/gate-screen";
+import { MomentCard } from "@/components/moment/moment-card";
 import { useFighters } from "@/hooks/use-fighters";
 import { useMyBets } from "@/hooks/use-my-bets";
-import { battleArenaPath, useMyMoments } from "@/hooks/use-my-moments";
+import { useMyMoments } from "@/hooks/use-my-moments";
 import { useSubnameBatch } from "@/hooks/use-subname";
 import { MOMENT_INFT_ADDRESS } from "@/lib/contracts";
 import { useDeclineBattle } from "@/hooks/use-accept-battle";
@@ -746,59 +747,11 @@ export default function VaultPage() {
             }}
           >
             {momentsPage.map((m) => (
-              <Card key={m.tokenId} style={{ padding: 16 }}>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                  <Sigil
-                    seed={`moment-${m.battleId}-${m.roundNo}-${m.side}`}
-                    size={56}
-                    color={m.side === 0 ? "var(--fighter-a)" : "var(--fighter-b)"}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>
-                      Moment #{m.tokenId}
-                    </div>
-                    <div
-                      className="mono"
-                      style={{
-                        fontSize: 11,
-                        color: "var(--tx-tertiary)",
-                        marginTop: 2,
-                        letterSpacing: 0.04,
-                      }}
-                    >
-                      Battle {m.battleId} · R{m.roundNo} · {m.side === 0 ? "A" : "B"}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: "var(--tx-secondary)",
-                        marginTop: 6,
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      Fighter #{m.fighterTokenId}
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 6, marginTop: 14 }}>
-                  <Button
-                    size="sm"
-                    onClick={() => router.push(battleArenaPath(m.battleId))}
-                    style={{ flex: 1 }}
-                  >
-                    Source battle
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() =>
-                      router.push(`/fighters/${m.fighterTokenId}`)
-                    }
-                    style={{ flex: 1 }}
-                  >
-                    Fighter
-                  </Button>
-                </div>
-              </Card>
+              <MomentCard
+                key={m.tokenId}
+                moment={m}
+                viewerAddr={(addr as `0x${string}` | undefined) ?? null}
+              />
             ))}
           </div>
         ))}
