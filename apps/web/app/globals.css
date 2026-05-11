@@ -1222,6 +1222,438 @@ a { color: inherit; text-decoration: none; }
 .op-mp--c::after { background: var(--op-cobalt); }
 .op-mp--p::after { background: var(--op-plum); mix-blend-mode: normal; opacity: 0.3; }
 
+/* ── VERDICT REVEAL HERO + COMPANIONS ──────────────────────────────
+ * The showpiece. Plum overprint hero, receipt + mint panel grid,
+ * outcome row, replay strip. Each pattern is a translation of
+ * docs/design/project/overprint-verdict.html, primitives only
+ * (no per-page styling). Discipline: one big stamp per page, plum
+ * reserved for verdict + mint art surfaces. */
+
+.op-verdict {
+  position: relative;
+  background: var(--op-plum);
+  color: var(--op-paper);
+  padding: 60px 56px;
+  border: 2px solid var(--op-ink);
+  min-height: 520px;
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 48px;
+  align-items: start;
+  overflow: hidden;
+  margin-bottom: 32px;
+}
+.op-verdict::after {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(255, 90, 26, 0.08) 1px, transparent 1px);
+  background-size: 5px 5px;
+  opacity: 0.6;
+}
+.op-verdict > * { position: relative; z-index: 1; }
+
+.op-v-head {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid color-mix(in oklab, var(--op-paper) 25%, transparent);
+}
+.op-v-head .op-v-ribbon {
+  font-family: var(--op-fm);
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--op-fluo);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.op-v-head .op-v-ribbon::before {
+  content: '';
+  width: 8px; height: 8px;
+  background: var(--op-fluo);
+}
+.op-v-head .op-v-meta {
+  font-family: var(--op-fm);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: var(--op-paper-deep);
+  text-transform: uppercase;
+}
+.op-v-head .op-v-meta b {
+  color: var(--op-paper);
+  font-family: var(--op-fm);
+  font-weight: 500;
+}
+
+.op-v-canon {
+  font-family: var(--op-fi);
+  font-style: italic;
+  font-size: 74px;
+  line-height: 1.05;
+  color: var(--op-paper);
+  letter-spacing: -0.8px;
+  max-width: 18ch;
+  margin: 0;
+}
+.op-v-canon u {
+  text-decoration: underline;
+  text-decoration-color: var(--op-fluo);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 8px;
+  display: inline;
+  position: relative;
+}
+.op-v-canon .op-v-ico {
+  font-family: var(--op-fi);
+  font-style: italic;
+  color: var(--op-fluo);
+}
+
+/* Left→right fluo rule beneath canonical text. Animates on
+ * `[data-reveal="on"]`. Disputed: cobalt with crimson hash notch. */
+.op-v-rule {
+  display: block;
+  height: 2px;
+  width: 0;
+  background: var(--op-fluo);
+  mix-blend-mode: multiply;
+  margin-top: 18px;
+  transition: width 720ms var(--yap-ease-snap);
+}
+.op-v-rule[data-reveal="on"] { width: 100%; }
+.op-v-rule[data-disputed="on"] {
+  background: var(--op-cobalt);
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--op-cobalt) 0 24px,
+    var(--op-fluo-deep) 24px 32px
+  );
+}
+
+.op-v-foot {
+  grid-column: 1 / -1;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid color-mix(in oklab, var(--op-paper) 25%, transparent);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.op-v-foot .op-v-stat .op-v-stat-l {
+  font-family: var(--op-fm);
+  font-size: 10px;
+  color: var(--op-fluo-light);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+.op-v-foot .op-v-stat .op-v-stat-v {
+  font-family: var(--op-fd);
+  font-size: 26px;
+  line-height: 1;
+  color: var(--op-paper);
+  margin-top: 6px;
+}
+.op-v-foot .op-v-stat .op-v-stat-v .op-v-stat-x {
+  font-family: var(--op-fp);
+  font-size: 14px;
+  color: var(--op-paper-deep);
+  margin-left: 4px;
+}
+.op-v-foot .op-v-stat .op-v-stat-v.is-mono {
+  font-family: var(--op-fm);
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}
+
+.op-v-stamp {
+  align-self: start;
+  justify-self: end;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+}
+.op-v-stamp-meta {
+  font-family: var(--op-fm);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: var(--op-paper-deep);
+  text-transform: uppercase;
+  text-align: right;
+  line-height: 1.5;
+}
+.op-v-stamp-meta b {
+  color: var(--op-fluo);
+  font-family: var(--op-fm);
+  font-weight: 500;
+}
+
+/* Verdict 2-up below hero — receipt (1.4fr) + mint-moment (1fr). */
+.op-v-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+/* Inline mini-stamp used inside receipt rows ("verified", "tee"). */
+.op-stamp-mini {
+  display: inline-block;
+  padding: 3px 8px 2px;
+  background: var(--op-cobalt);
+  color: var(--op-paper);
+  mix-blend-mode: multiply;
+  font-family: var(--op-fd);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transform: rotate(-2deg);
+  margin-left: 6px;
+}
+
+/* Mint moment panel — paper-deep card with cobalt offset shadow,
+ * plum art surface with fluo dot texture, mp-body stats grid. */
+.op-mint {
+  background: var(--op-paper-deep);
+  border: 2px solid var(--op-ink);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.op-mint::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--op-cobalt);
+  mix-blend-mode: multiply;
+  transform: translate(var(--op-offset-2), var(--op-offset-2));
+  z-index: -1;
+  pointer-events: none;
+}
+.op-mint-head {
+  padding: 14px 20px;
+  border-bottom: 2px solid var(--op-ink);
+  background: var(--op-paper);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.op-mint-head h3 {
+  font-family: var(--op-fd);
+  font-weight: 400;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  margin: 0;
+}
+.op-mint-head .op-mint-clock {
+  font-family: var(--op-fm);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: var(--op-fluo);
+  text-transform: uppercase;
+}
+.op-mint-art {
+  padding: 28px 22px;
+  background: var(--op-plum);
+  color: var(--op-paper);
+  position: relative;
+  text-align: center;
+  border-bottom: 2px solid var(--op-ink);
+  overflow: hidden;
+}
+.op-mint-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 90, 26, 0.1) 1px, transparent 1px);
+  background-size: 6px 6px;
+  opacity: 0.5;
+  pointer-events: none;
+}
+.op-mint-art > * { position: relative; z-index: 1; }
+.op-mint-art .op-mint-lab {
+  font-family: var(--op-fm);
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--op-fluo);
+  text-transform: uppercase;
+}
+.op-mint-art .op-mint-title {
+  font-family: var(--op-fd);
+  font-weight: 400;
+  font-size: 64px;
+  line-height: 0.85;
+  color: var(--op-paper);
+  text-transform: uppercase;
+  letter-spacing: -1.4px;
+  margin: 8px 0 0;
+}
+.op-mint-art .op-mint-ed {
+  font-family: var(--op-fp);
+  font-size: 26px;
+  color: var(--op-fluo);
+  mix-blend-mode: screen;
+  margin-top: 10px;
+  line-height: 1;
+}
+.op-mint-body {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.op-mint-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.op-mint-stats .op-mint-s .op-mint-s-l {
+  font-family: var(--op-fm);
+  font-size: 9px;
+  color: var(--op-ink-mid);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+.op-mint-stats .op-mint-s .op-mint-s-v {
+  font-family: var(--op-fd);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--op-ink);
+}
+.op-mint-stats .op-mint-s .op-mint-s-v .op-mint-s-x {
+  font-family: var(--op-fp);
+  font-size: 14px;
+  color: var(--op-ink-soft);
+  margin-left: 4px;
+}
+.op-mint-stats .op-mint-s .op-mint-s-v.is-cobalt { color: var(--op-cobalt); }
+
+/* Outcome row — 4 hairline-divided columns, fluo dot on winner. */
+.op-out-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 2px solid var(--op-ink);
+  background: var(--op-paper);
+}
+.op-out-row .op-out-c {
+  padding: 18px 20px;
+  border-right: 1px solid var(--op-ink);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
+.op-out-row .op-out-c:last-child { border-right: none; }
+.op-out-row .op-out-c .op-out-l {
+  font-family: var(--op-fm);
+  font-size: 10px;
+  color: var(--op-ink-soft);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+.op-out-row .op-out-c .op-out-v {
+  font-family: var(--op-fd);
+  font-weight: 400;
+  font-size: 32px;
+  line-height: 0.9;
+  color: var(--op-ink);
+}
+.op-out-row .op-out-c .op-out-v.is-cobalt { color: var(--op-cobalt); }
+.op-out-row .op-out-c .op-out-v.is-fluo {
+  color: var(--op-fluo);
+  mix-blend-mode: multiply;
+}
+.op-out-row .op-out-c .op-out-v.is-dim { color: var(--op-ink-mid); }
+.op-out-row .op-out-c .op-out-v .op-out-x {
+  font-family: var(--op-fp);
+  font-size: 16px;
+  color: var(--op-ink-soft);
+  margin-left: 4px;
+}
+.op-out-row .op-out-c.is-win::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: var(--op-fluo);
+  mix-blend-mode: multiply;
+}
+
+/* Replay strip — paper bg, hairline rules, fluo timeline + ink head. */
+.op-play-strip {
+  background: var(--op-paper);
+  border: 2px solid var(--op-ink);
+  padding: 20px 22px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 14px;
+}
+.op-play-strip .op-play-lab {
+  font-family: var(--op-fd);
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--op-ink);
+}
+.op-play-strip .op-play-tl {
+  flex: 1;
+  height: 8px;
+  background: var(--op-paper-deep);
+  border: 1.5px solid var(--op-ink);
+  position: relative;
+}
+.op-play-strip .op-play-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: var(--op-cobalt);
+  mix-blend-mode: multiply;
+}
+.op-play-strip .op-play-head {
+  position: absolute;
+  top: 50%;
+  width: 14px; height: 14px;
+  background: var(--op-fluo);
+  mix-blend-mode: multiply;
+  transform: translate(-50%, -50%);
+}
+.op-play-strip .op-play-time {
+  font-family: var(--op-fm);
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--op-ink-soft);
+  text-transform: uppercase;
+}
+.op-play-strip .op-play-marks {
+  display: flex;
+  gap: 14px;
+  font-family: var(--op-fm);
+  font-size: 11px;
+  color: var(--op-ink-soft);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+/* Bottom CTA cluster. */
+.op-actions {
+  display: flex;
+  gap: 14px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .op-stamp-big, .op-stamp { transform: rotate(0); }
+  .op-stamp-big, .op-stamp, .op-stamp-mini { transform: rotate(0); }
+  .op-v-rule { transition: none; width: 100%; }
 }
