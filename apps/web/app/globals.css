@@ -44,6 +44,30 @@
   --op-tint-c: #C5D2F2; /* cobalt tint surface */
   --op-tint-o: #FFD5C2; /* fluo tint surface */
 
+  /* ── RESERVED OVERPRINT IDENTITY COLORS — use --op-* DIRECT only ──
+   *
+   * Plum (--op-plum):
+   *   - Verdict reveal hero surface bg
+   *   - Mint-moment art panel bg
+   *   - Landing mint promo strip bg
+   *   - Market card art bg
+   *   - Editorial italic prose color (`.is-italic`, `em` in deck copy)
+   *   - btn--plum, stamp--plum specific variants
+   *   NOT for general loss / dim / disabled / muted text — use
+   *   --op-ink-mid for those (which is what --yap-bruise now points at).
+   *
+   * Fluo big stamp (.op-stamp-big, default fluo bg multiply):
+   *   - 1 per page MAX
+   *   - Verdict winner, landing hero pull-stamp, arena LIVE indicator,
+   *     market headline accent, KO/FINAL markers
+   *   - For inline secondary status callouts: use .op-stamp (small,
+   *     no rotation) or .tape-badge (rotated edition strip) instead
+   *
+   * Tints (--op-tint-c, --op-tint-o):
+   *   - Fighter side surfaces only (--fighter-a-bg / --fighter-b-bg)
+   *   - NOT for general elevated panels — use --op-paper-deep there
+   * ───────────────────────────────────────────────────────── */
+
   /* Multiply-blend offset constants for the drop-shadow trick used
    * across cards, buttons, panels: `::after { background: cobalt;
    * mix-blend-mode: multiply; transform: translate(N,N); z-index: -1; }`
@@ -51,45 +75,50 @@
   --op-offset-1: 4px;
   --op-offset-2: 6px;
 
-  /* ── Legacy --yap-ink-* aliases ────────────────────────────────
-   * Promoter palette was dark warm-ink; Overprint is cream paper +
-   * ink. Flip the scale so deeper-stop semantics still hold:
-   *   ink-950 (was deepest dark) → ink (darkest text on paper)
-   *   ink-50  (was lightest near-white) → paper (lightest surface)
-   * Existing components that reach for ink-50 expecting "brightest
-   * surface" or ink-200 expecting "muted text" inherit correct
-   * semantics under the new palette. */
-  --yap-ink-950: var(--op-ink);
-  --yap-ink-900: var(--op-ink-soft);
-  --yap-ink-800: var(--op-ink-soft);
-  --yap-ink-700: var(--op-ink-mid);
-  --yap-ink-600: var(--op-ink-mid);
-  --yap-ink-500: var(--op-ink-dim);
-  --yap-ink-400: var(--op-ink-dim);
-  --yap-ink-300: var(--op-paper-shade);
-  --yap-ink-200: var(--op-paper-deep);
-  --yap-ink-100: var(--op-paper-deep);
-  --yap-ink-50:  var(--op-paper);
-  --yap-ink-0:   var(--op-paper);
+  /* ── Legacy --yap-ink-* aliases (BACKGROUND-context flip) ──────
+   * Promoter ink-50 was "darkest dark"; Overprint ink-50 must be
+   * paper (lightest surface). Legacy code reaches for ink-700/800/
+   * 900 expecting "dark panel ground" — those flip to paper-deep/-
+   * shade so cards/inputs/modals render as paper on Overprint.
+   *
+   * Text-color callsites that legitimately need DARK text on a
+   * coloured (cobalt/fluo) badge background must reference --op-ink
+   * directly — listed cases below in this file are patched. */
+  --yap-ink-950: var(--op-ink);          /* darkest — text on paper */
+  --yap-ink-900: var(--op-paper);        /* page-ground panel surface */
+  --yap-ink-800: var(--op-paper-deep);   /* elevated panel surface */
+  --yap-ink-700: var(--op-paper-shade);  /* recessed / muted ground */
+  --yap-ink-600: var(--op-ink);          /* heavy border */
+  --yap-ink-500: var(--op-ink-mid);      /* muted-mid border / dim text */
+  --yap-ink-400: var(--op-ink-mid);      /* faint text */
+  --yap-ink-300: var(--op-ink-mid);      /* tertiary text on paper */
+  --yap-ink-200: var(--op-ink-soft);     /* secondary text on paper */
+  --yap-ink-100: var(--op-ink-soft);     /* muted text on paper */
+  --yap-ink-50:  var(--op-ink);          /* primary text on paper */
+  --yap-ink-0:   var(--op-ink);          /* brightest text on paper */
 
-  /* Crimson → cobalt (brand primary). Gold → fluo (impact). Bruise →
-   * plum (verdict reserve). All existing component callsites resolve
-   * to Overprint values. */
+  /* Crimson → cobalt (brand primary). Gold → fluo (impact). Bruise
+   * historically meant "loss / dim / disabled" — re-mapped to
+   * op-ink-mid as quiet dim text/border. Plum stays RESERVED: use
+   * --op-plum directly only on verdict hero, mint-moment art panel,
+   * and editorial italic prose. */
   --yap-crimson:      var(--op-cobalt);
   --yap-crimson-soft: var(--op-cobalt-light);
   --yap-crimson-deep: var(--op-cobalt-deep);
   --yap-gold:         var(--op-fluo);
   --yap-gold-deep:    var(--op-fluo-deep);
-  --yap-bruise:       var(--op-plum);
+  --yap-bruise:       var(--op-ink-mid);
 
+  /* Semantic states — differentiated to avoid success≡info and
+   * danger≡warning collisions. */
   --yap-success:    var(--op-cobalt);
   --yap-success-bg: var(--op-tint-c);
   --yap-danger:     var(--op-fluo-deep);
   --yap-danger-bg:  var(--op-fluo-light);
   --yap-warning:    var(--op-fluo);
   --yap-warning-bg: var(--op-tint-o);
-  --yap-info:       var(--op-cobalt);
-  --yap-info-bg:    var(--op-tint-c);
+  --yap-info:       var(--op-ink-mid);
+  --yap-info-bg:    var(--op-paper-deep);
 
   /* ── Type families — Overprint stack ─────────────────────────── */
   --op-fd: var(--font-boldonse), Impact, sans-serif;
@@ -557,8 +586,9 @@ a { color: inherit; text-decoration: none; }
   align-items: center;
   gap: 6px;
   padding: 4px 9px;
-  background: var(--yap-ink-700);
-  color: var(--yap-ink-100);
+  background: var(--op-paper-deep);
+  color: var(--op-ink);
+  border: 1px solid var(--op-ink-mid);
   font-family: var(--yap-font-mono);
   font-size: 10.5px;
   letter-spacing: 1.5px;
@@ -572,32 +602,43 @@ a { color: inherit; text-decoration: none; }
 .badge--danger  { color: var(--yap-danger);  background: var(--yap-danger-bg);  }
 .badge--warning { color: var(--yap-warning); background: var(--yap-warning-bg); }
 .badge--info    { color: var(--yap-info);    background: var(--yap-info-bg);    }
-.badge--gold    { color: var(--yap-gold);    background: var(--yap-ink-800); box-shadow: inset 0 -2px 0 var(--yap-gold); }
-.badge--a       { color: var(--yap-crimson); background: var(--yap-ink-800); box-shadow: inset 0 -2px 0 var(--yap-crimson); }
-.badge--b       { color: var(--yap-gold);    background: var(--yap-ink-800); box-shadow: inset 0 -2px 0 var(--yap-gold); }
+.badge--gold    { color: var(--op-fluo);   background: var(--op-paper); box-shadow: inset 0 -2px 0 var(--op-fluo); }
+.badge--a       { color: var(--op-cobalt); background: var(--op-paper); box-shadow: inset 0 -2px 0 var(--op-cobalt); }
+.badge--b       { color: var(--op-fluo);   background: var(--op-paper); box-shadow: inset 0 -2px 0 var(--op-fluo); }
 
 /* Stamp — solid crimson block with cut corner + Anton caps. The
    loudest variant. One per surface (LIVE, KO, VERIFIED, FINAL).
    Optional .pulse dot + .ser serial pad for broadcast feel. */
+/* Base stamp — Overprint inline status callout. Flat (no rotation),
+ * cobalt fill, ink-paper text. Use freely as a quieter "stamped"
+ * marker for inline status. For the LOUD signature stamp (1 per
+ * page max), compose with `.stamp-badge--loud` to add rotation +
+ * multiply blend. */
 .stamp-badge {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 7px 14px 6px;
-  background: var(--yap-crimson);
-  color: var(--yap-ink-50);
-  font-family: var(--yap-font-display);
+  background: var(--op-cobalt);
+  color: var(--op-paper);
+  font-family: var(--op-fd);
   font-weight: 400;
   font-size: 17px;
   letter-spacing: 1px;
   text-transform: uppercase;
   line-height: 1;
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  clip-path: none;
   white-space: nowrap;
 }
-.stamp-badge--gold   { background: var(--yap-gold);   color: var(--yap-ink-900); }
-.stamp-badge--ink    { background: var(--yap-ink-50); color: var(--yap-ink-900); }
-.stamp-badge--bruise { background: var(--yap-bruise); color: var(--yap-ink-50); }
+.stamp-badge--gold   { background: var(--op-fluo);   color: var(--op-ink); }
+.stamp-badge--ink    { background: var(--op-ink);    color: var(--op-paper); }
+.stamp-badge--bruise { background: var(--op-ink-mid); color: var(--op-paper); }
+/* LOUD variant — opt-in for the one primary stamp per page. Rotated
+ * + multiply blend so the paper grain pulls through the fill. */
+.stamp-badge--loud {
+  mix-blend-mode: multiply;
+  transform: rotate(-2deg);
+}
 .stamp-badge .pulse {
   width: 8px; height: 8px; background: currentColor; border-radius: 50%;
 }
@@ -632,9 +673,10 @@ a { color: inherit; text-decoration: none; }
   align-items: center;
   gap: 8px;
   padding: 6px 14px 5px 22px;
-  background: var(--yap-ink-50);
-  color: var(--yap-ink-900);
-  font-family: var(--yap-font-display);
+  background: var(--op-paper);
+  color: var(--op-ink);
+  border: 2px solid var(--op-ink);
+  font-family: var(--op-fd);
   font-weight: 400;
   font-size: 15px;
   letter-spacing: 0.8px;
@@ -652,12 +694,12 @@ a { color: inherit; text-decoration: none; }
   transform: translateY(-50%);
   width: 7px;
   height: 7px;
-  background: var(--yap-ink-900);
+  background: var(--op-ink);
   border-radius: 50%;
 }
-.tape-badge--crim { background: var(--yap-crimson); color: var(--yap-ink-50); }
-.tape-badge--crim::before { background: var(--yap-ink-50); }
-.tape-badge--gold { background: var(--yap-gold); color: var(--yap-ink-900); }
+.tape-badge--crim { background: var(--op-cobalt); color: var(--op-paper); border-color: var(--op-ink); }
+.tape-badge--crim::before { background: var(--op-paper); }
+.tape-badge--gold { background: var(--op-fluo); color: var(--op-ink); border-color: var(--op-ink); }
 
 /* Token — bracketed monospace. Addresses, tokenIds, hashes. The
    gold brackets do all the chrome work; no fill needed. Reads as
@@ -697,10 +739,10 @@ a { color: inherit; text-decoration: none; }
   white-space: nowrap;
 }
 .split-badge .k {
-  background: var(--yap-ink-700);
-  color: var(--yap-ink-300);
+  background: var(--op-ink);
+  color: var(--op-paper);
   padding: 7px 9px;
-  font-family: var(--yap-font-mono);
+  font-family: var(--op-fm);
   font-size: 9.5px;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -708,19 +750,21 @@ a { color: inherit; text-decoration: none; }
   align-items: center;
 }
 .split-badge .v {
-  background: var(--yap-ink-50);
-  color: var(--yap-ink-900);
-  padding: 6px 11px 5px;
-  font-family: var(--yap-font-display);
+  background: var(--op-paper);
+  color: var(--op-ink);
+  border: 2px solid var(--op-ink);
+  border-left: none;
+  padding: 5px 11px 4px;
+  font-family: var(--op-fd);
   font-weight: 400;
   font-size: 17px;
   letter-spacing: 0.5px;
   display: flex;
   align-items: center;
 }
-.split-badge--crim   .v { background: var(--yap-crimson); color: var(--yap-ink-50); }
-.split-badge--gold   .v { background: var(--yap-gold);    color: var(--yap-ink-900); }
-.split-badge--bruise .v { background: var(--yap-bruise);  color: var(--yap-ink-50); }
+.split-badge--crim   .v { background: var(--op-cobalt); color: var(--op-paper); }
+.split-badge--gold   .v { background: var(--op-fluo);   color: var(--op-ink); }
+.split-badge--bruise .v { background: var(--op-ink-mid); color: var(--op-paper); }
 .split-badge--sm .k { font-size: 8.5px; padding: 5px 7px; letter-spacing: 1.8px; }
 .split-badge--sm .v { font-size: 13px;  padding: 4px 8px 3px; }
 
