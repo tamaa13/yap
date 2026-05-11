@@ -246,12 +246,19 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
         _proofConsumed[_boundProofId(op, tokenId, recipient)] = true;
     }
 
+    /// @dev Inner hash binds `block.chainid` so a proof attested on one
+    ///      chain cannot replay on another (defends a hypothetical
+    ///      testnet→mainnet TEE-key reuse during a migration window).
+    ///      Off-chain verifiers must mirror the same binding when they
+    ///      compute the proofId for {attestProof}.
     function _boundProofId(
         OwnershipProof calldata op,
         uint256 tokenId,
         address recipient
-    ) internal pure returns (bytes32) {
-        bytes32 id = keccak256(abi.encode(op.oracleType, op.dataHash, op.nonce, op.proof));
+    ) internal view returns (bytes32) {
+        bytes32 id = keccak256(
+            abi.encode(op.oracleType, op.dataHash, op.nonce, op.proof, block.chainid)
+        );
         return keccak256(abi.encode(id, tokenId, recipient));
     }
 
