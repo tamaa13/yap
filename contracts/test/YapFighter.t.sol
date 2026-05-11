@@ -359,6 +359,67 @@ contract YapFighterTest is Test {
         assertTrue(fighter.supportsInterface(type(IERC7857).interfaceId));
     }
 
+    // ---------------- persona access log (P3F) ----------------
+
+    function test_LogAccess_OwnerEmitsAndIncrements() public {
+        uint256 id = _mintTo(alice, keccak256("log-owner"));
+        assertEq(fighter.getAccessCount(id), 0);
+        uint256 ts = block.timestamp;
+        vm.expectEmit(true, true, true, true, address(fighter));
+        emit YapFighter.PersonaAccessed(id, alice, 42, uint64(ts));
+        vm.prank(alice);
+        fighter.logAccess(id, 42);
+        assertEq(fighter.getAccessCount(id), 1);
+    }
+
+    function test_LogAccess_AuthorizedExecutorEmitsAndIncrements() public {
+        uint256 id = _mintTo(alice, keccak256("log-exec"));
+        address runner = makeAddr("runner");
+        vm.prank(alice);
+        fighter.authorizeUsage(id, runner, hex"01");
+
+        vm.prank(runner);
+        fighter.logAccess(id, 99);
+        assertEq(fighter.getAccessCount(id), 1);
+
+        vm.prank(runner);
+        fighter.logAccess(id, 99);
+        assertEq(fighter.getAccessCount(id), 2);
+    }
+
+    function test_LogAccess_UnauthorizedReverts() public {
+        uint256 id = _mintTo(alice, keccak256("log-noaccess"));
+        address mallory = makeAddr("mallory");
+        vm.prank(mallory);
+        vm.expectRevert(YapFighter.NotAuthorized.selector);
+        fighter.logAccess(id, 1);
+    }
+
+    function test_LogAccess_RevokedExecutorRevertsAfterUnauthorize() public {
+        uint256 id = _mintTo(alice, keccak256("log-revoke"));
+        address runner = makeAddr("runner");
+        vm.prank(alice);
+        fighter.authorizeUsage(id, runner, hex"01");
+        vm.prank(runner);
+        fighter.logAccess(id, 1);
+        assertEq(fighter.getAccessCount(id), 1);
+
+        vm.prank(alice);
+        fighter.revokeAuthorization(id, runner);
+        vm.prank(runner);
+        vm.expectRevert(YapFighter.NotAuthorized.selector);
+        fighter.logAccess(id, 2);
+        assertEq(fighter.getAccessCount(id), 1);
+    }
+
+    function test_LogAccess_ZeroBattleIdAllowed() public {
+        // battleId == 0 is the convention for non-battle training accesses.
+        uint256 id = _mintTo(alice, keccak256("log-train"));
+        vm.prank(alice);
+        fighter.logAccess(id, 0);
+        assertEq(fighter.getAccessCount(id), 1);
+    }
+
     /// A proof attested with chainid X must not validate when the EVM-local
     /// chainid is Y. Simulates a cross-chain replay attempt: build a proof,
     /// compute its proofId WITHOUT chainid (the old format), attest, then
