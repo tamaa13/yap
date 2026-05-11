@@ -46,6 +46,15 @@ contract YapMarketplace is AccessControl, ReentrancyGuard, Pausable {
         uint256 price,
         uint256 platformFee
     );
+    /// @notice Emitted when a sale routed an EIP-2981 royalty to the
+    ///         underlying NFT's creator. Marketplaces holding NFTs that
+    ///         don't implement EIP-2981 (e.g. plain YapFighter) never fire
+    ///         this event — the royalty staticcall just falls through.
+    event RoyaltyPaid(
+        uint256 indexed tokenId,
+        address indexed receiver,
+        uint256 amount
+    );
     event Withdrew(address indexed seller, uint256 amount);
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
     event PlatformFeeUpdated(uint16 oldBps, uint16 newBps);
@@ -136,7 +145,21 @@ contract YapMarketplace is AccessControl, ReentrancyGuard, Pausable {
         if (msg.value < l.price) revert InsufficientPayment();
 
         uint256 fee = (l.price * platformFeeBps) / BPS_DENOMINATOR;
-        uint256 sellerAmt = l.price - fee;
+        // Probe EIP-2981 on the underlying NFT. Result is zero/zero for
+        // plain ERC-721 collections (e.g. YapFighter) so this instance of
+        // the marketplace is backwards-compatible with the fighter market.
+        (address royaltyReceiver, uint256 royaltyAmt) =
+            _royaltyOf(tokenId, l.price);
+        // Cap royalty so the seller can't end up underwater after fee + royalty
+        // exceed price. A misconfigured high bps just truncates to the remaining
+        // proceeds rather than reverting the whole sale.
+        uint256 sellerPayable = l.price - fee;
+        if (royaltyAmt > sellerPayable) royaltyAmt = sellerPayable;
+        // Self-royalty (receiver == seller) is folded back into the seller's
+        // balance — there's no double-credit, the merge skips the event since
+        // no economic transfer happened.
+        if (royaltyReceiver == l.seller) royaltyAmt = 0;
+        uint256 sellerAmt = sellerPayable - royaltyAmt;
         uint256 refund = msg.value - l.price;
 
         // --- effects first ---
@@ -145,6 +168,9 @@ contract YapMarketplace is AccessControl, ReentrancyGuard, Pausable {
         if (fee > 0) {
             // Credit treasury into pull balance; treasury withdraws via withdrawProceeds().
             sellerBalances[treasury] += fee;
+        }
+        if (royaltyAmt > 0 && royaltyReceiver != address(0)) {
+            sellerBalances[royaltyReceiver] += royaltyAmt;
         }
 
         // --- interactions ---
@@ -157,6 +183,28 @@ contract YapMarketplace is AccessControl, ReentrancyGuard, Pausable {
         IERC721(fighterContract).safeTransferFrom(l.seller, msg.sender, tokenId);
 
         emit Sold(tokenId, l.seller, msg.sender, l.price, fee);
+        if (royaltyAmt > 0 && royaltyReceiver != address(0)) {
+            emit RoyaltyPaid(tokenId, royaltyReceiver, royaltyAmt);
+        }
+    }
+
+    /// @dev EIP-2981 probe — returns the receiver/amount the NFT contract
+    ///      reports for a sale at `price`. Non-EIP-2981 NFTs (no royaltyInfo
+    ///      function, reverting implementations, or undersized returndata)
+    ///      degrade to (address(0), 0). Low-level staticcall bypasses
+    ///      Solidity's extcodesize auto-check so a misconfigured fighter
+    ///      contract address doesn't bork the whole sale path.
+    function _royaltyOf(uint256 tokenId, uint256 price)
+        internal
+        view
+        returns (address receiver, uint256 amount)
+    {
+        (bool ok, bytes memory ret) = fighterContract.staticcall(
+            abi.encodeWithSignature("royaltyInfo(uint256,uint256)", tokenId, price)
+        );
+        if (ok && ret.length >= 64) {
+            (receiver, amount) = abi.decode(ret, (address, uint256));
+        }
     }
 
     // --------------------------------------------------------------------------------------------

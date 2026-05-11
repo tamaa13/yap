@@ -37,6 +37,15 @@ contract MomentINFT is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
     uint256 public constant PROOF_VALIDITY = 10 minutes;
     uint256 public constant MAX_EXECUTORS = 100;
 
+    /// @notice Default royalty paid to the original minter on every secondary
+    ///         sale that routes through the {YapMarketplace}-compatible
+    ///         royalty hook. 250 bps == 2.5%, mirrors the platform fee so
+    ///         creator + protocol take the same cut by default. The minter
+    ///         may raise or lower this per-token up to {MAX_ROYALTY_BPS}.
+    uint96 public constant DEFAULT_ROYALTY_BPS = 250;
+    uint96 public constant MAX_ROYALTY_BPS = 1000; // 10% — hard ceiling
+    uint96 public constant ROYALTY_BPS_DENOMINATOR = 10_000;
+
     address public override verifier;
     address public treasury;
     uint256 public mintFee;
@@ -69,6 +78,17 @@ contract MomentINFT is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
     ///         serials of the same moment are produced via {iCloneFrom}.
     mapping(bytes32 => bool) public momentClaimed;
 
+    /// @notice Per-token royalty record. {minter} is the address that called
+    ///         {mintMoment} for this collectible — clones inherit the same
+    ///         minter so the original creator keeps the cut across serials.
+    ///         {royaltyBps} is bounded by {MAX_ROYALTY_BPS}; reads through
+    ///         the standard EIP-2981 {royaltyInfo} surface.
+    struct RoyaltyInfo {
+        address minter;
+        uint96 royaltyBps;
+    }
+    mapping(uint256 => RoyaltyInfo) private _royalties;
+
     mapping(uint256 => mapping(address => bytes)) public authorizations;
     mapping(uint256 => address[]) private _executors;
     mapping(uint256 => mapping(address => uint256)) private _executorIndex;
@@ -87,6 +107,15 @@ contract MomentINFT is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
         string encryptedURI,
         bytes32 provenanceHash
     );
+    /// @notice Fired any time a token's royalty record changes — on the
+    ///         initial mint (newBps == DEFAULT_ROYALTY_BPS) and whenever the
+    ///         minter calls {setRoyalty}. Lets indexers track the active
+    ///         creator cut without re-reading state.
+    event RoyaltySet(
+        uint256 indexed tokenId,
+        address indexed minter,
+        uint96 royaltyBps
+    );
 
     error InvalidProof();
     error ProofExpired();
@@ -101,6 +130,8 @@ contract MomentINFT is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
     error NotFighterUser();
     error MomentAlreadyClaimed();
     error MintNotSupported();
+    error RoyaltyTooHigh();
+    error NotMinter();
 
     constructor(
         address admin,
@@ -217,6 +248,7 @@ contract MomentINFT is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
             roundNo: roundNo,
             side: side
         });
+        _setRoyalty(tokenId, msg.sender, DEFAULT_ROYALTY_BPS);
 
         emit Minted(tokenId, msg.sender, metadataHash_, encryptedTranscriptURI);
         emit PublishedSealedKey(tokenId, msg.sender, sealedKey);
@@ -282,8 +314,11 @@ contract MomentINFT is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
         metadataHash[newTokenId] = proof.ownershipProof.dataHash;
         encryptedURI[newTokenId] = encryptedURI[tokenId];
         sealedKeys[newTokenId] = proof.ownershipProof.sealedKey;
-        // Inherit provenance — clones are additional serials of the same moment.
+        // Inherit provenance + royalty — clones are additional serials of
+        // the same moment, so the original minter keeps the secondary cut.
         momentOf[newTokenId] = momentOf[tokenId];
+        RoyaltyInfo memory parent = _royalties[tokenId];
+        _setRoyalty(newTokenId, parent.minter, parent.royaltyBps);
 
         emit Cloned(tokenId, newTokenId, to, proof.ownershipProof.dataHash);
         emit PublishedSealedKey(newTokenId, to, proof.ownershipProof.sealedKey);
@@ -378,6 +413,56 @@ contract MomentINFT is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
     }
 
     // --------------------------------------------------------------------------------------------
+    // Royalty (EIP-2981 + named view per brief)
+    // --------------------------------------------------------------------------------------------
+
+    /// @notice Named view per brief — returns the recorded minter and the
+    ///         bps cut for `tokenId`. Companion to {royaltyInfo}, which
+    ///         exposes the same data through the standard EIP-2981 shape
+    ///         that marketplaces probe via staticcall.
+    function getRoyaltyInfo(uint256 tokenId)
+        external
+        view
+        returns (address minter, uint96 royaltyBps)
+    {
+        RoyaltyInfo memory r = _royalties[tokenId];
+        return (r.minter, r.royaltyBps);
+    }
+
+    /// @notice EIP-2981 royalty resolver. `receiver` is the original minter
+    ///         (or zero for unminted/burned ids); `royaltyAmount` is
+    ///         `salePrice * royaltyBps / 10_000`. Marketplaces should call
+    ///         this with the sale's gross price before fee deduction.
+    function royaltyInfo(uint256 tokenId, uint256 salePrice)
+        external
+        view
+        returns (address receiver, uint256 royaltyAmount)
+    {
+        RoyaltyInfo memory r = _royalties[tokenId];
+        receiver = r.minter;
+        royaltyAmount = (salePrice * uint256(r.royaltyBps)) / uint256(ROYALTY_BPS_DENOMINATOR);
+    }
+
+    /// @notice Override the per-token royalty cut. Only the recorded minter
+    ///         can call — admins are intentionally excluded so creators can
+    ///         negotiate their own rates. New bps cannot exceed
+    ///         {MAX_ROYALTY_BPS}; minter address is immutable post-mint.
+    function setRoyalty(uint256 tokenId, uint96 royaltyBps) external {
+        RoyaltyInfo storage r = _royalties[tokenId];
+        if (r.minter == address(0)) revert NotMinter();
+        if (msg.sender != r.minter) revert NotMinter();
+        if (royaltyBps > MAX_ROYALTY_BPS) revert RoyaltyTooHigh();
+        r.royaltyBps = royaltyBps;
+        emit RoyaltySet(tokenId, r.minter, royaltyBps);
+    }
+
+    function _setRoyalty(uint256 tokenId, address minter, uint96 royaltyBps) internal {
+        if (royaltyBps > MAX_ROYALTY_BPS) revert RoyaltyTooHigh();
+        _royalties[tokenId] = RoyaltyInfo({minter: minter, royaltyBps: royaltyBps});
+        emit RoyaltySet(tokenId, minter, royaltyBps);
+    }
+
+    // --------------------------------------------------------------------------------------------
     // Internals
     // --------------------------------------------------------------------------------------------
 
@@ -427,6 +512,8 @@ contract MomentINFT is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
     {
         return
             interfaceId == type(IERC7857).interfaceId ||
+            // EIP-2981 royaltyInfo(uint256,uint256) selector pair → interface id 0x2a55205a.
+            interfaceId == 0x2a55205a ||
             super.supportsInterface(interfaceId);
     }
 }

@@ -484,4 +484,77 @@ contract MomentINFTTest is Test {
     function test_SupportsInterface_IncludesERC7857() public view {
         assertTrue(moment.supportsInterface(type(IERC7857).interfaceId));
     }
+
+    // ---------------- royalty (EIP-2981) ----------------
+
+    function test_Royalty_SetOnMint_DefaultBps() public {
+        uint256 id = _mintMoment(alice, SIDE_A, ROUND_NO);
+        (address minter, uint96 bps) = moment.getRoyaltyInfo(id);
+        assertEq(minter, alice);
+        assertEq(bps, moment.DEFAULT_ROYALTY_BPS());
+    }
+
+    function test_Royalty_Info_ProportionalToSalePrice() public {
+        uint256 id = _mintMoment(alice, SIDE_A, ROUND_NO);
+        // 250 bps == 2.5%. 1e18 * 0.025 = 2.5e16.
+        (address receiver, uint256 amount) = moment.royaltyInfo(id, 1 ether);
+        assertEq(receiver, alice);
+        assertEq(amount, 0.025 ether);
+    }
+
+    function test_Royalty_ClonedTokenInheritsMinterAndBps() public {
+        uint256 parent = _mintMoment(alice, SIDE_A, ROUND_NO);
+        // Bump parent bps so we can prove the clone copies the override too.
+        vm.prank(alice);
+        moment.setRoyalty(parent, 500);
+
+        IERC7857.TransferValidityProof memory tvp = _buildAttestedProof(
+            keccak256("clone-meta"), hex"02", parent, bob
+        );
+        vm.prank(alice);
+        uint256 cloneId = moment.iCloneFrom(bob, parent, tvp);
+
+        (address pm, uint96 pb) = moment.getRoyaltyInfo(parent);
+        (address cm, uint96 cb) = moment.getRoyaltyInfo(cloneId);
+        assertEq(pm, cm);
+        assertEq(pb, cb);
+        assertEq(cm, alice);
+        assertEq(cb, 500);
+    }
+
+    function test_Royalty_SetRoyalty_OnlyMinter() public {
+        uint256 id = _mintMoment(alice, SIDE_A, ROUND_NO);
+        vm.prank(bob);
+        vm.expectRevert(MomentINFT.NotMinter.selector);
+        moment.setRoyalty(id, 400);
+    }
+
+    function test_Royalty_SetRoyalty_RejectsAboveMax() public {
+        uint256 id = _mintMoment(alice, SIDE_A, ROUND_NO);
+        uint96 tooHigh = moment.MAX_ROYALTY_BPS() + 1;
+        vm.prank(alice);
+        vm.expectRevert(MomentINFT.RoyaltyTooHigh.selector);
+        moment.setRoyalty(id, tooHigh);
+    }
+
+    function test_Royalty_SetRoyalty_EmitsAndUpdates() public {
+        uint256 id = _mintMoment(alice, SIDE_A, ROUND_NO);
+        vm.expectEmit(true, true, false, true, address(moment));
+        emit MomentINFT.RoyaltySet(id, alice, 750);
+        vm.prank(alice);
+        moment.setRoyalty(id, 750);
+        (, uint96 bps) = moment.getRoyaltyInfo(id);
+        assertEq(bps, 750);
+    }
+
+    function test_Royalty_SetRoyalty_UnmintedTokenReverts() public {
+        vm.prank(alice);
+        vm.expectRevert(MomentINFT.NotMinter.selector);
+        moment.setRoyalty(999, 100);
+    }
+
+    function test_SupportsInterface_IncludesERC2981() public view {
+        // EIP-2981 interface id == 0x2a55205a.
+        assertTrue(moment.supportsInterface(0x2a55205a));
+    }
 }
