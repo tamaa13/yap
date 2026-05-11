@@ -87,7 +87,6 @@ everything else is free to read.
 | BattleRegistry | `0x755ef230d456b6cc991ccfff38ec5c6b0133d37b` |
 | YapMarketplace | `0x076e42a64e4ba43700ebb0830086138468dfa275` |
 | RentalEscrow | `0xe5Df2d51ef75A268daAd122038D94cEA9c3111EA` |
-| FighterTrainer | `0xC10bd77cdA8300877898612B00608bA522d5a460` |
 | MomentINFT | `0xf6cadAb5276A16b7C8213CD7B6BBB547f55be4AC` |
 | MomentMarketplace | `0x18653aa16a4ffc7093be0270ab427688dfd2fb81` |
 | YapSubnameRegistrar | `0xb84c024c3456b7c82ad8a08bf4b7c69804bbd56f` |
@@ -136,6 +135,21 @@ gating policy.
    MIN_GATE_MS / POST_READY_GRACE_MS / HARD_TIMEOUT_MS), not a static
    timer. Reduced-motion preference respected; sessionStorage-gated to
    first access only.
+
+## Defensive hardening (Phase-3 audit pass)
+
+Beyond the four core primitives, the contract layer ships a set of
+defensive guarantees that surfaced during a comparative audit against
+peer 0G projects (anima, Aegis-Vault, lattice, EIDOLON, Coal).
+
+| Surface | Guarantee |
+|---|---|
+| **0G DA anchoring** | `BattleEscrow.submitVerdict` low-level staticcalls the DA-layer DASigners precompile at `0x...1000`, records the current epoch into `battleDAEpoch[battleId]`, and emits `BattleDAAnchored(battleId, epoch)`. Lifts Yap to a 4-of-5 0G primitive integration (Storage + Compute + Chain + DA). Falls through to zero on non-precompile chains, never blocking settlement. |
+| **EIP-2981 royalties** | Battle Moments are minted with a `RoyaltyInfo { minter, royaltyBps }` record (250 bps default, 1000 bps cap). MomentINFT exposes both the brief-mandated `getRoyaltyInfo` view and the standard EIP-2981 `royaltyInfo` shape. Clones inherit the parent record; only the minter can mutate. The shared `YapMarketplace` settlement path probes EIP-2981 via staticcall and credits the receiver before paying the seller — Fighter sales degrade to zero royalty gracefully (no EIP-2981 surface), Moment sales pay the creator on every secondary trade. |
+| **Cross-chain proof binding** | YapFighter + MomentINFT bind `block.chainid` into the inner proof hash inside `_boundProofId`. A proof attested on Galileo cannot replay on Aristotle (or vice versa) even if a TEE verifier key were reused during a migration window. Off-chain verifiers mirror the same derivation. |
+| **PersonaAccessed audit log** | YapFighter exposes `logAccess(tokenId, battleId)` — gated to the owner or any authorized executor — which increments `getAccessCount(tokenId)` and emits `PersonaAccessed(tokenId, accessor, battleId, timestamp)`. Every inference round leaves a public audit trail; revoking an executor immediately stops their ability to add entries. |
+| **Slither CI gate** | `.github/workflows/slither.yml` runs on every push/PR touching `contracts/**` with `fail-on: high`. Local baseline against current main is **0 high-severity findings**; the badge surfaces on the project README. Medium-severity items stay visible in CI logs without blocking merges. |
+| **Asymmetric force-close fairness (H audit)** | `RentalEscrow.forceCloseRental` matches the peer-audited anima `AnimaMarket.forceClose` on the two guarantees that matter — engaged-provider protection (dispute-free rental at timeout → owner is paid, not the renter) and no-fee buyer/renter refund on the dispute branch. On the `_settleSplit` path Yap goes *further* than anima: the platform fee is scaled to the **owner's share only**, so a 100% renter refund pays *zero* protocol fee. Anima charges a flat 5% on every dispute resolution including 100%-buyer outcomes. |
 
 ## What we surfaced upstream
 
