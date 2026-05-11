@@ -14,10 +14,13 @@ import { PageContainer } from "@/components/shell/page-container";
 import { Pagination, usePageFromUrl } from "@/components/ui/pagination";
 import { RecordBadge, Split, TokenTag } from "@/components/ui/badge";
 import { useFighters } from "@/hooks/use-fighters";
+import { useMomentListings } from "@/hooks/use-moment-listings";
 import { CARD_GRID_PAGE_SIZE, pageToOffset } from "@/lib/pagination";
+import { MOMENT_MARKET_ADDRESS } from "@/lib/contracts";
 import type { FighterArchetype } from "@/lib/types";
+import { MomentsMarket } from "./moments-market";
 
-type MarketTab = "buy" | "rent" | "auction";
+type MarketTab = "buy" | "rent" | "auction" | "moments";
 type ViewMode = "grid" | "list";
 
 const ARCHETYPES: Array<{ id: FighterArchetype; label: string }> = [
@@ -42,6 +45,9 @@ export default function MarketPage() {
   // Pull full catalog so we filter+paginate post-fetch (testnet scale).
   // See lib/pagination.ts header for mainnet migration path.
   const { data: all, isLoading } = useFighters({ limit: 9999 });
+  // Lightweight count for the moments tab badge — only the length;
+  // MomentsMarket handles its own deep query when activated.
+  const { data: momentListings } = useMomentListings();
 
   const list = useMemo(() => {
     const eloMinN = eloMin === "" ? null : Number(eloMin);
@@ -141,10 +147,22 @@ export default function MarketPage() {
           { value: "buy", label: "Buy", count: counts.buy },
           { value: "rent", label: "Rent", count: counts.rent },
           { value: "auction", label: "Auction", count: counts.auction },
+          ...(MOMENT_MARKET_ADDRESS !== ""
+            ? [
+                {
+                  value: "moments",
+                  label: "Moments",
+                  count: momentListings.length,
+                },
+              ]
+            : []),
         ]}
         style={{ marginBottom: 20 }}
       />
 
+      {tab === "moments" ? (
+        <MomentsMarket />
+      ) : (
       <div className="al-market-row" style={{ display: "flex", gap: 20 }}>
         <div className="al-market-filter" style={{ width: 220, flexShrink: 0 }}>
           <Card style={{ padding: 16 }}>
@@ -525,6 +543,7 @@ export default function MarketPage() {
           />
         </div>
       </div>
+      )}
     </PageContainer>
   );
 }
