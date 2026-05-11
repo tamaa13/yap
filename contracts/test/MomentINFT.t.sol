@@ -157,7 +157,9 @@ contract MomentINFTTest is Test {
             proof: proofBytes
         });
         tvp = IERC7857.TransferValidityProof({accessProof: ap, ownershipProof: op});
-        bytes32 proofId = keccak256(abi.encode(op.oracleType, op.dataHash, op.nonce, op.proof));
+        bytes32 proofId = keccak256(
+            abi.encode(op.oracleType, op.dataHash, op.nonce, op.proof, block.chainid)
+        );
         vm.prank(verifier);
         moment.attestProof(proofId, tokenId, recipient);
     }

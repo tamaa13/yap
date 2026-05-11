@@ -56,7 +56,9 @@ contract YapFighterTest is Test {
             proof: proofBytes
         });
         tvp = IERC7857.TransferValidityProof({accessProof: ap, ownershipProof: op});
-        proofId = keccak256(abi.encode(op.oracleType, op.dataHash, op.nonce, op.proof));
+        proofId = keccak256(
+            abi.encode(op.oracleType, op.dataHash, op.nonce, op.proof, block.chainid)
+        );
         vm.prank(verifier);
         fighter.attestProof(proofId, tokenId, recipient);
     }
@@ -355,5 +357,42 @@ contract YapFighterTest is Test {
 
     function test_SupportsInterface_IncludesERC7857() public view {
         assertTrue(fighter.supportsInterface(type(IERC7857).interfaceId));
+    }
+
+    /// A proof attested with chainid X must not validate when the EVM-local
+    /// chainid is Y. Simulates a cross-chain replay attempt: build a proof,
+    /// compute its proofId WITHOUT chainid (the old format), attest, then
+    /// try to consume — the contract's chainid-bound _boundProofId yields
+    /// a different slot and {InvalidProof} fires.
+    function test_BoundProofId_CrossChainReplayBlocked() public {
+        uint256 id = _mintTo(alice, keccak256("xchain"));
+        IERC7857.TransferValidityProof memory tvp;
+        bytes32 newHash = keccak256("xchain-new");
+        // Reuse the helper layout but inject a pre-chainid proofId
+        // (the off-chain verifier on the OTHER chain would not include
+        // block.chainid in its derivation if it followed the old format).
+        IERC7857.AccessProof memory ap = IERC7857.AccessProof(address(0), bytes32(0), hex"");
+        bytes memory nonce = abi.encodePacked(bytes32(uint256(77)));
+        bytes memory proofBytes = hex"cc";
+        IERC7857.OwnershipProof memory op = IERC7857.OwnershipProof({
+            oracleType: 0,
+            dataHash: newHash,
+            sealedKey: hex"02",
+            targetPubkey: hex"",
+            nonce: nonce,
+            proof: proofBytes
+        });
+        tvp = IERC7857.TransferValidityProof({accessProof: ap, ownershipProof: op});
+        bytes32 oldFormatProofId = keccak256(
+            abi.encode(op.oracleType, op.dataHash, op.nonce, op.proof)
+        );
+        vm.prank(verifier);
+        fighter.attestProof(oldFormatProofId, id, bob);
+
+        IERC7857.TransferValidityProof[] memory proofs = new IERC7857.TransferValidityProof[](1);
+        proofs[0] = tvp;
+        vm.prank(alice);
+        vm.expectRevert(YapFighter.InvalidProof.selector);
+        fighter.iTransferFrom(alice, bob, id, proofs, "ipfs://reseal");
     }
 }

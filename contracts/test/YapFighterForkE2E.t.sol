@@ -156,7 +156,9 @@ contract YapFighterForkE2ETest is Test {
         });
 
         // 2. Verifier attests proof freshness for (tokenId, recipient).
-        bytes32 proofId = keccak256(abi.encode(op.oracleType, op.dataHash, op.nonce, op.proof));
+        bytes32 proofId = keccak256(
+            abi.encode(op.oracleType, op.dataHash, op.nonce, op.proof, block.chainid)
+        );
         vm.prank(VERIFIER);
         fighter.attestProof(proofId, TOKEN_ID, newOwner);
 
@@ -222,7 +224,9 @@ contract YapFighterForkE2ETest is Test {
         IERC7857.AccessProof memory ap = IERC7857.AccessProof(address(0), bytes32(0), hex"");
         IERC7857.TransferValidityProof memory proof = IERC7857.TransferValidityProof(ap, op);
 
-        bytes32 proofId = keccak256(abi.encode(op.oracleType, op.dataHash, op.nonce, op.proof));
+        bytes32 proofId = keccak256(
+            abi.encode(op.oracleType, op.dataHash, op.nonce, op.proof, block.chainid)
+        );
         vm.prank(VERIFIER);
         fighter.attestProof(proofId, TOKEN_ID, newOwner);
 
