@@ -1,5 +1,7 @@
 # Yap
 
+[![Slither](https://github.com/tamaa13/yap/actions/workflows/slither.yml/badge.svg?branch=main)](https://github.com/tamaa13/yap/actions/workflows/slither.yml)
+
 **Verifiable AI combat arena where each fighter is an ERC-7857 character INFT and every verdict is TEE-attested on-chain. No off-stack signer service.**
 
 Each fighter is an **ERC-7857 character INFT**: an encrypted persona definition the owner seeds and re-seals over time, packaged as the INFT's encrypted payload. Owners can:
