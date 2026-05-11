@@ -1,52 +1,108 @@
 @import "tailwindcss";
 
-/* ──────────────────────────────
-   Yap — Design tokens (Promoter direction)
-   Fight-poster editorial: warm ink + cream + crimson + gold + bruise.
-   Anton (display caps) + Archivo (body) + Space Mono (numbers, IDs).
-   See docs/design/project/design-system.html for the full system,
-   apps/web/STYLE.md for voice, apps/web/MOTION.md for motion vocab.
-   Phase A migration: alias-first — old --bg-/--tx-/--accent vars are
-   re-bound to Promoter values so existing components pick up the new
-   palette without per-callsite changes. New code references --yap-*
-   directly; legacy aliases bridge until Phase B/C touch each surface.
+/* ──────────────────────────────────────────────────────────────────
+   Yap — OVERPRINT design system (Task #47, Claude Design v2)
+   ──────────────────────────────────────────────────────────────────
+   Risograph zine / overprint registration. Cream paper page + cobalt
+   + fluo + plum accents, every coloured surface uses
+   `mix-blend-mode: multiply` so paper grain pulls through. Plum is
+   reserved for verdict reveal — the overprint where cobalt + fluo
+   meet. New font stack: Boldonse (display), Caprasimo (poster
+   serif), Inter Tight (body), Newsreader italic (canonical text),
+   DM Mono (receipts + ids).
+
+   ALIAS REBIND: legacy --yap-*, --bg-*, --tx-*, --accent tokens point
+   at Overprint equivalents below so existing components inherit the
+   rebrand without per-file rewrites. ALL --yap-ink-* values flip
+   from dark warm-ink to light paper/ink-on-cream; existing code that
+   reaches for "ink-50" expecting brightest text now resolves to the
+   darkest ink against paper, semantically equivalent.
    ────────────────────────────── */
 
 :root {
-  /* ── Promoter primary palette ────────────────────────────────── */
-  --yap-ink-950: #0E0B08;
-  --yap-ink-900: #14110E;
-  --yap-ink-800: #1A1612;
-  --yap-ink-700: #221C16;
-  --yap-ink-600: #2C251D;
-  --yap-ink-500: #443A2E;
-  --yap-ink-400: #6E6457;
-  --yap-ink-300: #8A8378;
-  --yap-ink-200: #B8B0A2;
-  --yap-ink-100: #DCD5C7;
-  --yap-ink-50:  #F2EDE2;
-  --yap-ink-0:   #FBF8F1;
+  /* ── Overprint primary palette ─────────────────────────────── */
+  --op-paper:       #F2EAD3;
+  --op-paper-deep:  #E5DAB7;
+  --op-paper-shade: #DAD0AE;
 
-  --yap-crimson:        #C8102E;
-  --yap-crimson-soft:   #A60D26;
-  --yap-crimson-deep:   #7A0918;
-  --yap-gold:           #C9A961;
-  --yap-gold-deep:      #8E7635;
-  --yap-bruise:         #5C2530;
+  --op-ink:      #1A1814;
+  --op-ink-soft: #3D3933;
+  --op-ink-mid:  #6B665D;
+  --op-ink-dim:  #A29C8D;
 
-  --yap-success:        #5BA855;
-  --yap-success-bg:     #1C2A1A;
-  --yap-danger:         #E0432B;
-  --yap-danger-bg:      #2D1611;
-  --yap-warning:        #E8A22B;
-  --yap-warning-bg:     #2A1F0E;
-  --yap-info:           #5DA0D6;
-  --yap-info-bg:        #11202C;
+  --op-cobalt:       #2342C8;
+  --op-cobalt-deep:  #15278A;
+  --op-cobalt-light: #A8B6E8;
 
-  /* ── Type families ──────────────────────────────────────────── */
-  --yap-font-display: var(--font-anton), "Archivo Black", Impact, sans-serif;
-  --yap-font-body:    var(--font-archivo), "Inter", system-ui, -apple-system, sans-serif;
-  --yap-font-mono:    var(--font-space-mono), "JetBrains Mono", ui-monospace, 'SF Mono', monospace;
+  --op-fluo:       #FF5A1A;
+  --op-fluo-deep:  #C73900;
+  --op-fluo-light: #FFC8A8;
+
+  --op-plum:      #4A2860;
+  --op-plum-deep: #2F1840;
+
+  --op-tint-c: #C5D2F2; /* cobalt tint surface */
+  --op-tint-o: #FFD5C2; /* fluo tint surface */
+
+  /* Multiply-blend offset constants for the drop-shadow trick used
+   * across cards, buttons, panels: `::after { background: cobalt;
+   * mix-blend-mode: multiply; transform: translate(N,N); z-index: -1; }`
+   * gives a printed-offset shadow without leaving CSS. */
+  --op-offset-1: 4px;
+  --op-offset-2: 6px;
+
+  /* ── Legacy --yap-ink-* aliases ────────────────────────────────
+   * Promoter palette was dark warm-ink; Overprint is cream paper +
+   * ink. Flip the scale so deeper-stop semantics still hold:
+   *   ink-950 (was deepest dark) → ink (darkest text on paper)
+   *   ink-50  (was lightest near-white) → paper (lightest surface)
+   * Existing components that reach for ink-50 expecting "brightest
+   * surface" or ink-200 expecting "muted text" inherit correct
+   * semantics under the new palette. */
+  --yap-ink-950: var(--op-ink);
+  --yap-ink-900: var(--op-ink-soft);
+  --yap-ink-800: var(--op-ink-soft);
+  --yap-ink-700: var(--op-ink-mid);
+  --yap-ink-600: var(--op-ink-mid);
+  --yap-ink-500: var(--op-ink-dim);
+  --yap-ink-400: var(--op-ink-dim);
+  --yap-ink-300: var(--op-paper-shade);
+  --yap-ink-200: var(--op-paper-deep);
+  --yap-ink-100: var(--op-paper-deep);
+  --yap-ink-50:  var(--op-paper);
+  --yap-ink-0:   var(--op-paper);
+
+  /* Crimson → cobalt (brand primary). Gold → fluo (impact). Bruise →
+   * plum (verdict reserve). All existing component callsites resolve
+   * to Overprint values. */
+  --yap-crimson:      var(--op-cobalt);
+  --yap-crimson-soft: var(--op-cobalt-light);
+  --yap-crimson-deep: var(--op-cobalt-deep);
+  --yap-gold:         var(--op-fluo);
+  --yap-gold-deep:    var(--op-fluo-deep);
+  --yap-bruise:       var(--op-plum);
+
+  --yap-success:    var(--op-cobalt);
+  --yap-success-bg: var(--op-tint-c);
+  --yap-danger:     var(--op-fluo-deep);
+  --yap-danger-bg:  var(--op-fluo-light);
+  --yap-warning:    var(--op-fluo);
+  --yap-warning-bg: var(--op-tint-o);
+  --yap-info:       var(--op-cobalt);
+  --yap-info-bg:    var(--op-tint-c);
+
+  /* ── Type families — Overprint stack ─────────────────────────── */
+  --op-fd: var(--font-boldonse), Impact, sans-serif;
+  --op-fp: var(--font-caprasimo), Georgia, serif;
+  --op-fb: var(--font-inter-tight), system-ui, -apple-system, sans-serif;
+  --op-fi: var(--font-newsreader), Georgia, serif;
+  --op-fm: var(--font-dm-mono), ui-monospace, 'SF Mono', monospace;
+
+  --yap-font-display:   var(--op-fd);
+  --yap-font-body:      var(--op-fb);
+  --yap-font-mono:      var(--op-fm);
+  --yap-font-editorial: var(--op-fi);
+  --yap-font-poster:    var(--op-fp);
 
   /* ── Type scale (px) — design system v1 ─────────────────────── */
   --yap-fs-display: 72px; --yap-lh-display: 0.9;
@@ -90,42 +146,48 @@
   --yap-ease-data:   cubic-bezier(.25,.46,.45,.94);
 
   /* ──────────────────────────────────────────────────────────────
-     LEGACY ALIASES — point old token names at the new Promoter
-     values so existing components and motion-pilot work pick up the
-     re-skin without needing a rename pass. Phase B/C will migrate
-     callsites to --yap-* directly where they're touched.
+     LEGACY ALIASES — point old --bg-/--tx-/--accent vars at Overprint
+     equivalents so existing components inherit the rebrand without
+     per-callsite rewrites.
      ────────────────────────────────────────────────────────────── */
-  --bg-canvas: var(--yap-ink-950);
-  --bg-surface: var(--yap-ink-800);
-  --bg-raised: var(--yap-ink-700);
-  --bg-sunken: var(--yap-ink-900);
-  /* Borders were rgba-on-white in the old scheme; on warm-ink they
-   * read flatter, so map to the inked stops directly — slightly more
-   * contrast at the same visual weight. */
-  --bd-subtle: var(--yap-ink-700);
-  --bd-default: var(--yap-ink-600);
-  --bd-strong: var(--yap-ink-500);
-  --tx-primary: var(--yap-ink-50);
-  --tx-secondary: var(--yap-ink-200);
-  --tx-tertiary: var(--yap-ink-300);
-  --tx-disabled: var(--yap-ink-500);
-  /* Accent — was amber #FFB800; now Promoter crimson. The motion
-   * pilot's reaction-slam + speech-bubble code already references
-   * --accent and picks this up automatically. */
-  --accent: var(--yap-crimson);
-  --accent-hover: var(--yap-crimson-soft);
-  --accent-muted: rgba(200, 16, 46, 0.12);
-  --accent-border: rgba(200, 16, 46, 0.40);
-  /* Fighter corner colors — Promoter mapping per main 2026-05-08:
-   * crimson for Corner A (challenger / aggression / primary), gold
-   * for Corner B (defender / premium / promo). Drops the old
-   * blue/orange boxing-cosplay pair entirely. */
-  --fighter-a: var(--yap-crimson);
-  --fighter-b: var(--yap-gold);
-  --fighter-a-bg: rgba(200, 16, 46, 0.08);
-  --fighter-b-bg: rgba(201, 169, 97, 0.08);
-  --fighter-a-bd: rgba(200, 16, 46, 0.28);
-  --fighter-b-bd: rgba(201, 169, 97, 0.28);
+  /* Overprint surfaces are paper, not dark. --bg-canvas page ground
+   * = paper; --bg-surface = paper-deep (mild contrast for cards);
+   * --bg-raised = paper-shade for additional elevation; --bg-sunken
+   * = paper for recessed areas (depth in Overprint comes from border,
+   * not fill). */
+  --bg-canvas:  var(--op-paper);
+  --bg-surface: var(--op-paper-deep);
+  --bg-raised:  var(--op-paper-shade);
+  --bg-sunken:  var(--op-paper);
+
+  /* Borders — Overprint relies on heavy ink borders + dashed dividers
+   * rather than tinted surfaces. Subtle = dashed-ink-mid, default =
+   * solid ink, strong = thicker ink. */
+  --bd-subtle:  var(--op-ink-mid);
+  --bd-default: var(--op-ink);
+  --bd-strong:  var(--op-ink);
+
+  /* Foreground — ink-on-paper. */
+  --tx-primary:   var(--op-ink);
+  --tx-secondary: var(--op-ink-soft);
+  --tx-tertiary:  var(--op-ink-mid);
+  --tx-disabled:  var(--op-ink-dim);
+
+  /* Brand — cobalt. */
+  --accent:        var(--op-cobalt);
+  --accent-hover:  var(--op-cobalt-deep);
+  --accent-muted:  rgba(35, 66, 200, 0.14);
+  --accent-border: rgba(35, 66, 200, 0.45);
+
+  /* Fighter corners — cobalt PRO (Corner A) / fluo CON (Corner B).
+   * Both warm-spectrum-ish on paper; the multiply-blend mode on each
+   * surface ensures they read as overprint registration colors. */
+  --fighter-a:    var(--op-cobalt);
+  --fighter-b:    var(--op-fluo);
+  --fighter-a-bg: var(--op-tint-c);
+  --fighter-b-bg: var(--op-tint-o);
+  --fighter-a-bd: rgba(35, 66, 200, 0.45);
+  --fighter-b-bd: rgba(255, 90, 26, 0.55);
   --success: var(--yap-success);
   --warning: var(--yap-warning);
   --danger: var(--yap-danger);
@@ -141,9 +203,9 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-archivo);
-  --font-mono: var(--font-space-mono);
-  --font-display: var(--font-anton);
+  --font-sans: var(--font-inter-tight);
+  --font-mono: var(--font-dm-mono);
+  --font-display: var(--font-boldonse);
   --color-canvas: var(--bg-canvas);
   --color-surface: var(--bg-surface);
   --color-raised: var(--bg-raised);
@@ -157,22 +219,35 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
-  background: var(--bg-canvas);
-  color: var(--tx-primary);
-  font-family: var(--sans);
-  /* Promoter design system: body 15px / 1.55 (vs prior 14 / 1.5).
-   * Designer chose 15 deliberately for data-rich tables. */
-  font-size: var(--yap-fs-body);
-  line-height: var(--yap-lh-body);
-  font-feature-settings: 'ss01', 'tnum';
+  background: var(--op-paper);
+  color: var(--op-ink);
+  font-family: var(--op-fb);
+  font-size: 15px;
+  line-height: 1.5;
+  font-feature-settings: 'tnum';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  /* Native cursor hidden in favor of the Dot + Leash JS cursor mounted
-   * via <YapCursor>. The component itself restores `cursor: auto` on
-   * touch / coarse-pointer devices, where hover-based UI doesn't apply. */
   cursor: none;
 }
+/* Risograph paper grain — fixed dotted-ink overlay across the
+ * viewport. Pulls every coloured surface (cobalt / fluo / plum)
+ * into a printed-on-paper feel via the underlying paper noise
+ * showing through `mix-blend-mode: multiply` accents. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.55;
+  background-image:
+    radial-gradient(rgba(26, 24, 20, 0.06) 1px, transparent 1px),
+    radial-gradient(rgba(26, 24, 20, 0.04) 1.5px, transparent 1.5px);
+  background-size: 3px 3px, 7px 7px;
+  background-position: 0 0, 1.5px 1.5px;
+}
+body > * { position: relative; z-index: 2; }
 @media (hover: hover) and (pointer: fine) {
   /* Aggressive override — any element with its own `cursor: pointer`
    * (e.g. <tr onClick> rows in tables) would otherwise stack on top
@@ -182,7 +257,7 @@ body {
     cursor: none !important;
   }
 }
-::selection { background: var(--yap-crimson); color: var(--yap-ink-50); }
+::selection { background: var(--op-fluo); color: var(--op-ink); }
 
 /* ─────────────────────────────────────────────────────────────────────
    Yap cursor — Dot + Leash
@@ -386,62 +461,76 @@ a { color: inherit; text-decoration: none; }
    hover/active translate so the press feel is identical for any
    non-React surface (e.g. RainbowKit injected buttons) that opts in.
    ────────────────────────────────────────────────────────────── */
+/* ── Overprint button ──────────────────────────────────────────
+ * Ink-bordered solid fill + multiply-blend offset backplate (the
+ * fluo or cobalt "second print" creating the registration shadow).
+ * No clip-path notch — Overprint uses square corners + 2px ink
+ * border + offset shadow. */
 .btn {
-  --btn-bg: var(--yap-crimson);
-  --btn-fg: var(--yap-ink-50);
-  --btn-bd: transparent;
-  --btn-pad-y: 12px; --btn-pad-x: 22px;
+  --btn-bg: var(--op-ink);
+  --btn-fg: var(--op-paper);
+  --btn-bd: var(--op-ink);
+  --btn-shadow: var(--op-fluo);
+  --btn-pad-y: 13px; --btn-pad-x: 20px;
   --btn-fs: 14px; --btn-gap: 8px;
   background: var(--btn-bg);
   color: var(--btn-fg);
-  border: 1.5px solid var(--btn-bd);
+  border: 2px solid var(--btn-bd);
   padding: var(--btn-pad-y) var(--btn-pad-x);
-  font-family: var(--yap-font-display);
+  font-family: var(--op-fd);
   font-weight: 400;
   font-size: var(--btn-fs);
-  letter-spacing: 2px;
+  letter-spacing: 1px;
+  line-height: 1;
   text-transform: uppercase;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--btn-gap);
-  clip-path: var(--yap-cut-md);
-  transition:
-    transform var(--yap-t-fast) var(--yap-ease-out),
-    background var(--yap-t-fast) var(--yap-ease-out),
-    color var(--yap-t-fast) var(--yap-ease-out);
+  position: relative;
+  border-radius: 0;
+  clip-path: none;
   text-decoration: none;
-  line-height: 1;
   white-space: nowrap;
   user-select: none;
+  transition: transform 120ms cubic-bezier(.2,.8,.2,1);
+}
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--btn-shadow);
+  mix-blend-mode: multiply;
+  transform: translate(4px, 4px);
+  z-index: -1;
+  pointer-events: none;
 }
 .btn:hover { transform: translate(-1px, -1px); }
-.btn:active { transform: translate(1px, 1px); }
+.btn:active { transform: translate(2px, 2px); }
 .btn[disabled], .btn.is-disabled {
-  background: var(--yap-ink-700);
-  color: var(--yap-ink-400);
+  --btn-bg: var(--op-paper-shade);
+  --btn-fg: var(--op-ink-mid);
+  --btn-bd: var(--op-ink-mid);
   cursor: not-allowed;
-  border-color: transparent;
+}
+.btn[disabled]::after, .btn.is-disabled::after {
+  background: var(--op-ink-mid);
+  opacity: 0.3;
 }
 .btn[disabled]:hover, .btn.is-disabled:hover { transform: none; }
 
-.btn--secondary { --btn-bg: transparent; --btn-fg: var(--yap-ink-50); --btn-bd: var(--yap-ink-50); }
-.btn--secondary:hover { --btn-bg: var(--yap-ink-50); --btn-fg: var(--yap-ink-900); }
-.btn--ghost { --btn-bg: transparent; --btn-fg: var(--yap-ink-200); --btn-bd: var(--yap-ink-500); }
-.btn--ghost:hover { --btn-fg: var(--yap-ink-50); --btn-bd: var(--yap-ink-200); }
-.btn--danger { --btn-bg: var(--yap-danger); --btn-fg: var(--yap-ink-50); }
-.btn--gold { --btn-bg: var(--yap-gold); --btn-fg: var(--yap-ink-900); }
+.btn--primary,
+.btn--cobalt   { --btn-bg: var(--op-cobalt); --btn-fg: var(--op-paper); --btn-shadow: var(--op-fluo); }
+.btn--fluo     { --btn-bg: var(--op-fluo);   --btn-fg: var(--op-ink);   --btn-shadow: var(--op-cobalt); mix-blend-mode: multiply; }
+.btn--plum     { --btn-bg: var(--op-plum);   --btn-fg: var(--op-paper); --btn-shadow: var(--op-fluo); }
+.btn--secondary,
+.btn--ghost    { --btn-bg: var(--op-paper);  --btn-fg: var(--op-ink);   --btn-shadow: var(--op-cobalt); }
+.btn--danger   { --btn-bg: var(--op-fluo-deep); --btn-fg: var(--op-paper); --btn-shadow: var(--op-plum); }
+.btn--gold     { --btn-bg: var(--op-fluo); --btn-fg: var(--op-ink); --btn-shadow: var(--op-cobalt); }
 
-.btn--sm {
-  --btn-pad-y: 8px; --btn-pad-x: 14px; --btn-fs: 12px;
-  clip-path: var(--yap-cut-sm);
-}
-.btn--lg {
-  --btn-pad-y: 16px; --btn-pad-x: 28px; --btn-fs: 18px;
-  clip-path: var(--yap-cut-lg);
-  letter-spacing: 2.5px;
-}
+.btn--sm { --btn-pad-y: 9px; --btn-pad-x: 14px; --btn-fs: 11px; }
+.btn--lg { --btn-pad-y: 17px; --btn-pad-x: 28px; --btn-fs: 17px; }
 .btn--full { width: 100%; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -680,12 +769,12 @@ a { color: inherit; text-decoration: none; }
   will-change: transform;
 }
 .al-card-lift:hover {
-  /* Promoter spec: crimson border + 2px lift. Drop the earlier
-   * 0.4deg rotate (motion-pilot stylistic flourish) — design
-   * system landed on translateY only. */
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32);
-  border-color: var(--yap-crimson);
+  /* Overprint hover: card lifts toward upper-left as the cobalt
+   * multiply-blend backplate registers behind. The backplate is
+   * the same offset-shadow trick used on .al-card.elevated; this
+   * just animates the offset growing on hover. */
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 0 var(--op-cobalt);
 }
 .al-card-lift:active {
   transform: translateY(0) rotate(0deg);
@@ -709,17 +798,27 @@ a { color: inherit; text-decoration: none; }
    The React Card component composes `.al-card` + optional
    `.al-card-lift` + caller className.
    ────────────────────────────────────────────────────────────── */
+/* Overprint card — paper chassis with 2px ink border. Optional
+ * `.elevated` adds a cobalt multiply-blend offset backplate (the
+ * printed-shadow trick from overprint-verdict.html .mint-panel). */
 .al-card {
-  background: var(--yap-ink-800);
-  border: 1px solid var(--yap-ink-600);
+  background: var(--op-paper);
+  border: 2px solid var(--op-ink);
   border-radius: 0;
-  /* No default padding — caller controls density via inline style
-   * (existing convention across the codebase). When ready to migrate,
-   * adopt `.card-pad` shorthand below. */
+  position: relative;
 }
 .al-card.elevated {
-  background: var(--yap-ink-700);
-  box-shadow: var(--yap-sh-2);
+  background: var(--op-paper-deep);
+}
+.al-card.elevated::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--op-cobalt);
+  mix-blend-mode: multiply;
+  transform: translate(6px, 6px);
+  z-index: -1;
+  pointer-events: none;
 }
 .al-card .card-head {
   display: flex;
@@ -886,3 +985,193 @@ a { color: inherit; text-decoration: none; }
   width: 100%;
 }
 .al-drawer-item:hover { background: var(--bg-surface); }
+
+/* ──────────────────────────────────────────────────────────────
+   OVERPRINT PRIMITIVES — additions beyond the legacy classes
+   ──────────────────────────────────────────────────────────────
+   Composable utilities for verdict reveal hero, receipt panels,
+   mint-moment cards, big rotated stamps, and the multiply-blend
+   offset shadows that fingerprint the direction.
+   ────────────────────────────── */
+
+/* Big rotated stamp — used max once per page (verdict hero, KO
+ * callout, FINAL stamp). Multiply blend on fluo so the underlying
+ * paper grain shows through. */
+.op-stamp-big {
+  display: inline-block;
+  background: var(--op-fluo);
+  color: var(--op-ink);
+  mix-blend-mode: multiply;
+  font-family: var(--op-fd);
+  font-weight: 400;
+  font-size: 48px;
+  line-height: 0.85;
+  letter-spacing: -1px;
+  text-transform: uppercase;
+  padding: 18px 22px 14px;
+  transform: rotate(-2.4deg);
+}
+.op-stamp-big--cobalt { background: var(--op-cobalt); color: var(--op-paper); }
+.op-stamp-big--plum { background: var(--op-plum); color: var(--op-paper); mix-blend-mode: normal; }
+
+/* Small inline stamp — secondary call-outs (mini "verified" chips,
+ * round labels, status badges). Same rotation + multiply but
+ * compact size. */
+.op-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 2px;
+  background: var(--op-cobalt);
+  color: var(--op-paper);
+  mix-blend-mode: multiply;
+  font-family: var(--op-fd);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  line-height: 1;
+  transform: rotate(-2deg);
+}
+.op-stamp--fluo  { background: var(--op-fluo); color: var(--op-ink); }
+.op-stamp--plum  { background: var(--op-plum); color: var(--op-paper); mix-blend-mode: normal; }
+.op-stamp--paper { background: var(--op-paper); color: var(--op-ink); border: 2px solid var(--op-ink); mix-blend-mode: normal; }
+
+/* Receipt panel — perforated-edge ink-bordered list with dashed
+ * row dividers. Used on verdict reveal + mint flow. */
+.op-receipt {
+  background: var(--op-paper);
+  border: 2px solid var(--op-ink);
+}
+.op-receipt-head {
+  padding: 14px 20px;
+  border-bottom: 2px solid var(--op-ink);
+  background: var(--op-ink);
+  color: var(--op-paper);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.op-receipt-head h3 {
+  font-family: var(--op-fd);
+  font-weight: 400;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  margin: 0;
+}
+.op-receipt-head .op-perf {
+  font-family: var(--op-fm);
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--op-paper-deep);
+  text-transform: uppercase;
+}
+.op-r-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 18px;
+  padding: 12px 20px;
+  border-bottom: 1px dashed var(--op-ink-mid);
+}
+.op-r-row:last-child { border-bottom: none; }
+.op-r-row .op-r-l {
+  font-family: var(--op-fm);
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--op-ink-mid);
+  text-transform: uppercase;
+  align-self: center;
+}
+.op-r-row .op-r-v {
+  font-family: var(--op-fm);
+  font-size: 13px;
+  color: var(--op-ink);
+  word-break: break-all;
+}
+.op-r-row .op-r-v.is-italic {
+  font-family: var(--op-fi);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--op-plum);
+  line-height: 1.3;
+}
+.op-r-row .op-r-v b {
+  color: var(--op-cobalt);
+  font-family: var(--op-fm);
+  font-weight: 500;
+}
+
+/* Two-layer multiply overprint headline — H1 with cobalt + fluo
+ * pseudo-elements offset to create registration misprint feel.
+ * Wrap the text in `.op-h1` and duplicate via aria-hidden spans:
+ *   <h1 class="op-h1"><span class="op-h1-base">…</span>
+ *     <span class="op-h1-l op-h1-l-c">…</span>
+ *     <span class="op-h1-l op-h1-l-o">…</span></h1>
+ */
+.op-h1 {
+  font-family: var(--op-fd);
+  font-weight: 400;
+  font-size: clamp(72px, 12vw, 140px);
+  line-height: 0.82;
+  letter-spacing: -2.5px;
+  text-transform: uppercase;
+  color: var(--op-ink);
+  position: relative;
+  display: inline-block;
+  margin: 0;
+}
+.op-h1-l {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+.op-h1-l-c { color: var(--op-cobalt); transform: translate(-5px, -3px); }
+.op-h1-l-o { color: var(--op-fluo); transform: translate(3px, 4px); }
+
+/* Eyebrow with fluo dot — section-head pattern. */
+.op-eye {
+  font-family: var(--op-fm);
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--op-cobalt);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.op-eye::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--op-fluo);
+  mix-blend-mode: multiply;
+}
+
+/* Hairline + heavy combo divider — dashed ink-mid for soft rules,
+ * solid 2-3px ink for major section breaks. */
+.op-rule { border-top: 2px solid var(--op-ink); }
+.op-rule-soft { border-top: 1px dashed var(--op-ink-mid); }
+
+/* Multiply-offset backplate utility — apply to any element to give
+ * it the cobalt registration shadow. `.op-mp` is the default fluo
+ * backplate; `.op-mp--c` swaps to cobalt; `.op-mp--p` swaps to plum. */
+.op-mp { position: relative; }
+.op-mp::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--op-fluo);
+  mix-blend-mode: multiply;
+  transform: translate(var(--op-offset-2), var(--op-offset-2));
+  z-index: -1;
+  pointer-events: none;
+}
+.op-mp--c::after { background: var(--op-cobalt); }
+.op-mp--p::after { background: var(--op-plum); mix-blend-mode: normal; opacity: 0.3; }
+
+@media (prefers-reduced-motion: reduce) {
+  .op-stamp-big, .op-stamp { transform: rotate(0); }
+}

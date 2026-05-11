@@ -1,39 +1,59 @@
 import type { Metadata } from "next";
-import { Anton, Archivo, Space_Mono } from "next/font/google";
+import {
+  Boldonse,
+  Caprasimo,
+  DM_Mono,
+  Inter_Tight,
+  Newsreader,
+} from "next/font/google";
 import "./globals.css";
 import { EntryGate } from "@/components/shell/entry-gate";
 import { YapCursor } from "@/components/shell/yap-cursor";
 import { Providers } from "./providers";
 
-// Promoter design direction — fight-poster editorial. Anton handles
-// display caps (hero, section heads, card titles, KO stamps); Archivo
-// is the body workhorse with full weight range for label/heading
-// hierarchy; Space Mono lands on numerics and IDs (token addresses,
-// 0G amounts, ELO) where the slab letterforms read as "data".
+// Overprint design direction — Risograph zine / overprint registration.
+// Cream paper, cobalt + fluo + plum accents with `mix-blend-mode:
+// multiply` so paper grain pulls through every coloured surface.
 //
-// Display weight is locked at 400 — Anton ships a single weight by
-// design; loading more would 404. Archivo carries 400-900 because
-// data-rich pages call for serious heading weight headroom. Space
-// Mono pulls 400 and 700 — bold mono lands on stamp serials + table
-// emphasis cells.
-const archivo = Archivo({
-  variable: "--font-archivo",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
-  display: "swap",
-});
-
-const anton = Anton({
-  variable: "--font-anton",
+// Type stack:
+//   - Boldonse        → display (heavy stencil/condensed)
+//   - Caprasimo       → poster serif (slabby ornamental)
+//   - Inter Tight     → body (variable 400-800)
+//   - Newsreader      → editorial italic (canonical verdict text)
+//   - DM Mono         → mono (receipt labels, ids, hashes)
+const boldonse = Boldonse({
+  variable: "--font-boldonse",
   subsets: ["latin"],
   weight: ["400"],
   display: "swap",
 });
 
-const spaceMono = Space_Mono({
-  variable: "--font-space-mono",
+const caprasimo = Caprasimo({
+  variable: "--font-caprasimo",
   subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: ["400"],
+  display: "swap",
+});
+
+const interTight = Inter_Tight({
+  variable: "--font-inter-tight",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+});
+
+const newsreader = Newsreader({
+  variable: "--font-newsreader",
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  style: ["italic"],
+  display: "swap",
+});
+
+const dmMono = DM_Mono({
+  variable: "--font-dm-mono",
+  subsets: ["latin"],
+  weight: ["400", "500"],
   display: "swap",
 });
 
@@ -51,7 +71,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${archivo.variable} ${anton.variable} ${spaceMono.variable}`}
+      className={`${boldonse.variable} ${caprasimo.variable} ${interTight.variable} ${newsreader.variable} ${dmMono.variable}`}
       suppressHydrationWarning
     >
       <body>
