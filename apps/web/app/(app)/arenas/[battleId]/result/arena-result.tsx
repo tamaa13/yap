@@ -529,6 +529,18 @@ export function ArenaResult({
               >
                 Pin this round's argument as an ERC-7857 collectible.
                 Side ownership gates each button — fighter owners only.
+                {" "}
+                <span
+                  className="mono"
+                  style={{
+                    color: "var(--yap-gold)",
+                    letterSpacing: 0.04,
+                  }}
+                >
+                  Default 2.5% creator royalty
+                </span>{" "}
+                applies on every secondary sale (EIP-2981, tunable
+                up to 10%).
               </div>
               <div
                 style={{
