@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, Vm} from "forge-std/Test.sol";
 import {YapMarketplace} from "../src/YapMarketplace.sol";
 import {ERC721} from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 import {IERC721Receiver} from "openzeppelin-contracts/contracts/token/ERC721/IERC721Receiver.sol";
@@ -13,6 +13,33 @@ contract MockFighter is ERC721 {
 
     function mint(address to, uint256 tokenId) external {
         _mint(to, tokenId);
+    }
+}
+
+/// @dev ERC-721 with a per-token EIP-2981 royalty record so the marketplace's
+///      royalty staticcall sees a non-zero result. Used by the royalty tests
+///      below — the plain {MockFighter} above intentionally lacks
+///      `royaltyInfo` so it can verify the no-royalty fallback path.
+contract MockRoyaltyNFT is ERC721 {
+    mapping(uint256 => address) public minter;
+    mapping(uint256 => uint96) public royaltyBps;
+    uint96 public constant BPS_DENOMINATOR = 10_000;
+
+    constructor() ERC721("MockRoyaltyNFT", "MRN") {}
+
+    function mintWithRoyalty(address to, uint256 tokenId, uint96 bps) external {
+        _mint(to, tokenId);
+        minter[tokenId] = to;
+        royaltyBps[tokenId] = bps;
+    }
+
+    function royaltyInfo(uint256 tokenId, uint256 salePrice)
+        external
+        view
+        returns (address receiver, uint256 amount)
+    {
+        receiver = minter[tokenId];
+        amount = (salePrice * uint256(royaltyBps[tokenId])) / uint256(BPS_DENOMINATOR);
     }
 }
 
@@ -414,5 +441,137 @@ contract YapMarketplaceTest is Test {
         vm.prank(admin);
         mkt.setTreasury(bob);
         assertEq(mkt.treasury(), bob);
+    }
+
+    // ---------------- royalty (EIP-2981 settlement hook) ----------------
+
+    /// Mint a token on a MockRoyaltyNFT-backed marketplace instance, list it
+    /// via a secondary seller, buy via a fresh buyer, then assert that the
+    /// minter pulls a royalty cut and the seller pulls (price - fee - royalty).
+    function test_Royalty_PaidToMinterOnResale() public {
+        // Deploy a fresh marketplace pointed at a royalty-aware NFT.
+        MockRoyaltyNFT rnft = new MockRoyaltyNFT();
+        YapMarketplace rmkt = new YapMarketplace(address(rnft), admin, treasury);
+
+        address minter = makeAddr("minter");
+        address seller = makeAddr("seller");
+        address buyer = makeAddr("buyer");
+        vm.deal(seller, 10 ether);
+        vm.deal(buyer, 10 ether);
+
+        // Mint with 500 bps (5%) royalty, then transfer to a secondary seller.
+        uint96 bps = 500;
+        rnft.mintWithRoyalty(minter, 42, bps);
+        vm.prank(minter);
+        rnft.transferFrom(minter, seller, 42);
+
+        // Seller approves + lists.
+        vm.prank(seller);
+        rnft.approve(address(rmkt), 42);
+        vm.prank(seller);
+        rmkt.listItem(42, PRICE);
+
+        uint256 expectedFee = (PRICE * rmkt.platformFeeBps()) / 10_000;
+        uint256 expectedRoyalty = (PRICE * uint256(bps)) / 10_000;
+        uint256 expectedSellerAmt = PRICE - expectedFee - expectedRoyalty;
+
+        vm.expectEmit(true, true, false, true, address(rmkt));
+        emit YapMarketplace.RoyaltyPaid(42, minter, expectedRoyalty);
+        vm.prank(buyer);
+        rmkt.buyItem{value: PRICE}(42);
+
+        assertEq(rmkt.sellerProceeds(seller), expectedSellerAmt);
+        assertEq(rmkt.sellerProceeds(minter), expectedRoyalty);
+        assertEq(rmkt.sellerProceeds(treasury), expectedFee);
+        assertEq(rnft.ownerOf(42), buyer);
+
+        // Withdraw + cash flows match.
+        uint256 mBefore = minter.balance;
+        vm.prank(minter);
+        rmkt.withdrawProceeds();
+        assertEq(minter.balance - mBefore, expectedRoyalty);
+    }
+
+    /// A plain ERC-721 without EIP-2981 (the existing MockFighter) returns
+    /// zero from the staticcall probe — the marketplace then behaves like
+    /// before, with seller receiving (price - fee) and no RoyaltyPaid event.
+    function test_Royalty_NonERC2981NFT_NoDeductionAndNoEvent() public {
+        _listTokenByAlice(TOKEN, PRICE);
+        vm.recordLogs();
+        vm.prank(bob);
+        mkt.buyItem{value: PRICE}(TOKEN);
+
+        uint256 fee = (PRICE * mkt.platformFeeBps()) / 10_000;
+        assertEq(mkt.sellerProceeds(alice), PRICE - fee);
+        assertEq(mkt.sellerProceeds(treasury), fee);
+
+        // Walk the recorded logs and assert none of them are RoyaltyPaid.
+        bytes32 royaltySig = keccak256("RoyaltyPaid(uint256,address,uint256)");
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        for (uint256 i = 0; i < logs.length; ++i) {
+            assertTrue(logs[i].topics[0] != royaltySig, "RoyaltyPaid should not fire");
+        }
+    }
+
+    /// Self-royalty (the seller IS the recorded minter) collapses into a
+    /// single seller credit — no double-counting, no RoyaltyPaid event.
+    function test_Royalty_SellerIsMinter_FoldsIntoSellerProceeds() public {
+        MockRoyaltyNFT rnft = new MockRoyaltyNFT();
+        YapMarketplace rmkt = new YapMarketplace(address(rnft), admin, treasury);
+
+        address minter = makeAddr("minter-seller");
+        address buyer = makeAddr("buyer-2");
+        vm.deal(minter, 10 ether);
+        vm.deal(buyer, 10 ether);
+
+        rnft.mintWithRoyalty(minter, 7, 750);
+        vm.prank(minter);
+        rnft.approve(address(rmkt), 7);
+        vm.prank(minter);
+        rmkt.listItem(7, PRICE);
+
+        vm.recordLogs();
+        vm.prank(buyer);
+        rmkt.buyItem{value: PRICE}(7);
+
+        uint256 fee = (PRICE * rmkt.platformFeeBps()) / 10_000;
+        // No royalty deduction when seller == minter.
+        assertEq(rmkt.sellerProceeds(minter), PRICE - fee);
+        bytes32 royaltySig = keccak256("RoyaltyPaid(uint256,address,uint256)");
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        for (uint256 i = 0; i < logs.length; ++i) {
+            assertTrue(logs[i].topics[0] != royaltySig, "RoyaltyPaid should not fire");
+        }
+    }
+
+    /// Misconfigured royalty (bps > 10_000 - platformFeeBps) gets truncated
+    /// to whatever's left after fee, never reverting the sale path.
+    function test_Royalty_OverPriceTruncatesAtRemaining() public {
+        MockRoyaltyNFT rnft = new MockRoyaltyNFT();
+        YapMarketplace rmkt = new YapMarketplace(address(rnft), admin, treasury);
+
+        address minter = makeAddr("greedy-minter");
+        address seller = makeAddr("seller-3");
+        address buyer = makeAddr("buyer-3");
+        vm.deal(seller, 10 ether);
+        vm.deal(buyer, 10 ether);
+
+        // Mint with absurd 50_000 bps — _royaltyOf will return amount > price.
+        rnft.mintWithRoyalty(minter, 5, 50_000);
+        vm.prank(minter);
+        rnft.transferFrom(minter, seller, 5);
+        vm.prank(seller);
+        rnft.approve(address(rmkt), 5);
+        vm.prank(seller);
+        rmkt.listItem(5, PRICE);
+
+        vm.prank(buyer);
+        rmkt.buyItem{value: PRICE}(5);
+
+        uint256 fee = (PRICE * rmkt.platformFeeBps()) / 10_000;
+        // Royalty gets capped at (price - fee). Seller receives zero.
+        assertEq(rmkt.sellerProceeds(seller), 0);
+        assertEq(rmkt.sellerProceeds(minter), PRICE - fee);
+        assertEq(rmkt.sellerProceeds(treasury), fee);
     }
 }
