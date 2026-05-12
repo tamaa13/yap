@@ -196,6 +196,12 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
+/* Pre-entry paint guard. The inline <head> script tags <html> with
+ * `.pre-entry` on first-visit (no `yap-entered` flag in sessionStorage)
+ * so the page paints dark to match the splash overlay bg from the
+ * very first frame — no red flash between SSR paint and EntryGate
+ * splash mount. Class is removed in EntryGate.markEntered(). */
+html.pre-entry, html.pre-entry body { background: var(--yap-ink-950); }
 body {
   background: var(--bg-canvas);
   color: var(--tx-primary);

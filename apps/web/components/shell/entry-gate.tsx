@@ -193,6 +193,13 @@ function markEntered() {
   } catch {
     // ignore
   }
+  // Release the pre-entry paint guard installed by the inline script
+  // in layout.tsx <head>. Body bg transitions from dark to red page-bg.
+  try {
+    document.documentElement.classList.remove("pre-entry");
+  } catch {
+    // ignore
+  }
 }
 
 function Splash() {
