@@ -27,12 +27,13 @@ export default function ConnectPage() {
         </h1>
         <p
           style={{
-            fontFamily: "var(--yap-font-body)",
-            fontSize: 15,
+            fontFamily: "var(--yap-font-display-2)",
+            fontSize: 19,
             color: "rgba(255,255,255,0.85)",
             margin: "0 auto 32px",
-            lineHeight: 1.55,
-            maxWidth: "44ch",
+            lineHeight: 1.4,
+            letterSpacing: 0.3,
+            maxWidth: "40ch",
           }}
         >
           {connected
@@ -91,11 +92,11 @@ export default function ConnectPage() {
 
         <div
           style={{
-            fontFamily: "var(--yap-font-mono)",
-            fontSize: 11,
+            fontFamily: "var(--yap-font-display-2)",
+            fontSize: 13,
             color: "rgba(255,255,255,0.6)",
             marginTop: 32,
-            letterSpacing: 1,
+            letterSpacing: 0.6,
             textTransform: "uppercase",
           }}
         >

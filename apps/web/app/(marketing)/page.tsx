@@ -135,10 +135,10 @@ export default function LandingPage() {
             </div>
             <div
               style={{
-                fontFamily: "var(--yap-font-mono)",
+                fontFamily: "var(--yap-font-display-2)",
                 fontWeight: 400,
-                fontSize: "clamp(13px, 1.2vw, 16px)",
-                letterSpacing: 4,
+                fontSize: "clamp(16px, 1.5vw, 22px)",
+                letterSpacing: 1.5,
                 lineHeight: 1.3,
                 color: "rgba(255,255,255,0.85)",
                 textTransform: "uppercase",
@@ -302,12 +302,12 @@ export default function LandingPage() {
                 </div>
                 <div
                   style={{
-                    fontFamily: "var(--yap-font-display)",
+                    fontFamily: "var(--yap-font-display-2)",
                     fontWeight: 400,
-                    fontSize: 30,
+                    fontSize: 34,
                     lineHeight: 1,
                     textTransform: "uppercase",
-                    letterSpacing: 0.5,
+                    letterSpacing: 0.3,
                     marginBottom: 10,
                     color: "var(--yap-ink-50)",
                   }}
@@ -461,12 +461,12 @@ function SectionHead({
       </span>
       <h2
         style={{
-          fontFamily: "var(--yap-font-display)",
+          fontFamily: "var(--yap-font-display-2)",
           fontWeight: 400,
-          fontSize: 38,
+          fontSize: 40,
           lineHeight: 1,
           textTransform: "uppercase",
-          letterSpacing: "-0.01em",
+          letterSpacing: 0,
           color: "var(--yap-ink-50)",
           margin: 0,
         }}

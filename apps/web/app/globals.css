@@ -57,33 +57,29 @@
   --yap-info:           #5DA0D6;
   --yap-info-bg:        #11202C;
 
-  /* ── Type families (EXPERIMENT v15 — Riot + Poesing) ──────── */
-  /* Two display faces:
-   *   --yap-font-display   : Riot — primary display, hero trinity,
-   *                          page titles, fighter names.
-   *   --yap-font-display-2 : Poesing — secondary character face,
-   *                          grunge / street / distressed-edge.
-   *                          Full 0-9 + punctuation (verified via
-   *                          fontTools), so safe on numeral slots.
+  /* ── Type families (EXPERIMENT v17 — Poesing site-wide) ────── */
+  /* Final allocation (Tama-locked):
+   *   --yap-font-display   : Riot — hero trinity, fighter names,
+   *                          page titles, YapMark plate.
+   *   --yap-font-display-2 : Poesing — EVERYTHING ELSE. Body
+   *                          prose, navigation, card titles, card
+   *                          meta, numerics, labels, eyebrows,
+   *                          CTAs, stamps, modals, footer, empty
+   *                          states, helper text. Full 0-9 +
+   *                          punctuation verified.
+   *   --yap-font-body      : aliased to Poesing — every callsite
+   *                          inheriting body cascade picks it up.
+   *   --yap-font-mono      : Anonymous Pro — RESERVED for hex /
+   *                          addresses / tx hashes / token IDs.
+   *                          The only non-Poesing, non-Riot escape.
    *
-   * USE Poesing on display flair — letters AND digits both work:
-   *   - dateline strip values (R02 / 142.8 OG / 02:44 UTC)
-   *   - .stamp-badge loud caps (LIVE / VERDICT / FINAL stamps)
-   *   - manifesto pull-quote
-   *   - section eyebrows, CTA verbs, poster accents
-   *
-   * AVOID Poesing on actionable technical data — Anonymous Pro
-   * mono reads sharper for hex / address chars:
-   *   - wallet addresses (0x… via <Hash> / <TokenTag>)
-   *   - transaction hashes
-   *   - body prose / paragraph text (use Outfit)
-   *
-   * License: 1001fonts personal-use demo. Hackathon-OK; verify
-   * before shipping commercially. */
+   * Outfit dropped from the stack entirely.
+   * License caveat: Poesing is 1001fonts personal-use demo.
+   * Hackathon-OK; verify before shipping commercially. */
   --yap-font-display:   var(--font-riot), var(--font-saira-cond), "Archivo Black", Impact, sans-serif;
   --yap-font-display-2: var(--font-poesing), 'Poesing', var(--font-saira-cond), Impact, sans-serif;
   --yap-font-stencil:   var(--font-riot), var(--font-saira-cond), Impact, sans-serif;
-  --yap-font-body:      var(--font-outfit), system-ui, -apple-system, sans-serif;
+  --yap-font-body:      var(--font-poesing), 'Poesing', var(--font-saira-cond), system-ui, sans-serif;
   --yap-font-mono:      var(--font-anon-pro), ui-monospace, 'SF Mono', monospace;
   --yap-font-editorial: var(--font-riot), var(--font-saira-cond), Georgia, serif;
 
