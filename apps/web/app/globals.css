@@ -834,9 +834,16 @@ a { color: inherit; text-decoration: none; }
   100% { background-position: calc(200px + 100%) 0; }
 }
 .al-skel {
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.03) 100%);
-  background-size: 200px 100%;
-  background-repeat: no-repeat;
+  /* Two-layer bg: dark solid base (--yap-ink-700) gives the skel block
+   * structural visibility on BOTH the red page canvas AND inside dark
+   * cards. Shimmer gradient overlays on top — `repeat-x` cycles it
+   * across the width while the keyframe slides background-position.
+   * Without the dark base, the low-opacity white shimmer disappears
+   * against the saturated red page bg. */
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.18) 50%, rgba(255, 255, 255, 0.05) 100%) repeat-x,
+    var(--yap-ink-700);
+  background-size: 200px 100%, 100% 100%;
   animation: al-shimmer 1.4s linear infinite;
   border-radius: 4px;
 }
