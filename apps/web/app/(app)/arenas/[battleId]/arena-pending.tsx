@@ -110,56 +110,6 @@ export function ArenaPending({
   const isChallenger = iControl(fighterA);
   const isDefender = iControl(fighterB);
 
-  // TEMP diagnostic (v32.1) — Tama reports Accept button still hidden
-  // for renter on battle 16/fighterB=20 even after v32 wired rentedBy
-  // into useFighter. Surface fighterA/B shape + iControl outputs so we
-  // can see whether rentedBy is actually populating client-side or
-  // useFighter's rental overlay still has a gap.
-  if (typeof window !== "undefined" && addr) {
-    const safe = (v: unknown): unknown => {
-      if (typeof v === "bigint") return v.toString();
-      if (Array.isArray(v)) return v.map(safe);
-      if (v && typeof v === "object") {
-        const out: Record<string, unknown> = {};
-        for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
-          out[k] = safe(val);
-        }
-        return out;
-      }
-      return v;
-    };
-    const summary = safe({
-      battleIdNum,
-      uiId,
-      user: lu,
-      fighterA: {
-        id: fighterA?.id,
-        owner: fighterA?.owner,
-        rentedBy: fighterA?.rentedBy ?? null,
-        forRent: fighterA?.forRent ?? null,
-        rentExpiresAt: fighterA?.rentExpiresAt ?? null,
-      },
-      fighterB: {
-        id: fighterB?.id,
-        owner: fighterB?.owner,
-        rentedBy: fighterB?.rentedBy ?? null,
-        forRent: fighterB?.forRent ?? null,
-        rentExpiresAt: fighterB?.rentExpiresAt ?? null,
-      },
-      isChallenger,
-      isDefender,
-    });
-    const dbg = (window as unknown as { __yapArenaPendingDebug?: string })
-      .__yapArenaPendingDebug;
-    const summaryStr = JSON.stringify(summary);
-    if (dbg !== summaryStr) {
-      (
-        window as unknown as { __yapArenaPendingDebug: string }
-      ).__yapArenaPendingDebug = summaryStr;
-      console.log("[arena-pending audit]", summary);
-    }
-  }
-
   const onAccept = async () => {
     try {
       const tx = await accept.write(battleIdNum, {
