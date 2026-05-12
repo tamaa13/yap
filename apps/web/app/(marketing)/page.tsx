@@ -186,14 +186,14 @@ export default function LandingPage() {
                 </div>
                 <div
                   style={{
-                    fontFamily: "var(--yap-font-mono)",
-                    fontWeight: 700,
-                    fontSize: 24,
+                    fontFamily: "var(--yap-font-display-2)",
+                    fontWeight: 400,
+                    fontSize: 32,
                     lineHeight: 1,
                     color: "#FFFFFF",
                     marginTop: 4,
                     textTransform: "uppercase",
-                    letterSpacing: 0,
+                    letterSpacing: -0.3,
                   }}
                 >
                   {s.v}
