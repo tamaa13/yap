@@ -168,16 +168,25 @@ export function usePendingChallenges(user: `0x${string}` | undefined) {
   const incoming: PendingChallenge[] = [];
   const outgoing: PendingChallenge[] = [];
 
-  // TEMP diagnostic — Tama caught v26 not surfacing rental challenge for
-  // wallet 0x38a1...470B on battle 6 / fighterB 20. Surface the read-wave
-  // state once per render so we can verify the rental tuple is actually
-  // landing client-side. Remove this block once the bug is confirmed
-  // fixed (next iteration).
+  // TEMP diagnostic — BigInt-safe stringify so JSON.stringify doesn't
+  // panic on rental tuple fields (startedAt/expiresAt/paid are uint64).
+  // Remove once root cause identified.
   if (typeof window !== "undefined" && user) {
-    const dbg = (window as unknown as { __yapPendingChallengesDebug?: unknown }).__yapPendingChallengesDebug;
-    const now = Date.now();
+    const safe = (v: unknown): unknown => {
+      if (typeof v === "bigint") return v.toString();
+      if (Array.isArray(v)) return v.map(safe);
+      if (v && typeof v === "object") {
+        const out: Record<string, unknown> = {};
+        for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+          out[k] = safe(val);
+        }
+        return out;
+      }
+      return v;
+    };
     const rentalsCount = rentalReads.data?.filter((r) => r.status === "success").length ?? 0;
-    const summary = {
+    const firstRentalRaw = rentalReads.data?.find((r) => r.status === "success")?.result;
+    const summary = safe({
       user,
       battleIdsCount: battleIds.length,
       battleReadsReady: !!battleReads.data,
@@ -185,12 +194,13 @@ export function usePendingChallenges(user: `0x${string}` | undefined) {
       rentalReadsReady: !!rentalReads.data,
       rentalsCount,
       battleIds: battleIds.map((b) => Number(b)),
-      // Surface first successful rental result for inspection
-      firstRental: rentalReads.data?.find((r) => r.status === "success")?.result,
-      timestamp: now,
-    };
-    if (JSON.stringify(dbg) !== JSON.stringify(summary)) {
-      (window as unknown as { __yapPendingChallengesDebug: unknown }).__yapPendingChallengesDebug = summary;
+      firstRental: firstRentalRaw,
+      now: Date.now(),
+    });
+    const dbg = (window as unknown as { __yapPendingChallengesDebug?: string }).__yapPendingChallengesDebug;
+    const summaryStr = JSON.stringify(summary);
+    if (dbg !== summaryStr) {
+      (window as unknown as { __yapPendingChallengesDebug: string }).__yapPendingChallengesDebug = summaryStr;
       console.log("[usePendingChallenges]", summary);
     }
   }
