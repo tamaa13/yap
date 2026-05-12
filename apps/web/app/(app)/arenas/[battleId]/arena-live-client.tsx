@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Skel } from "@/components/ui/skeleton";
+import { ArenaShellSkel } from "@/components/ui/skeleton";
 import { PageContainer } from "@/components/shell/page-container";
 import { useBattle } from "@/hooks/use-battle";
 import { useFighter } from "@/hooks/use-fighter";
@@ -32,8 +32,7 @@ export function ArenaLiveClient({ battleId }: { battleId: string }) {
   if (battle.isLoading || fighterA.isLoading || fighterB.isLoading) {
     return (
       <PageContainer>
-        <Skel h={24} w="40%" style={{ marginBottom: 14 }} />
-        <Skel h={220} />
+        <ArenaShellSkel />
       </PageContainer>
     );
   }

@@ -813,8 +813,10 @@ function CardGridSkel({ count = 6 }: { count?: number }) {
   );
 }
 
-// Stacked-row placeholder used by the challenges sub-lists. Slim rows that
-// match the actual incoming/outgoing card density.
+// Stacked-row placeholder mirroring the incoming/outgoing challenge cards
+// above: padding 14, flex row with a title + meta-line text column on the
+// left and a two-button action cluster on the right. Matches the loaded
+// vertical rhythm so accept/decline buttons don't jump in on swap.
 function ChallengesListSkel() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -825,16 +827,32 @@ function ChallengesListSkel() {
             padding: 14,
             background: "var(--yap-ink-800)",
             border: "1px solid var(--yap-ink-600)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
           }}
         >
-          <div
-            className="al-skel"
-            style={{ height: 12, width: "60%", marginBottom: 8, borderRadius: 3 }}
-          />
-          <div
-            className="al-skel"
-            style={{ height: 10, width: "35%", borderRadius: 3 }}
-          />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div
+              className="al-skel"
+              style={{ height: 13, width: "65%", marginBottom: 6, borderRadius: 3 }}
+            />
+            <div
+              className="al-skel"
+              style={{ height: 11, width: "40%", borderRadius: 3 }}
+            />
+          </div>
+          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+            <div
+              className="al-skel"
+              style={{ height: 28, width: 68, borderRadius: 3 }}
+            />
+            <div
+              className="al-skel"
+              style={{ height: 28, width: 130, borderRadius: 3 }}
+            />
+          </div>
         </div>
       ))}
     </div>
