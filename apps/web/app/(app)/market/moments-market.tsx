@@ -18,7 +18,7 @@ import { parseAbiItem, formatEther } from "viem";
 import { useWatchContractEvent } from "wagmi";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { FighterCardSkel } from "@/components/ui/skeleton";
+import { MomentCardSkel } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Icon } from "@/components/ui/icon";
 import {
@@ -401,7 +401,7 @@ export function MomentsMarket() {
             }}
           >
             {Array.from({ length: 8 }).map((_, i) => (
-              <FighterCardSkel key={i} />
+              <MomentCardSkel key={i} />
             ))}
           </div>
         ) : list.length === 0 ? (
