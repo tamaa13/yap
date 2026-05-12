@@ -48,7 +48,22 @@ export default function BattleNewPage() {
   const myFighters = useFighters({ owner: addr, limit: 200 });
   const allFighters = useFighters({ limit: 200 });
 
-  const myList = myFighters.data;
+  // Step 1 line-up picker — only fighters the user EFFECTIVELY controls
+  // (can field in a battle right now): owned-and-not-rented-out, OR
+  // rented-in during active lease. Fighters I own that are rented out
+  // are excluded — the renter holds operational control.
+  // myFighters via rental-overlay returns both "I own" and "I rent in"
+  // and "I own + rented out" — need to narrow to iControl===true here.
+  const myList = useMemo(() => {
+    if (!addr) return [];
+    const myAddr = addr.toLowerCase();
+    return myFighters.data.filter((f) => {
+      const iOwn = f.owner.toLowerCase() === myAddr;
+      const iRent = !!f.rentedBy && f.rentedBy.toLowerCase() === myAddr;
+      const hasRenter = !!f.rentedBy;
+      return iRent || (iOwn && !hasRenter);
+    });
+  }, [myFighters.data, addr]);
 
   const opponentsLoading = allFighters.isLoading || myFighters.isLoading;
 
@@ -73,6 +88,43 @@ export default function BattleNewPage() {
       return !iControl;
     });
   }, [allFighters.data, addr, opponentsLoading]);
+
+  // TEMP diagnostic (v30) — Tama reports fighter 20 still missing
+  // from opponent picker after v29 iControl logic shipped. Surface
+  // fighter 20's exact row from allFighters so we can see what
+  // owner/rentedBy values are flowing in.
+  if (typeof window !== "undefined" && addr && allFighters.data) {
+    const myAddr = addr.toLowerCase();
+    const f20 = allFighters.data.find((f) => f.id === 20);
+    const summary = f20
+      ? {
+          id: f20.id,
+          owner: f20.owner,
+          rentedBy: f20.rentedBy ?? null,
+          forRent: f20.forRent ?? null,
+          myAddr,
+          iOwn: f20.owner.toLowerCase() === myAddr,
+          iRent: !!f20.rentedBy && f20.rentedBy.toLowerCase() === myAddr,
+          hasRenter: !!f20.rentedBy,
+          inOpponentList: opponents.some((o) => o.id === 20),
+          inMyList: myList.some((m) => m.id === 20),
+          totalAllFighters: allFighters.data.length,
+          totalOpponents: opponents.length,
+        }
+      : {
+          fighter20Missing: true,
+          totalAllFighters: allFighters.data.length,
+          allIds: allFighters.data.map((f) => f.id),
+        };
+    const dbg = (window as unknown as { __yapBattleNewDebug?: string })
+      .__yapBattleNewDebug;
+    const summaryStr = JSON.stringify(summary);
+    if (dbg !== summaryStr) {
+      (window as unknown as { __yapBattleNewDebug: string }).__yapBattleNewDebug =
+        summaryStr;
+      console.log("[battle/new opponent audit]", summary);
+    }
+  }
 
   // Local-state opponent pagination — wizard already owns the URL via
   // ?fighter & ?opponent, so paging stays in component state to avoid
