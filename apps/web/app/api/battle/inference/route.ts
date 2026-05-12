@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { runInference } from "@/lib/0g/compute";
+import { logFighterAccess } from "@/lib/0g/log-access";
+import { parseBattleId } from "@/lib/on-chain";
 
 export const runtime = "nodejs";
 
@@ -11,6 +13,11 @@ interface InferenceBody {
   round?: number;
   side?: "a" | "b";
   priorTranscript?: string;
+  /** Token id of the fighter that's about to speak. When present, a
+   *  fire-and-forget `YapFighter.logAccess(tokenId, battleId)` tx is
+   *  fired by the runner wallet after a successful inference. Missing
+   *  ids no-op the log (we keep the inference response either way). */
+  tokenId?: number;
 }
 
 /**
@@ -49,6 +56,15 @@ export async function POST(req: Request) {
 
   try {
     const result = await runInference({ providerAddress, model, prompt });
+    // Audit-log this access. Fire-and-forget — the LLM response shouldn't
+    // wait on a chain tx confirm. `parseBattleId` decodes the `b-<hex>`
+    // ui id; fall back to a numeric parse for callers that already pass
+    // the bare integer.
+    if (typeof body.tokenId === "number") {
+      const numericId =
+        parseBattleId(body.battleId) ?? BigInt(body.battleId);
+      logFighterAccess(body.tokenId, numericId);
+    }
     return NextResponse.json({
       battleId: body.battleId,
       round: body.round ?? 1,
