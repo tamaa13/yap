@@ -1,4 +1,4 @@
-import { CardSkel } from "@/components/ui/skeleton";
+import { BattleCardSkel } from "@/components/ui/skeleton";
 import { PageContainer } from "@/components/shell/page-container";
 
 export default function ArenasLoading() {
@@ -16,7 +16,7 @@ export default function ArenasLoading() {
         }}
       >
         {Array.from({ length: 6 }).map((_, i) => (
-          <CardSkel key={i} />
+          <BattleCardSkel key={i} />
         ))}
       </div>
     </PageContainer>

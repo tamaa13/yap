@@ -15,6 +15,12 @@ export function Skel({ w = "100%", h = 12, style }: SkelProps) {
   );
 }
 
+/**
+ * Generic card-shaped placeholder retained for legacy callers. New code
+ * should reach for the shape-specific Skel variants below (BattleCardSkel,
+ * FighterCardSkel etc.) so loading states scaffold the real layout
+ * rather than gesturing at a different one.
+ */
 export function CardSkel({ style }: { style?: CSSProperties }) {
   return (
     <div
@@ -39,6 +45,96 @@ export function CardSkel({ style }: { style?: CSSProperties }) {
       <div style={{ display: "flex", gap: 6 }}>
         <Skel w={60} h={20} />
         <Skel w={60} h={20} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Loading scaffold for `BattleCard` (apps/web/app/(app)/arenas/battle-card.tsx).
+ * Mirrors the real card's outer padding (16), status-row dims, topic
+ * line-height block (minHeight 40), fighter grid (1fr · auto · 1fr with
+ * 32×32 Sigils), and pool/spectators footer with its top divider — so
+ * the placeholder occupies the same vertical rhythm as the loaded card
+ * and content swaps in without reflow.
+ */
+export function BattleCardSkel({ style }: { style?: CSSProperties }) {
+  return (
+    <div
+      style={{
+        padding: 16,
+        background: "var(--yap-ink-800)",
+        border: "1px solid var(--yap-ink-600)",
+        borderRadius: 0,
+        ...style,
+      }}
+    >
+      {/* Status row: 12px icon-equivalent + label, round tag right. */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          marginBottom: 10,
+        }}
+      >
+        <Skel w={12} h={12} style={{ borderRadius: 99 }} />
+        <Skel w={56} h={10} />
+        <Skel w={42} h={12} style={{ marginLeft: "auto" }} />
+      </div>
+      {/* Topic block: matches the loaded card's minHeight 40 / mb 14. */}
+      <div style={{ minHeight: 40, marginBottom: 14 }}>
+        <Skel w="100%" h={14} style={{ marginBottom: 6 }} />
+        <Skel w="65%" h={14} />
+      </div>
+      {/* Fighter row: grid 1fr · auto · 1fr with 32×32 Sigils. */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr auto 1fr",
+          gap: 12,
+          alignItems: "center",
+          marginBottom: 12,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Skel w={32} h={32} style={{ borderRadius: 99, flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Skel w="80%" h={12} style={{ marginBottom: 4 }} />
+            <Skel w={36} h={10} />
+          </div>
+        </div>
+        <Skel w={14} h={11} />
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            justifyContent: "flex-end",
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Skel
+              w="80%"
+              h={12}
+              style={{ marginBottom: 4, marginLeft: "auto" }}
+            />
+            <Skel w={36} h={10} style={{ marginLeft: "auto" }} />
+          </div>
+          <Skel w={32} h={32} style={{ borderRadius: 99, flexShrink: 0 }} />
+        </div>
+      </div>
+      {/* Footer: pool · spectators, with top divider — mirror borderTop. */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          paddingTop: 10,
+          borderTop: "1px solid var(--bd-subtle)",
+        }}
+      >
+        <Skel w={80} h={11} />
+        <Skel w={70} h={11} />
       </div>
     </div>
   );
