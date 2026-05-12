@@ -47,7 +47,7 @@ export function FighterPanel({
           <div
             style={{
               fontFamily: "var(--yap-font-display)",
-              fontWeight: 800,
+              fontWeight: 400,
               fontSize: 24,
               lineHeight: 0.95,
               textTransform: "uppercase",

@@ -276,7 +276,7 @@ export function ArenaResult({
               <div
                 style={{
                   fontFamily: "var(--yap-font-display)",
-                  fontWeight: 800,
+                  fontWeight: 400,
                   fontSize: 22,
                   lineHeight: 1.2,
                   textTransform: "uppercase",
@@ -334,7 +334,7 @@ export function ArenaResult({
                 <div
                   style={{
                     fontFamily: "var(--yap-font-display)",
-                    fontWeight: 800,
+                    fontWeight: 400,
                     fontSize: 56,
                     lineHeight: 0.85,
                     textTransform: "uppercase",

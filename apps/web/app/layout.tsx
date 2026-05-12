@@ -1,10 +1,6 @@
 import type { Metadata } from "next";
-import {
-  Anonymous_Pro,
-  Outfit,
-  Saira_Condensed,
-  Saira_Stencil_One,
-} from "next/font/google";
+import { Anonymous_Pro, Outfit, Saira_Condensed } from "next/font/google";
+import localFont from "next/font/local";
 // Rainbowkit CSS first so our globals.css can override its specificity.
 // Copied verbatim from `node_modules/@rainbow-me/rainbowkit/dist/index.css`
 // because the side-effect import in providers-client.tsx silently fails
@@ -18,18 +14,16 @@ import { EntryGate } from "@/components/shell/entry-gate";
 import { YapCursor } from "@/components/shell/yap-cursor";
 import { Providers } from "./providers";
 
-// EXPERIMENT v3 — sport-masthead identity. Stencil display + condensed
-// poster sans + geometric body + retro-techy mono. Near-black ground,
-// vermillion the only warm element.
-//   - Saira Stencil One → hero / loud moments (single weight 400)
-//   - Saira Condensed   → general display, variable 100-900
-//   - Outfit            → workhorse body, variable 100-900
-//   - Anonymous Pro     → coder mono, 400 + 700
-const sairaStencil = Saira_Stencil_One({
-  variable: "--font-stencil",
-  subsets: ["latin"],
-  weight: ["400"],
+// EXPERIMENT v5 — display swap to Riot (cdnfonts.com self-host).
+// Single weight 400; hierarchy carried by size + tracking + uppercase,
+// not weight. Saira Condensed retained as a chain fallback for glyph
+// coverage (Riot is a stylized display face). Outfit + Anonymous Pro
+// unchanged for body + mono.
+const riot = localFont({
+  variable: "--font-riot",
+  src: "./fonts/Riot.woff",
   display: "swap",
+  weight: "400",
 });
 
 const sairaCondensed = Saira_Condensed({
@@ -67,7 +61,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${sairaStencil.variable} ${sairaCondensed.variable} ${outfit.variable} ${anonymousPro.variable}`}
+      className={`${riot.variable} ${sairaCondensed.variable} ${outfit.variable} ${anonymousPro.variable}`}
       suppressHydrationWarning
     >
       <body>

@@ -50,12 +50,16 @@
   --yap-info:           #5DA0D6;
   --yap-info-bg:        #11202C;
 
-  /* ── Type families (EXPERIMENT v3 — sport masthead stack) ──── */
-  --yap-font-stencil:   var(--font-stencil), "Stencil Std", Impact, sans-serif;
-  --yap-font-display:   var(--font-saira-cond), "Saira Condensed", "Archivo Black", Impact, sans-serif;
+  /* ── Type families (EXPERIMENT v5 — Riot display) ──────────── */
+  /* Riot (cdnfonts) is single-weight 400. Saira Condensed sits in
+   * the family chain as glyph-coverage fallback, NOT as a weight
+   * boost — components are no longer setting fontWeight 800 on
+   * display callsites; hierarchy is size + tracking + caps. */
+  --yap-font-display:   var(--font-riot), var(--font-saira-cond), "Archivo Black", Impact, sans-serif;
+  --yap-font-stencil:   var(--font-riot), var(--font-saira-cond), Impact, sans-serif;
   --yap-font-body:      var(--font-outfit), system-ui, -apple-system, sans-serif;
   --yap-font-mono:      var(--font-anon-pro), ui-monospace, 'SF Mono', monospace;
-  --yap-font-editorial: var(--font-saira-cond), Georgia, serif;
+  --yap-font-editorial: var(--font-riot), var(--font-saira-cond), Georgia, serif;
 
   /* ── Type scale (px) — design system v1 ─────────────────────── */
   --yap-fs-display: 72px; --yap-lh-display: 0.9;

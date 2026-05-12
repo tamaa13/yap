@@ -203,7 +203,7 @@ export default function MintPage() {
       <h1
         style={{
           fontFamily: "var(--yap-font-display)",
-          fontWeight: 800,
+          fontWeight: 400,
           fontSize: 56,
           lineHeight: 0.9,
           letterSpacing: "-0.5px",
@@ -725,7 +725,7 @@ Crypto is a slot machine with footnotes.
                     <div
                       style={{
                         fontFamily: "var(--yap-font-display)",
-                        fontWeight: 800,
+                        fontWeight: 400,
                         fontSize: 36,
                         lineHeight: 0.95,
                         textTransform: "uppercase",
