@@ -140,6 +140,7 @@ function setBattlesAutoGetter(opts: { poolAWei: bigint }) {
             ZERO_HASH, // verdictHash
             0n, // totalClaimed
             0n, // settledAt
+            0n, // royaltyPaid
           ],
         },
       },
