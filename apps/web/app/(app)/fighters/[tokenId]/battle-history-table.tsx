@@ -30,10 +30,10 @@ export function BattleHistoryTable({
                 style={{
                   textAlign: "left",
                   padding: "10px 14px",
-                  fontSize: 11,
-                  fontFamily: "var(--mono)",
-                  fontWeight: 500,
-                  letterSpacing: 0.08,
+                  fontSize: 13,
+                  fontFamily: "var(--yap-font-display-2)",
+                  fontWeight: 400,
+                  letterSpacing: 0.3,
                   textTransform: "uppercase",
                   color: "var(--tx-tertiary)",
                 }}

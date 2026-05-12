@@ -352,25 +352,29 @@ a { color: inherit; text-decoration: none; }
 /* (selection moved up next to body so it picks up the Promoter palette
  * directly without going through the muted alias.) */
 
-/* FINAL LOCKDOWN (v19) — `.mono` UTILITY CLASS swapped to Poesing.
+/* FINAL LOCKDOWN (v25 — revised mono rule):
  *
- * Rationale: 60+ callsites used `className="mono"` for tracked
- * uppercase labels (chain meta, eyebrows, status caps, dateline
- * fragments) — almost none of them were rendering hex. Routing
- * the class through Poesing flips them all at once.
+ * Anonymous Pro mono (--yap-font-mono) is ONLY for FULL hex content
+ * where character-distinction matters AND the user is comparing /
+ * copying the exact string:
+ *   - <Hash> primitive (hash.tsx) — full 0x… 40-char addresses
+ *   - <TokenTag> .token-badge — bracketed structured IDs
+ *   - Form inputs (.input/.textarea/.select) — chars user types
+ *   - 3 inline overrides for direct-hex `<span>` content:
+ *     arena-live battle.id, fighter-detail fighter.id, subname-
+ *     modal tokenId + yap.0g handle, provider address truncation
  *
- * Anonymous Pro mono is preserved for TRUE hex content via
- * inline `fontFamily: var(--yap-font-mono)`:
- *   - <Hash> primitive (hash.tsx) — inline ref, untouched
- *   - <TokenTag> .token-badge — inline ref in globals.css, untouched
- *   - Form inputs (.input/.textarea/.select) — chars typed by user
- *   - 3 known direct-hex `className="mono"` callsites have been
- *     overridden inline below: arena-live battle.id, fighter-
- *     detail fighter.id, subname-modal tokenId + yap.0g handle
+ * Truncated wallet addresses in chrome surfaces (top-nav user
+ * button "0x1d4D…485D ▼", inline status rows) render in POESING
+ * — nav-vocab consistency wins over the strict mono rule, since
+ * users aren't comparing those character-by-character.
  *
- * Mono usage strict — DO NOT use `className="mono"` for hex; reach
- * for <Hash> / <TokenTag> primitives, or inline `var(--yap-font-
- * mono)` style if a primitive doesn't fit. */
+ * Generic tracked labels, "Date / Opponent / Topic / Result" table
+ * headers, "Round X/Y · Settled" status rows, "qwen-X · provider"
+ * meta lines, VOICE ON button — ALL Poesing.
+ *
+ * The `.mono` UTILITY CLASS (~57 callsites) is rebound to Poesing
+ * via this rule so generic className="mono" labels auto-flip. */
 .mono { font-family: var(--yap-font-display-2); }
 .label {
   font-family: var(--yap-font-display-2);
