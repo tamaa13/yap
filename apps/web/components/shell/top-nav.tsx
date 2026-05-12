@@ -64,7 +64,7 @@ function NavLink({ entry, active }: { entry: NavEntry; active: boolean }) {
         letterSpacing: 1.6,
         textTransform: "uppercase",
         fontWeight: 500,
-        color: active ? "var(--yap-ink-50)" : "var(--yap-ink-300)",
+        color: active ? "#FFFFFF" : "rgba(255,255,255,0.72)",
         background: "transparent",
         textDecoration: "none",
       }}
