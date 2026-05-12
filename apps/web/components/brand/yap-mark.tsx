@@ -1,58 +1,57 @@
 export interface YapMarkProps {
-  /** Display height. Letter weight scales with size. */
+  /** Display height of the "Yap" letterforms (the plate hugs them
+   *  with internal padding). */
   size?: number;
-  /** Mark color. Defaults to vermillion. */
-  color?: string;
-  /** Optional left-side bullet dot — set to false to drop. */
-  dot?: boolean;
+  /** Plate fill — defaults to true near-black so the stamp pops
+   *  on the saturated-crimson page. */
+  plate?: string;
+  /** Wordmark fill — defaults to cream. */
+  ink?: string;
 }
 
 /**
- * Yap wordmark — pure typographic mark, no icon.
+ * Yap mark — black plate + cream Riot wordmark "YAP", fight-poster
+ * seal aesthetic. Replaces the prior free-floating wordmark which
+ * read patchy on the red page (Riot's stencil character lets ground
+ * bleed through). A solid plate guarantees contrast regardless of
+ * the underlying surface.
  *
- * The brand is the type, set in heavy Saira Condensed tracked tight
- * with a vermillion bullet leading the letter group. A wordmark-only
- * mark reads as senior + restrained; an icon would add noise without
- * carrying any combat-sport meaning.
- *
- * Caller passes `size` in px (height); the type renders ~1.4× that
- * width so it can sit in topbars / footers as a horizontal element.
+ * Cut-corner geometry via clip-path (`--yap-cut-sm`) matches the
+ * `.btn` button corner shape — the mark + buttons share one
+ * vocabulary.
  */
 export function YapMark({
   size = 22,
-  color = "#E69500",
-  dot = true,
+  plate = "#0A0A0A",
+  ink = "#F4ECDB",
 }: YapMarkProps) {
   return (
     <span
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: Math.max(6, size * 0.35),
-        height: size,
-        fontFamily: "var(--yap-font-display)",
-        fontWeight: 400,
-        fontSize: size,
+        justifyContent: "center",
+        background: plate,
+        padding: `${Math.round(size * 0.30)}px ${Math.round(size * 0.45)}px ${Math.round(size * 0.22)}px`,
+        clipPath: "var(--yap-cut-sm)",
+        flexShrink: 0,
         lineHeight: 1,
-        letterSpacing: "-0.04em",
-        textTransform: "uppercase",
-        color: "currentColor",
         userSelect: "none",
       }}
     >
-      {dot ? (
-        <span
-          aria-hidden
-          style={{
-            display: "inline-block",
-            width: Math.max(8, size * 0.32),
-            height: Math.max(8, size * 0.32),
-            background: color,
-            flexShrink: 0,
-          }}
-        />
-      ) : null}
-      Yap
+      <span
+        style={{
+          fontFamily: "var(--yap-font-display)",
+          fontWeight: 400,
+          fontSize: size,
+          lineHeight: 1,
+          letterSpacing: "-0.02em",
+          textTransform: "uppercase",
+          color: ink,
+        }}
+      >
+        Yap
+      </span>
     </span>
   );
 }
