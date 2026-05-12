@@ -376,7 +376,7 @@ export function ArenaLive({
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ color: "var(--tx-secondary)" }}>Battle</span>
-              <span className="mono">{battle.id}</span>
+              <span style={{ fontFamily: "var(--yap-font-mono)", fontSize: 12 }}>{battle.id}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ color: "var(--tx-secondary)" }}>Side</span>
