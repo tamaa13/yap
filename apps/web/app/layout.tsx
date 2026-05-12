@@ -26,13 +26,14 @@ const riot = localFont({
   weight: "400",
 });
 
-// Groovy Riot — secondary display face. Retro-vintage hand-drawn /
-// rough stencil character. Reserved for character-clash moments
-// (dateline values, loud stamp badges, manifesto pull-quote) where
+// Poesing — secondary display face. Grunge / street display,
+// distressed-edge character. Includes full 0-9 + punctuation
+// (unlike the Groovy Riot demo previously here), so it's safe on
+// numeral display slots: dateline values, stamp badges, anywhere
 // Riot's primary stencil benefits from a tonal partner.
-const groovyRiot = localFont({
-  variable: "--font-groovy-riot",
-  src: "./fonts/GroovyRiot.ttf",
+const poesing = localFont({
+  variable: "--font-poesing",
+  src: "./fonts/Poesing.ttf",
   display: "swap",
   weight: "400",
 });
@@ -72,7 +73,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${riot.variable} ${groovyRiot.variable} ${sairaCondensed.variable} ${outfit.variable} ${anonymousPro.variable}`}
+      className={`${riot.variable} ${poesing.variable} ${sairaCondensed.variable} ${outfit.variable} ${anonymousPro.variable}`}
       suppressHydrationWarning
     >
       <body>
