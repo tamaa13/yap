@@ -371,7 +371,7 @@ export function FighterDetail({
                   <div>
                     <div className="label">Earnings</div>
                     <div className="num" style={{ fontSize: 20, fontWeight: 600 }}>
-                      {fmtNum(fighter.earnings)} 0G
+                      {fmtNum(fighter.earnings, 4)} 0G
                     </div>
                   </div>
                 </div>
@@ -721,7 +721,7 @@ export function FighterDetail({
                     className="num"
                     style={{ fontSize: 28, fontWeight: 700 }}
                   >
-                    {fmtNum(fighter.earnings)} 0G
+                    {fmtNum(fighter.earnings, 4)} 0G
                   </div>
                   <div
                     style={{
