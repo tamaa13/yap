@@ -13,31 +13,33 @@
    ────────────────────────────── */
 
 :root {
-  /* EXPERIMENT v3 — true near-black palette. Warm-brown undertone
-   * dropped entirely. Neutral cold-grey scale so vermillion red is
-   * the only warm element on screen. Sport-poster cleanliness. */
-  --yap-ink-950: #0A0A0A;
-  --yap-ink-900: #0F0F10;
-  --yap-ink-800: #16161A;
-  --yap-ink-700: #1D1D22;
-  --yap-ink-600: #2A2A30;
-  --yap-ink-500: #3D3D45;
-  --yap-ink-400: #6A6A72;
-  --yap-ink-300: #8B8B92;
-  --yap-ink-200: #B4B4BA;
-  --yap-ink-100: #D8D8DC;
-  --yap-ink-50:  #F0F0F2;
+  /* EXPERIMENT v4 — true black + sodium amber. Warm fight-poster
+   * lamp on pitch dark. Cream foreground, sodium amber as the only
+   * brand accent, deep oxblood reserved for dispute panels only. */
+  --yap-ink-950: #050505;
+  --yap-ink-900: #0A0A0A;
+  --yap-ink-800: #141414;
+  --yap-ink-700: #1F1F1F;
+  --yap-ink-600: #2E2A24;
+  --yap-ink-500: #4F4A42;
+  --yap-ink-400: #6B665D;
+  --yap-ink-300: #A29C8D;
+  --yap-ink-200: #C8C0AE;
+  --yap-ink-100: #EBE1CB;
+  --yap-ink-50:  #F4ECDB;
   --yap-ink-0:   #FFFFFF;
 
-  /* EXPERIMENT — vermillion / signal-red on charcoal. Bolder, warmer
-   * than Promoter's deep crimson; reads as fight-poster blood-orange,
-   * anti-AI-startup, high-contrast on near-black ground. */
-  --yap-crimson:        #D62828;
-  --yap-crimson-soft:   #B81F1F;
-  --yap-crimson-deep:   #8C1414;
-  --yap-gold:           #F4A261;
-  --yap-gold-deep:      #C97A2B;
-  --yap-bruise:         #6B1F26;
+  /* EXPERIMENT v4 — sodium amber as primary accent. Warm fight-
+   * poster lamp on pitch-dark. Deep oxblood `--yap-bruise` is
+   * RESERVED for dispute panels only; never used ambiently. The
+   * legacy `--yap-crimson` token name remains so existing components
+   * pick up the amber without per-file edits. */
+  --yap-crimson:        #E69500;  /* sodium amber */
+  --yap-crimson-soft:   #C48020;  /* hover */
+  --yap-crimson-deep:   #B07020;  /* brass-deep, pressed */
+  --yap-gold:           #C49A24;  /* warm gold */
+  --yap-gold-deep:      #8E7635;
+  --yap-bruise:         #6B1F26;  /* deep oxblood — dispute only */
 
   --yap-success:        #5BA855;
   --yap-success-bg:     #1C2A1A;
@@ -83,8 +85,8 @@
   --yap-sh-1: 0 1px 0 rgba(0,0,0,.4), 0 2px 6px rgba(0,0,0,.25);
   --yap-sh-2: 0 2px 0 rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.35);
   --yap-sh-3: 0 4px 0 rgba(0,0,0,.55), 0 16px 48px rgba(0,0,0,.5);
-  --yap-glow-crimson: 0 0 0 1px rgba(214,40,40,.5), 0 0 24px rgba(214,40,40,.35);
-  --yap-glow-gold:    0 0 0 1px rgba(244,162,97,.4), 0 0 18px rgba(244,162,97,.25);
+  --yap-glow-crimson: 0 0 0 1px rgba(230,149,0,.5), 0 0 24px rgba(230,149,0,.35);
+  --yap-glow-gold:    0 0 0 1px rgba(196,154,36,.4), 0 0 18px rgba(196,154,36,.25);
 
   /* ── Motion timing (mirrors MOTION.md — design within these) ── */
   --yap-t-fast:   140ms;

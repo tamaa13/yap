@@ -20,7 +20,7 @@ export interface YapMarkProps {
  */
 export function YapMark({
   size = 22,
-  color = "#D62828",
+  color = "#E69500",
   dot = true,
 }: YapMarkProps) {
   return (
