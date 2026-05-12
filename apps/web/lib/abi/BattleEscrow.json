@@ -170,6 +170,19 @@
   },
   {
     "type": "function",
+    "name": "FIGHTER_ROYALTY_BPS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "MAX_DISPUTE_WINDOW",
     "inputs": [],
     "outputs": [
@@ -381,6 +394,11 @@
         "name": "settledAt",
         "type": "uint64",
         "internalType": "uint64"
+      },
+      {
+        "name": "royaltyPaid",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -669,6 +687,11 @@
             "name": "settledAt",
             "type": "uint64",
             "internalType": "uint64"
+          },
+          {
+            "name": "royaltyPaid",
+            "type": "uint256",
+            "internalType": "uint256"
           }
         ]
       }
@@ -1324,6 +1347,37 @@
         "type": "uint256",
         "indexed": true,
         "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "FighterRoyaltyPaid",
+    "inputs": [
+      {
+        "name": "battleId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "winnerTokenId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "receiver",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
         "name": "amount",

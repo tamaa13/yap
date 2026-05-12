@@ -10,15 +10,21 @@ clears upstream. See [bug catalog](bug-catalog.md).
 
 | Contract | Role | Address |
 |---|---|---|
-| `YapFighter` | ERC-7857 character INFT — encrypted persona payload | `0xd023b0c5b0ccc829dbf0b39df5e81aece4d36a24` |
-| `BattleEscrow` | Match lifecycle + pari-mutuel pool + verdict verification | `0x4bd214fdfe925124c9e145e577ac860c0d93fb2e` |
-| `BattleRegistry` | On-chain match history + ELO ledger | `0x755ef230d456b6cc991ccfff38ec5c6b0133d37b` |
-| `YapMarketplace` | Buy / sell escrow for fighters | `0x076e42a64e4ba43700ebb0830086138468dfa275` |
-| `RentalEscrow` | Custody-based rentals + co-signed dispute resolution | `0xe5Df2d51ef75A268daAd122038D94cEA9c3111EA` |
-| `MomentINFT` | ERC-7857 sibling — round highlights as collectibles | `0xf6cadAb5276A16b7C8213CD7B6BBB547f55be4AC` |
-| `MomentMarketplace` | Buy / sell escrow for Battle Moments | `0x18653aa16a4ffc7093be0270ab427688dfd2fb81` |
-| `YapSubnameRegistrar` | `<label>.yap.0g` ENS-style subname registry | `0xb84c024c3456b7c82ad8a08bf4b7c69804bbd56f` |
+| `YapFighter` | ERC-7857 character INFT — encrypted persona payload | `0xc2A82B1c6cb820ccf0C7732F40733A4101615CA2` |
+| `BattleEscrow` | Match lifecycle + pari-mutuel pool + verdict verification + 5% fighter royalty | `0xC3a196f1e25485E1059199c2F4D2afdd07043Cb8` |
+| `BattleRegistry` | On-chain match history + ELO ledger + lifetime earnings | `0x8A665bd7dFed87A1d6B87f1e5ecbc70E08fb7bD3` |
+| `YapMarketplace` | Buy / sell escrow for fighters | `0xf4e65e53b203E4EF64Fedfe0C77BD83C56f7CEf1` |
+| `RentalEscrow` | Custody-based rentals + co-signed dispute resolution | `0xad7b130d1ED52e33F1c64C7349E4994423e19E5b` |
+| `MomentINFT` | ERC-7857 sibling — round highlights as collectibles | `0xde6f1Ad216B2de19DBE5418c278DDbec1633092f` |
+| `MomentMarketplace` | Buy / sell escrow for Battle Moments | `0xDC77b8a4BE9C1aaAAFb80a3342A457700E070c20` |
+| `YapSubnameRegistrar` | `<label>.yap.0g` ENS-style subname registry | `0xD9c17C941C6307FbBf4fB6A9959Fc6d7490CCb31` |
 | `YapInbox` | Stateless A2A encrypted messaging | `0xe92dB21A770c32a19795556C46D5c6a274955DBD` |
+
+> Eight contracts redeployed on **2026-05-13** via the Strategy A
+> full-cascade ceremony — v3 layered fighter royalty + RUNNER_ROLE on
+> top of the Phase-3 audit-pass bytecode. v1 ecosystem (fighters,
+> subnames, rentals, listings) is orphaned by design. `YapInbox` is
+> unchanged (separate CREATE2 path, identical bytecode).
 
 ## TEE provider
 
