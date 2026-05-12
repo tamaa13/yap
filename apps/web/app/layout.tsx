@@ -26,6 +26,17 @@ const riot = localFont({
   weight: "400",
 });
 
+// Groovy Riot — secondary display face. Retro-vintage hand-drawn /
+// rough stencil character. Reserved for character-clash moments
+// (dateline values, loud stamp badges, manifesto pull-quote) where
+// Riot's primary stencil benefits from a tonal partner.
+const groovyRiot = localFont({
+  variable: "--font-groovy-riot",
+  src: "./fonts/GroovyRiot.ttf",
+  display: "swap",
+  weight: "400",
+});
+
 const sairaCondensed = Saira_Condensed({
   variable: "--font-saira-cond",
   subsets: ["latin"],
@@ -61,7 +72,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${riot.variable} ${sairaCondensed.variable} ${outfit.variable} ${anonymousPro.variable}`}
+      className={`${riot.variable} ${groovyRiot.variable} ${sairaCondensed.variable} ${outfit.variable} ${anonymousPro.variable}`}
       suppressHydrationWarning
     >
       <body>
