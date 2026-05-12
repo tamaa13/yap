@@ -51,6 +51,11 @@ contract BattleRegistry is AccessControl {
         uint32 eloA,
         uint32 eloB
     );
+    /// @notice Emitted when {recordEarnings} accrues a payout to a fighter's
+    ///         lifetime earnings counter. The escrow calls this after paying
+    ///         the 5% fighter royalty on a settled battle; the cumulative
+    ///         total surfaces through {fighterStats}.
+    event EarningsRecorded(uint256 indexed tokenId, uint256 amount);
 
     error UnknownBattle();
     error AlreadyRegistered();
@@ -97,6 +102,16 @@ contract BattleRegistry is AccessControl {
         if (_stats[fighterB].elo == 0) _stats[fighterB].elo = DEFAULT_ELO;
 
         emit BattleRegistered(battleId, fighterA, fighterB, topic);
+    }
+
+    /// @notice Accrue earnings to a fighter's lifetime counter. Called by
+    ///         the BattleEscrow after paying the fighter-royalty cut on a
+    ///         settled battle. ESCROW_ROLE-gated so only the wired escrow
+    ///         can mutate earnings; the value is otherwise read-only via
+    ///         {fighterStats}.
+    function recordEarnings(uint256 tokenId, uint256 amount) external onlyRole(ESCROW_ROLE) {
+        _stats[tokenId].earnings += amount;
+        emit EarningsRecorded(tokenId, amount);
     }
 
     function finalizeBattle(uint256 battleId, uint8 winner) external onlyRole(ESCROW_ROLE) {

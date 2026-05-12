@@ -12,6 +12,12 @@ import {IERC7857} from "./IERC7857.sol";
 ///         Ownership transfers require a re-sealing proof (TEE/ZK) verified by {verifier}.
 contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    /// @notice Server-side runner address(es) authorized to write to the
+    ///         persona audit log via {logAccess}. Granted to the off-chain
+    ///         inference runner so it can emit {PersonaAccessed} on every
+    ///         decryption round without needing per-token executor wiring.
+    ///         Owner + executor paths remain functional in parallel.
+    bytes32 public constant RUNNER_ROLE = keccak256("RUNNER_ROLE");
 
     /// @notice Ownership proofs expire after this window. Tightened from 1
     ///         hour to 10 minutes to reduce replay surface for stale proofs
@@ -310,7 +316,8 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
     function logAccess(uint256 tokenId, uint256 battleId) external {
         bool isOwner_ = ownerOf(tokenId) == msg.sender;
         bool isExecutor_ = _executorIndex[tokenId][msg.sender] != 0;
-        if (!isOwner_ && !isExecutor_) revert NotAuthorized();
+        bool isRunner_ = hasRole(RUNNER_ROLE, msg.sender);
+        if (!isOwner_ && !isExecutor_ && !isRunner_) revert NotAuthorized();
         unchecked {
             _accessCount[tokenId] += 1;
         }

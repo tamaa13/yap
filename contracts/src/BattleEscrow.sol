@@ -17,6 +17,8 @@ interface IBattleRegistry {
     ) external;
 
     function finalizeBattle(uint256 battleId, uint8 winner) external;
+
+    function recordEarnings(uint256 tokenId, uint256 amount) external;
 }
 
 interface IFighter {
@@ -84,6 +86,11 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
     /// @notice Pending challenge auto-cancels if defender doesn't accept/decline in this window.
     uint256 public constant CHALLENGE_EXPIRY = 24 hours;
     uint16 public constant PLATFORM_FEE_BPS = 250; // 2.5%
+    /// @notice Fighter-owner royalty as a fraction of the settled pool.
+    ///         Paid out of the gross pot at {settle} time when there's a
+    ///         decisive winner, so the same payout integrity invariants
+    ///         apply: netPool = poolA + poolB - feeCollected - royaltyPaid.
+    uint16 public constant FIGHTER_ROYALTY_BPS = 500; // 5%
     uint16 public constant BPS_DENOMINATOR = 10_000;
 
     /// @notice Anti-gambling mechanics (enforced at acceptBattle + claimPayout):
@@ -141,6 +148,12 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
         /// @notice Block timestamp when {settle} ran. Used to enforce the
         ///         {DUST_SWEEP_COOLDOWN} before residual sweeps.
         uint64 settledAt;
+        /// @notice Royalty paid to the winning fighter's current owner at
+        ///         {settle}. Zero for draws / single-side / cancelled
+        ///         battles. Subtracted from the netPool used by
+        ///         {claimPayout} so bettor payouts stay consistent with
+        ///         what's actually still escrowed.
+        uint256 royaltyPaid;
     }
 
     /// @notice Time after settlement before residual dust + abandoned stakes
@@ -209,6 +222,15 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
     ///         data-availability committee responsible for that epoch.
     event BattleDAAnchored(uint256 indexed battleId, uint64 epoch);
     event BattleSettled(uint256 indexed battleId, uint8 winner, uint256 fee);
+    /// @notice Fired when {settle} routes the 5% fighter-owner royalty to
+    ///         the winning fighter's current owner. Zero on draws / single-
+    ///         side battles where no royalty applies.
+    event FighterRoyaltyPaid(
+        uint256 indexed battleId,
+        uint256 indexed winnerTokenId,
+        address indexed receiver,
+        uint256 amount
+    );
     event SettlementPaused(uint256 indexed battleId, uint64 newDeadline);
     event DisputeFiled(
         uint256 indexed battleId,
@@ -695,20 +717,40 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
         else if (b.winner == SIDE_B) winnerPool = b.poolB;
 
         uint256 fee;
-        // draw or single-side-only battles return stakes in full (handled in claimPayout).
+        uint256 royalty;
+        // Fee + royalty fire only on contested wins (both sides put up stakes
+        // AND there's a decisive winner). Draws and single-side battles
+        // refund stakes via {claimPayout} and skip both cuts so bettors
+        // can't end up underwater on their own returned stake.
         if (b.winner != DRAW && winnerPool > 0 && (b.poolA + b.poolB) > winnerPool) {
             fee = ((b.poolA + b.poolB) * PLATFORM_FEE_BPS) / BPS_DENOMINATOR;
+            royalty = ((b.poolA + b.poolB) * FIGHTER_ROYALTY_BPS) / BPS_DENOMINATOR;
             b.feeCollected = fee;
+            b.royaltyPaid = royalty;
         }
 
         b.status = Status.Settled;
         b.settledAt = uint64(block.timestamp);
 
+        uint256 winnerTokenId = (b.winner == SIDE_A) ? b.fighterA : b.fighterB;
         if (address(registry) != address(0)) {
             registry.finalizeBattle(battleId, b.winner);
+            // Accrue lifetime earnings even when the cumulative payout is
+            // zero so indexers see a consistent BattleFinalized →
+            // EarningsRecorded pair per battle. Skipped when there's no
+            // winnerTokenId (DRAW path falls through with royalty == 0).
+            if (royalty > 0) {
+                registry.recordEarnings(winnerTokenId, royalty);
+            }
         }
+
         if (fee > 0) {
             Address.sendValue(payable(treasury), fee);
+        }
+        if (royalty > 0) {
+            address fighterOwner = fighter.ownerOf(winnerTokenId);
+            Address.sendValue(payable(fighterOwner), royalty);
+            emit FighterRoyaltyPaid(battleId, winnerTokenId, fighterOwner, royalty);
         }
 
         emit BattleSettled(battleId, b.winner, fee);
@@ -733,7 +775,7 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
         ) {
             revert TimeoutNotReached();
         }
-        uint256 escrowed = b.poolA + b.poolB - b.feeCollected;
+        uint256 escrowed = b.poolA + b.poolB - b.feeCollected - b.royaltyPaid;
         uint256 dust = escrowed > b.totalClaimed
             ? escrowed - b.totalClaimed
             : 0;
@@ -782,7 +824,7 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
             } else {
                 uint256 winnerPool = (b.winner == SIDE_A) ? b.poolA : b.poolB;
                 uint256 loserPool = (b.winner == SIDE_A) ? b.poolB : b.poolA;
-                uint256 netPool = b.poolA + b.poolB - b.feeCollected;
+                uint256 netPool = b.poolA + b.poolB - b.feeCollected - b.royaltyPaid;
                 if (winnerPool == 0) {
                     // Degenerate case (no bets on winning side) — refund.
                     payout = bet.amount;
