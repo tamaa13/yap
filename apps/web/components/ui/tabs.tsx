@@ -50,7 +50,7 @@ export function Tabs<T extends string = string>({
               cursor: "pointer",
               position: "relative",
               fontFamily: "var(--yap-font-display)",
-              fontWeight: 400,
+              fontWeight: 800,
               fontSize: 18,
               lineHeight: 1,
               textTransform: "uppercase",

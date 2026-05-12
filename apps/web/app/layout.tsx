@@ -1,47 +1,47 @@
 import type { Metadata } from "next";
 import {
-  Big_Shoulders,
-  Fraunces,
-  IBM_Plex_Mono,
-  Public_Sans,
+  Anonymous_Pro,
+  Outfit,
+  Saira_Condensed,
+  Saira_Stencil_One,
 } from "next/font/google";
 import "./globals.css";
 import { EntryGate } from "@/components/shell/entry-gate";
 import { YapCursor } from "@/components/shell/yap-cursor";
 import { Providers } from "./providers";
 
-// EXPERIMENT direction (Task / experiment-red-hero-fonts) — stadium
-// poster identity in vermillion + charcoal. Type stack:
-//   - Big Shoulders Display → stadium-poster condensed display
-//   - Public Sans           → technical-formal body workhorse
-//   - Fraunces (italic)     → editorial italic for the VS marquee
-//   - IBM Plex Mono         → mono for data + IDs + dateline
-const bigShoulders = Big_Shoulders({
-  variable: "--font-bsd",
+// EXPERIMENT v3 — sport-masthead identity. Stencil display + condensed
+// poster sans + geometric body + retro-techy mono. Near-black ground,
+// vermillion the only warm element.
+//   - Saira Stencil One → hero / loud moments (single weight 400)
+//   - Saira Condensed   → general display, variable 100-900
+//   - Outfit            → workhorse body, variable 100-900
+//   - Anonymous Pro     → coder mono, 400 + 700
+const sairaStencil = Saira_Stencil_One({
+  variable: "--font-stencil",
+  subsets: ["latin"],
+  weight: ["400"],
+  display: "swap",
+});
+
+const sairaCondensed = Saira_Condensed({
+  variable: "--font-saira-cond",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
   display: "swap",
 });
 
-const publicSans = Public_Sans({
-  variable: "--font-public-sans",
+const outfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
+const anonymousPro = Anonymous_Pro({
+  variable: "--font-anon-pro",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  style: ["italic"],
-  display: "swap",
-});
-
-const plexMono = IBM_Plex_Mono({
-  variable: "--font-plex-mono",
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  weight: ["400", "700"],
   display: "swap",
 });
 
@@ -59,7 +59,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${bigShoulders.variable} ${publicSans.variable} ${fraunces.variable} ${plexMono.variable}`}
+      className={`${sairaStencil.variable} ${sairaCondensed.variable} ${outfit.variable} ${anonymousPro.variable}`}
       suppressHydrationWarning
     >
       <body>

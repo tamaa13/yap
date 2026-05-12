@@ -70,7 +70,7 @@ export function LandingTopFighters() {
             <div
               style={{
                 fontFamily: "var(--yap-font-display)",
-                fontWeight: 400,
+                fontWeight: 800,
                 fontSize: 26,
                 lineHeight: 0.95,
                 marginTop: 14,
