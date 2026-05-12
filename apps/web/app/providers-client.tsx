@@ -31,12 +31,12 @@ export function WalletProviders({ children }: { children: ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
           theme={darkTheme({
-            // Promoter palette: crimson primary on Ink-950 ground.
+            // Experiment palette: sodium amber on near-black ground.
             // Hex literals because RainbowKit's theme contract takes
             // strings, not CSS vars — keep them in sync with
-            // `--yap-crimson` and `--yap-ink-950` in globals.css.
-            accentColor: "#C8102E",
-            accentColorForeground: "#F2EDE2",
+            // `--yap-crimson` and `--yap-ink-900` in globals.css.
+            accentColor: "#E69500",
+            accentColorForeground: "#F4ECDB",
             borderRadius: "small",
             fontStack: "system",
           })}
