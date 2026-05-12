@@ -44,6 +44,7 @@ function battleStruct({
     verdictHash: ZERO_BYTES as `0x${string}`,
     totalClaimed: 0n,
     settledAt: 0n,
+    royaltyPaid: 0n,
   };
 }
 

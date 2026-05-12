@@ -122,6 +122,7 @@ function fighter20Scenario() {
     verdictHash: ZERO_HASH as `0x${string}`,
     totalClaimed: 0n,
     settledAt: 0n,
+    royaltyPaid: 0n,
   };
 
   // BATTLE_ESCROW gets two distinct mocks (getBattle from
@@ -153,6 +154,7 @@ function fighter20Scenario() {
           battleStruct.verdictHash,
           battleStruct.totalClaimed,
           battleStruct.settledAt,
+          battleStruct.royaltyPaid,
         ],
       },
     },

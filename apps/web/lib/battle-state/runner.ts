@@ -51,6 +51,7 @@ import {
   fetchProviderSignature,
   findCanonicalContentOffset,
 } from "@/lib/0g/inference";
+import { logFighterAccess } from "@/lib/0g/log-access";
 import { RPC } from "@/lib/0g/storage";
 import { writeBattleSnapshot } from "@/lib/0g/kv";
 import { getBattleStore } from "./store";
@@ -330,6 +331,10 @@ async function runLoop(battleId: number): Promise<void> {
           side: "a",
         }),
       });
+      // Audit-log: persona inference completed for fighter A. Fire-and-
+      // forget tx via the RUNNER_ROLE-granted wallet — see
+      // lib/0g/log-access.ts for the latency / failure-handling rationale.
+      logFighterAccess(state0.fighterA.id, battleId);
 
       await store.update(battleId, (s) => ({
         ...s,
@@ -368,6 +373,9 @@ async function runLoop(battleId: number): Promise<void> {
           side: "b",
         }),
       });
+      // Audit-log fighter B's round access. Same fire-and-forget pattern
+      // as the A-side call above.
+      logFighterAccess(state0.fighterB.id, battleId);
 
       const afterRound = await store.update(battleId, (s) => ({
         ...s,
