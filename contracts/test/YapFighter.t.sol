@@ -395,6 +395,43 @@ contract YapFighterTest is Test {
         fighter.logAccess(id, 1);
     }
 
+    /// Server-side runner with RUNNER_ROLE can log access for ANY fighter
+    /// without per-token executor authorization. Enables the yap-web
+    /// inference API route to emit PersonaAccessed on every round.
+    function test_LogAccess_RunnerRoleCanLogAnyFighter() public {
+        uint256 id1 = _mintTo(alice, keccak256("runner-1"));
+        uint256 id2 = _mintTo(bob, keccak256("runner-2"));
+        address runner = makeAddr("server-runner");
+        bytes32 runnerRole = fighter.RUNNER_ROLE();
+        vm.prank(admin);
+        fighter.grantRole(runnerRole, runner);
+
+        // Runner logs without being owner or executor of either fighter.
+        vm.prank(runner);
+        fighter.logAccess(id1, 7);
+        vm.prank(runner);
+        fighter.logAccess(id2, 7);
+        assertEq(fighter.getAccessCount(id1), 1);
+        assertEq(fighter.getAccessCount(id2), 1);
+    }
+
+    function test_LogAccess_RunnerRoleRevocationStopsAccess() public {
+        uint256 id = _mintTo(alice, keccak256("runner-revoke"));
+        address runner = makeAddr("runner-rev");
+        bytes32 runnerRole = fighter.RUNNER_ROLE();
+
+        vm.prank(admin);
+        fighter.grantRole(runnerRole, runner);
+        vm.prank(runner);
+        fighter.logAccess(id, 1);
+
+        vm.prank(admin);
+        fighter.revokeRole(runnerRole, runner);
+        vm.prank(runner);
+        vm.expectRevert(YapFighter.NotAuthorized.selector);
+        fighter.logAccess(id, 2);
+    }
+
     function test_LogAccess_RevokedExecutorRevertsAfterUnauthorize() public {
         uint256 id = _mintTo(alice, keccak256("log-revoke"));
         address runner = makeAddr("runner");
