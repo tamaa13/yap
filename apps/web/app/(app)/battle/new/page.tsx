@@ -55,14 +55,24 @@ export default function BattleNewPage() {
   const opponents = useMemo(() => {
     if (!addr || opponentsLoading) return [];
     const myAddr = addr.toLowerCase();
-    const myIdSet = new Set(myFighters.data.map((f) => f.id));
-    return allFighters.data.filter(
-      (f) =>
-        !myIdSet.has(f.id) &&
-        f.owner.toLowerCase() !== myAddr &&
-        (!f.rentedBy || f.rentedBy.toLowerCase() !== myAddr),
-    );
-  }, [allFighters.data, myFighters.data, addr, opponentsLoading]);
+    // Exclude fighters the CURRENT user effectively controls:
+    //   - rented-in (renter has operational control during the lease)
+    //   - owned outright AND not currently rented out (no other
+    //     effective controller; challenging would be self-challenge)
+    // INCLUDE fighters I own that I've rented OUT — the renter is the
+    // current controller, so I can challenge those (renter accepts).
+    // INCLUDE everyone else's fighters as usual.
+    // Was previously: `!myIdSet.has(f.id) && f.owner !== me && f.rentedBy !== me`
+    // — which dropped my rented-out fighters because myFighters
+    // (filtered by rental overlay) still listed them under me.
+    return allFighters.data.filter((f) => {
+      const iOwn = f.owner.toLowerCase() === myAddr;
+      const iRent = !!f.rentedBy && f.rentedBy.toLowerCase() === myAddr;
+      const hasRenter = !!f.rentedBy;
+      const iControl = iRent || (iOwn && !hasRenter);
+      return !iControl;
+    });
+  }, [allFighters.data, addr, opponentsLoading]);
 
   // Local-state opponent pagination — wizard already owns the URL via
   // ?fighter & ?opponent, so paging stays in component state to avoid
