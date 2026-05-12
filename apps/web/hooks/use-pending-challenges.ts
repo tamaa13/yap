@@ -168,10 +168,16 @@ export function usePendingChallenges(user: `0x${string}` | undefined) {
   const incoming: PendingChallenge[] = [];
   const outgoing: PendingChallenge[] = [];
 
-  // TEMP diagnostic — BigInt-safe stringify so JSON.stringify doesn't
-  // panic on rental tuple fields (startedAt/expiresAt/paid are uint64).
-  // Remove once root cause identified.
-  if (typeof window !== "undefined" && user) {
+  // TEMP diagnostic v28.1 — per-battle audit to spot which read is
+  // wired wrong. BigInt-safe (uint64 / uint256 fields → strings).
+  // Remove once root cause identified (next commit).
+  if (
+    typeof window !== "undefined" &&
+    user &&
+    battleReads.data &&
+    rentalReads.data &&
+    ownerReads.data
+  ) {
     const safe = (v: unknown): unknown => {
       if (typeof v === "bigint") return v.toString();
       if (Array.isArray(v)) return v.map(safe);
@@ -184,24 +190,75 @@ export function usePendingChallenges(user: `0x${string}` | undefined) {
       }
       return v;
     };
-    const rentalsCount = rentalReads.data?.filter((r) => r.status === "success").length ?? 0;
-    const firstRentalRaw = rentalReads.data?.find((r) => r.status === "success")?.result;
-    const summary = safe({
-      user,
-      battleIdsCount: battleIds.length,
-      battleReadsReady: !!battleReads.data,
-      ownerReadsReady: !!ownerReads.data,
-      rentalReadsReady: !!rentalReads.data,
-      rentalsCount,
-      battleIds: battleIds.map((b) => Number(b)),
-      firstRental: firstRentalRaw,
-      now: Date.now(),
+    const nowSec = Math.floor(Date.now() / 1000);
+    const luUser = user.toLowerCase();
+    const audit = battleIds.map((id, i) => {
+      const battleRaw = battleReads.data?.[i].status === "success"
+        ? (battleReads.data[i].result as unknown)
+        : null;
+      const rentalRaw = rentalReads.data?.[i].status === "success"
+        ? (rentalReads.data[i].result as unknown)
+        : null;
+      const ownerRaw = ownerReads.data?.[i].status === "success"
+        ? (ownerReads.data[i].result as unknown)
+        : null;
+      const fighterA = Array.isArray(battleRaw)
+        ? (battleRaw[0] as bigint)
+        : (battleRaw as { fighterA?: bigint } | null)?.fighterA;
+      const fighterB = Array.isArray(battleRaw)
+        ? (battleRaw[1] as bigint)
+        : (battleRaw as { fighterB?: bigint } | null)?.fighterB;
+      const status = Array.isArray(battleRaw)
+        ? (battleRaw[7] as number)
+        : (battleRaw as { status?: number } | null)?.status;
+      const renter = Array.isArray(rentalRaw)
+        ? (rentalRaw[0] as `0x${string}` | undefined)
+        : (rentalRaw as { renter?: `0x${string}` } | null)?.renter;
+      const expiresAt = Array.isArray(rentalRaw)
+        ? (rentalRaw[2] as bigint | undefined)
+        : (rentalRaw as { expiresAt?: bigint } | null)?.expiresAt;
+      const owner = ownerRaw as `0x${string}` | null;
+      const leaseActive = !!expiresAt && Number(expiresAt) > nowSec;
+      const matchesByOwner = !!owner && owner.toLowerCase() === luUser;
+      const matchesByRenter =
+        !!renter && renter.toLowerCase() === luUser && leaseActive;
+      return {
+        battleId: String(id),
+        fighterA: fighterA !== undefined ? String(fighterA) : "?",
+        fighterB: fighterB !== undefined ? String(fighterB) : "?",
+        status,
+        ownerOfB: owner,
+        rentalRenter: renter,
+        rentalExpiresAt: expiresAt !== undefined ? String(expiresAt) : "?",
+        leaseActive,
+        matchesByOwner,
+        matchesByRenter,
+        finalMatch: matchesByOwner || matchesByRenter,
+      };
     });
-    const dbg = (window as unknown as { __yapPendingChallengesDebug?: string }).__yapPendingChallengesDebug;
-    const summaryStr = JSON.stringify(summary);
+    // Only surface battles where SOMETHING is interesting: status==Pending,
+    // OR there's a non-zero rental, OR any match fires.
+    const interesting = audit.filter(
+      (a) =>
+        a.status === STATUS_PENDING ||
+        (a.rentalRenter &&
+          a.rentalRenter !== "0x0000000000000000000000000000000000000000") ||
+        a.finalMatch,
+    );
+    const summaryStr = JSON.stringify(safe(interesting));
+    const dbg = (window as unknown as { __yapPendingChallengesDebug?: string })
+      .__yapPendingChallengesDebug;
     if (dbg !== summaryStr) {
-      (window as unknown as { __yapPendingChallengesDebug: string }).__yapPendingChallengesDebug = summaryStr;
-      console.log("[usePendingChallenges]", summary);
+      (
+        window as unknown as { __yapPendingChallengesDebug: string }
+      ).__yapPendingChallengesDebug = summaryStr;
+      console.log(
+        "[usePendingChallenges audit]",
+        "nowSec=" + nowSec,
+        "user=" + user,
+        "interestingBattles=",
+        safe(interesting),
+      );
     }
   }
 
