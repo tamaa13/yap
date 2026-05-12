@@ -118,7 +118,7 @@ export default function MarketPage() {
       <h1
         style={{
           fontFamily: "var(--yap-font-display)",
-          fontWeight: 800,
+          fontWeight: 400,
           fontSize: 56,
           lineHeight: 0.9,
           letterSpacing: "-0.5px",
@@ -406,7 +406,7 @@ export default function MarketPage() {
                   <div
                     style={{
                       fontFamily: "var(--yap-font-display)",
-                      fontWeight: 800,
+                      fontWeight: 400,
                       fontSize: 24,
                       lineHeight: 0.95,
                       textTransform: "uppercase",

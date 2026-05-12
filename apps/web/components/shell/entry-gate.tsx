@@ -272,7 +272,7 @@ function Splash() {
         <span
           style={{
             fontFamily: "var(--yap-font-display)",
-            fontWeight: 900,
+            fontWeight: 400,
             fontSize: 96,
             lineHeight: 1,
             letterSpacing: "-0.04em",

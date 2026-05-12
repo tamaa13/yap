@@ -93,7 +93,7 @@ export default function LandingPage() {
             <div
               style={{
                 fontFamily: "var(--yap-font-display)",
-                fontWeight: 900,
+                fontWeight: 400,
                 fontSize: "clamp(72px, 12vw, 184px)",
                 lineHeight: 0.86,
                 letterSpacing: "-2.5px",
@@ -107,7 +107,7 @@ export default function LandingPage() {
             <div
               style={{
                 fontFamily: "var(--yap-font-display)",
-                fontWeight: 900,
+                fontWeight: 400,
                 fontSize: "clamp(72px, 12vw, 184px)",
                 lineHeight: 0.86,
                 letterSpacing: "-2.5px",
@@ -121,7 +121,7 @@ export default function LandingPage() {
             <div
               style={{
                 fontFamily: "var(--yap-font-display)",
-                fontWeight: 900,
+                fontWeight: 400,
                 fontSize: "clamp(72px, 12vw, 184px)",
                 lineHeight: 0.86,
                 letterSpacing: "-2.5px",
@@ -187,7 +187,7 @@ export default function LandingPage() {
                 <div
                   style={{
                     fontFamily: "var(--yap-font-display)",
-                    fontWeight: 700,
+                    fontWeight: 400,
                     fontSize: 28,
                     lineHeight: 1,
                     color: "var(--yap-ink-50)",
@@ -289,7 +289,7 @@ export default function LandingPage() {
                 <div
                   style={{
                     fontFamily: "var(--yap-font-display)",
-                    fontWeight: 800,
+                    fontWeight: 400,
                     fontSize: 56,
                     lineHeight: 0.85,
                     color: "var(--yap-crimson)",
@@ -301,7 +301,7 @@ export default function LandingPage() {
                 <div
                   style={{
                     fontFamily: "var(--yap-font-display)",
-                    fontWeight: 800,
+                    fontWeight: 400,
                     fontSize: 30,
                     lineHeight: 1,
                     textTransform: "uppercase",
@@ -454,7 +454,7 @@ function SectionHead({
       <h2
         style={{
           fontFamily: "var(--yap-font-display)",
-          fontWeight: 800,
+          fontWeight: 400,
           fontSize: 38,
           lineHeight: 1,
           textTransform: "uppercase",

@@ -31,7 +31,7 @@ export function YapMark({
         gap: Math.max(6, size * 0.35),
         height: size,
         fontFamily: "var(--yap-font-display)",
-        fontWeight: 900,
+        fontWeight: 400,
         fontSize: size,
         lineHeight: 1,
         letterSpacing: "-0.04em",
