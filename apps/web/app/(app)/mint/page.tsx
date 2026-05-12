@@ -24,10 +24,7 @@ import {
   recommendArchetype,
   type ScoreDimension,
 } from "@/lib/archetype-meta";
-import {
-  deriveMockScores,
-  type MockScores,
-} from "@/lib/stylometry/mock-scores";
+import type { MockScores } from "@/lib/stylometry/mock-scores";
 import type { FighterArchetype } from "@/lib/types";
 
 const DIMENSION_LABEL: Record<ScoreDimension, string> = {
@@ -229,23 +226,32 @@ export default function MintPage() {
     "Review & mint",
   ];
 
-  // Scoring trigger — fires when leaving step 1 → step 2. Computes the
-  // 5-tuple from the effective seed, then auto-suggests the
-  // best-fit archetype so the user lands on step 3 with a sensible
-  // pre-selection (still freely reassignable).
+  // Scoring trigger — fires when leaving step 1 → step 2. POSTs the
+  // effective seed to /api/mint/score; the route currently returns a
+  // mock 5-tuple (via lib/stylometry/mock-scores), but Phase 4 swaps
+  // the handler body for a real call to lib/0g/score-persona. The FE
+  // is contract-correct today.
   const runScoring = async () => {
     setScoreError(null);
     setScoring(true);
     try {
-      // Phase 4 will replace this stanza with a server-side call to
-      // `lib/0g/score-persona.ts` (POST /api/mint/score), which returns
-      // the TEE-attested scores + the canonical-text + signature bundle.
-      // For now: 1.2s simulated latency around the stylometric +
-      // heuristic derivation so the UI feels like a real LLM round-trip.
-      await new Promise((r) => setTimeout(r, 1200));
-      const derived = deriveMockScores(effectiveSeed);
-      setScores(derived);
-      setArch(recommendArchetype(derived));
+      const res = await fetch("/api/mint/score", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ seed: effectiveSeed }),
+      });
+      if (!res.ok) {
+        const detail = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        throw new Error(detail.error ?? `Score endpoint returned ${res.status}`);
+      }
+      const data = (await res.json()) as {
+        scores: MockScores;
+        mode?: string;
+      };
+      setScores(data.scores);
+      setArch(recommendArchetype(data.scores as unknown as Record<ScoreDimension, number>));
     } catch (e) {
       setScoreError(e instanceof Error ? e.message : "Scoring failed");
     } finally {
