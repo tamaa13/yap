@@ -254,13 +254,17 @@ export function TopNav() {
                   <span
                     style={{
                       position: "absolute",
-                      top: 7,
-                      right: 7,
-                      width: 8,
-                      height: 8,
+                      top: 6,
+                      right: 6,
+                      width: 9,
+                      height: 9,
                       borderRadius: "50%",
                       background: "var(--accent)",
-                      boxShadow: "0 0 0 2px rgba(10,11,15,0.88)",
+                      // Cream halo for visibility on red page bg.
+                      // Previously dark rgba(10,11,15,.88) from when
+                      // the top-nav was charcoal; on the red nav it
+                      // read as a dark blob.
+                      boxShadow: "0 0 0 2px var(--yap-ink-50)",
                     }}
                   />
                 )}
