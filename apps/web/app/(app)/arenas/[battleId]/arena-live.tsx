@@ -237,9 +237,6 @@ export function ArenaLive({
           />
         </div>
         <div style={{ flexShrink: 0 }}>
-          <CommentatorTtsToggle />
-        </div>
-        <div style={{ flexShrink: 0 }}>
           <Stamp tone="gold">
             <Icon name="shield" size={10} />
             &nbsp;TEE
@@ -1042,8 +1039,6 @@ function ReactionCount({ value }: { value: number }) {
 
 // ─── Commentator (decorative color commentary) ──────────────────────────
 
-const TTS_STORAGE_KEY = "yap.commentator.tts";
-
 /**
  * Bottom-of-arena ticker showing the latest streaming commentary token.
  * Surfaces the most recent round's commentary, auto-fades when no
@@ -1051,79 +1046,20 @@ const TTS_STORAGE_KEY = "yap.commentator.tts";
  * entertainment" so spectators don't confuse it with the TEE-attested
  * judge verdict.
  *
- * Speaks the finished commentary aloud via SpeechSynthesis when the
- * user has toggled TTS on (off by default, settings persist in
- * localStorage). No-ops gracefully on browsers without speech support.
+ * (Voice TTS removed v35 — Chrome autoplay + SSE timing wouldn't
+ * cooperate; ticker is text-only now.)
  */
 function CommentatorTicker({
   state,
 }: {
   state: LiveBattleState | null;
 }) {
-  const [tts, setTts] = useState(false);
-
-  // Hydrate TTS pref from localStorage. State lives in CommentatorTtsToggle
-  // (top bar) but the speak side-effect happens here, so we read it again.
-  useEffect(() => {
-    try {
-      setTts(localStorage.getItem(TTS_STORAGE_KEY) === "1");
-    } catch {
-      // localStorage unavailable — TTS stays off.
-    }
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === TTS_STORAGE_KEY) setTts(e.newValue === "1");
-    };
-    const onCustom = () => {
-      try {
-        setTts(localStorage.getItem(TTS_STORAGE_KEY) === "1");
-      } catch {
-        // ignore
-      }
-    };
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("yap:tts-changed", onCustom);
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("yap:tts-changed", onCustom);
-    };
-  }, []);
-
   // Find the latest round that has any commentary content.
   const latest = state?.rounds
     ? [...state.rounds]
         .filter((r) => r.commentary?.content)
         .sort((a, b) => b.number - a.number)[0]
     : undefined;
-
-  // Speak commentary when TTS is on. Previously gated on
-  // `latest.commentary.done` which the runner doesn't reliably flip on
-  // SSE final chunk — speech never started. Now fires on first
-  // non-empty content per round; once per round via the spokenFor ref.
-  // Chrome's autoplay policy requires speak() to land within a few
-  // seconds of a user gesture; the toggle click also warms a short
-  // utterance (see CommentatorTtsToggle) to register intent ahead of
-  // the async commentary arrival.
-  const spokenForRoundRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (!tts) return;
-    const content = latest?.commentary?.content;
-    if (!content) return;
-    if (spokenForRoundRef.current === latest!.number) return;
-    spokenForRoundRef.current = latest!.number;
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    try {
-      // Cancel any pending utterances so a late-arriving round
-      // doesn't queue behind a stale one.
-      window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(content);
-      utter.rate = 1.05;
-      utter.pitch = 1.0;
-      utter.volume = 0.9;
-      window.speechSynthesis.speak(utter);
-    } catch {
-      // SpeechSynthesis not really supported — skip.
-    }
-  }, [tts, latest?.number, latest?.commentary?.content]);
 
   return (
     <AnimatePresence mode="wait">
@@ -1204,91 +1140,3 @@ function CommentatorTicker({
   );
 }
 
-/**
- * Top-bar toggle for commentator text-to-speech. Persists to localStorage
- * and broadcasts a custom event so the ticker (in the same tree) can
- * pick up the change without prop-drilling.
- */
-function CommentatorTtsToggle() {
-  const [on, setOn] = useState(false);
-  const [supported, setSupported] = useState(true);
-
-  useEffect(() => {
-    setSupported(
-      typeof window !== "undefined" && "speechSynthesis" in window,
-    );
-    try {
-      setOn(localStorage.getItem(TTS_STORAGE_KEY) === "1");
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  if (!supported) return null;
-
-  const toggle = () => {
-    const next = !on;
-    setOn(next);
-    try {
-      localStorage.setItem(TTS_STORAGE_KEY, next ? "1" : "0");
-    } catch {
-      // ignore
-    }
-    window.dispatchEvent(new Event("yap:tts-changed"));
-    if (next && typeof window !== "undefined" && "speechSynthesis" in window) {
-      // WARM-UP: Chrome's autoplay policy requires speechSynthesis.speak()
-      // to land within ~5s of a user gesture. Commentary arrives async via
-      // SSE seconds later, by which time the gesture window has expired
-      // → silent fail. Fire a near-silent micro-utterance attached to the
-      // toggle click to grant the gesture permission ahead of time.
-      try {
-        const warm = new SpeechSynthesisUtterance(" ");
-        warm.volume = 0.01;
-        warm.rate = 4;
-        window.speechSynthesis.speak(warm);
-      } catch {
-        // ignore
-      }
-    }
-    if (!next && typeof window !== "undefined" && "speechSynthesis" in window) {
-      // Cancel any in-flight utterance the moment the user turns it off.
-      try {
-        window.speechSynthesis.cancel();
-      } catch {
-        // ignore
-      }
-    }
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={toggle}
-      title={on ? "Mute the commentator" : "Voice the commentator"}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "4px 9px",
-        fontFamily: "var(--yap-font-display-2)",
-        fontSize: 13,
-        letterSpacing: 0.3,
-        background: on ? "var(--accent-muted)" : "transparent",
-        color: on ? "var(--accent)" : "var(--tx-tertiary)",
-        border: `1px solid ${on ? "var(--accent-border)" : "var(--bd-default)"}`,
-        borderRadius: 3,
-        cursor: "pointer",
-      }}
-    >
-      <span
-        style={{
-          width: 6,
-          height: 6,
-          borderRadius: 99,
-          background: on ? "var(--accent)" : "var(--tx-disabled)",
-        }}
-      />
-      {on ? "VOICE ON" : "VOICE OFF"}
-    </button>
-  );
-}
