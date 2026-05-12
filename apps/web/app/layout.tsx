@@ -1,39 +1,47 @@
 import type { Metadata } from "next";
-import { Anton, Archivo, Space_Mono } from "next/font/google";
+import {
+  Big_Shoulders,
+  Fraunces,
+  IBM_Plex_Mono,
+  Public_Sans,
+} from "next/font/google";
 import "./globals.css";
 import { EntryGate } from "@/components/shell/entry-gate";
 import { YapCursor } from "@/components/shell/yap-cursor";
 import { Providers } from "./providers";
 
-// Promoter design direction — fight-poster editorial. Anton handles
-// display caps (hero, section heads, card titles, KO stamps); Archivo
-// is the body workhorse with full weight range for label/heading
-// hierarchy; Space Mono lands on numerics and IDs (token addresses,
-// 0G amounts, ELO) where the slab letterforms read as "data".
-//
-// Display weight is locked at 400 — Anton ships a single weight by
-// design; loading more would 404. Archivo carries 400-900 because
-// data-rich pages call for serious heading weight headroom. Space
-// Mono pulls 400 and 700 — bold mono lands on stamp serials + table
-// emphasis cells.
-const archivo = Archivo({
-  variable: "--font-archivo",
+// EXPERIMENT direction (Task / experiment-red-hero-fonts) — stadium
+// poster identity in vermillion + charcoal. Type stack:
+//   - Big Shoulders Display → stadium-poster condensed display
+//   - Public Sans           → technical-formal body workhorse
+//   - Fraunces (italic)     → editorial italic for the VS marquee
+//   - IBM Plex Mono         → mono for data + IDs + dateline
+const bigShoulders = Big_Shoulders({
+  variable: "--font-bsd",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
   display: "swap",
 });
 
-const anton = Anton({
-  variable: "--font-anton",
+const publicSans = Public_Sans({
+  variable: "--font-public-sans",
   subsets: ["latin"],
-  weight: ["400"],
+  weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
 
-const spaceMono = Space_Mono({
-  variable: "--font-space-mono",
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
   subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: ["400", "500", "600"],
+  style: ["italic"],
+  display: "swap",
+});
+
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
   display: "swap",
 });
 
@@ -51,7 +59,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${archivo.variable} ${anton.variable} ${spaceMono.variable}`}
+      className={`${bigShoulders.variable} ${publicSans.variable} ${fraunces.variable} ${plexMono.variable}`}
       suppressHydrationWarning
     >
       <body>

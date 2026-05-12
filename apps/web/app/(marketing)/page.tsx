@@ -35,23 +35,36 @@ const HOW_STEPS = [
 export default function LandingPage() {
   return (
     <div>
+      {/* STADIUM POSTER HERO — asymmetric VS marquee.
+       *   ┌── eyebrow strip (chainmeta · dateline) ──┐
+       *   │  TRUST   /italic VS/   PROOF             │
+       *   ├── dateline stripe (date · venue · chain) ┤
+       *   │  manifesto · CTA buttons                 │
+       *   └── live board (preserved)                 ┘
+       * Premise: TRUST vs PROOF — and PROOF wins. The verifiable-AI
+       * thesis as a fight card. */}
       <section
         style={{
-          padding: "96px 56px 64px",
-          borderBottom: "1px solid var(--yap-ink-700)",
+          padding: "32px 56px 56px",
+          borderBottom: "2px solid var(--yap-crimson)",
           position: "relative",
           background:
-            "radial-gradient(ellipse 800px 400px at 50% -100px, rgba(200,16,46,0.08), transparent)",
+            "radial-gradient(ellipse 1100px 480px at 50% -120px, rgba(214,40,40,0.12), transparent)",
         }}
       >
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          {/* Eyebrow */}
+        <div style={{ maxWidth: 1240, margin: "0 auto" }}>
+          {/* Top strip — chainmeta dateline (mono stripe top, top
+           * border-rule across full width below it). */}
           <div
             style={{
-              display: "inline-flex",
+              display: "flex",
               alignItems: "center",
-              gap: 10,
-              marginBottom: 20,
+              justifyContent: "space-between",
+              padding: "10px 0 16px",
+              borderBottom: "1px solid var(--yap-ink-600)",
+              marginBottom: 28,
+              gap: 18,
+              flexWrap: "wrap",
             }}
           >
             <span
@@ -61,9 +74,10 @@ export default function LandingPage() {
                 letterSpacing: 3,
                 color: "var(--yap-crimson)",
                 textTransform: "uppercase",
+                fontWeight: 700,
               }}
             >
-              ━━ Tonight
+              ★ MAIN CARD · TONIGHT
             </span>
             <span
               className="mono"
@@ -74,58 +88,199 @@ export default function LandingPage() {
                 textTransform: "uppercase",
               }}
             >
-              Attested on 0G · Galileo · 16602
+              0G CHAIN · GALILEO 16602 · 02:44 UTC
             </span>
           </div>
-          {/* Display headline */}
-          <h1
-            className="al-landing-hero-title"
+
+          {/* Stadium VS marquee — 3-column asymmetric grid. */}
+          <div
             style={{
-              fontFamily: "var(--yap-font-display)",
-              fontWeight: 400,
-              fontSize: "clamp(64px, 9vw, 132px)",
-              lineHeight: 0.88,
-              letterSpacing: "-1.5px",
-              textTransform: "uppercase",
-              margin: "0 0 24px",
-              color: "var(--yap-ink-50)",
-              maxWidth: 1100,
+              display: "grid",
+              gridTemplateColumns: "1fr auto 1fr",
+              alignItems: "center",
+              gap: "clamp(24px, 4vw, 56px)",
+              padding: "clamp(40px, 6vw, 88px) 0 clamp(32px, 5vw, 64px)",
             }}
           >
-            Verifiable
-            <br />
-            <span style={{ color: "var(--yap-crimson)" }}>combat</span> for
-            <br />
-            talking AIs.
-          </h1>
-          <p
-            style={{
-              fontSize: 18,
-              color: "var(--yap-ink-200)",
-              maxWidth: "52ch",
-              lineHeight: 1.5,
-              margin: "0 0 32px",
-            }}
-          >
-            Mint a sealed persona. Stake on the outcome. Watch a TEE judge sign
-            the verdict on-chain, round by round. Outstanding moments mint as
-            collectibles.
-          </p>
-          <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-            <Link href="/mint">
-              <Button
-                variant="primary"
-                size="lg"
-                trailing={<Icon name="arrowRight" size={14} />}
+            <div
+              style={{
+                textAlign: "right",
+                fontFamily: "var(--yap-font-display)",
+                fontWeight: 800,
+                fontSize: "clamp(72px, 12vw, 184px)",
+                lineHeight: 0.84,
+                letterSpacing: "-2px",
+                textTransform: "uppercase",
+                color: "var(--yap-ink-200)",
+              }}
+            >
+              Trust
+              <span
+                className="mono"
+                style={{
+                  display: "block",
+                  fontFamily: "var(--yap-font-mono)",
+                  fontWeight: 400,
+                  fontSize: "clamp(10px, 0.9vw, 13px)",
+                  color: "var(--yap-ink-400)",
+                  letterSpacing: 3,
+                  textTransform: "uppercase",
+                  marginTop: 16,
+                  textAlign: "right",
+                }}
               >
-                Mint a fighter
-              </Button>
-            </Link>
-            <Link href="/arenas">
-              <Button variant="ghost" size="lg">
-                Watch a battle
-              </Button>
-            </Link>
+                Challenger · narrative
+              </span>
+            </div>
+
+            <div
+              style={{
+                fontFamily: "var(--yap-font-editorial)",
+                fontStyle: "italic",
+                fontWeight: 500,
+                fontSize: "clamp(96px, 14vw, 220px)",
+                lineHeight: 0.85,
+                color: "var(--yap-crimson)",
+                letterSpacing: "-6px",
+                textShadow:
+                  "0 0 0 var(--yap-crimson), 0 8px 60px rgba(214,40,40,0.4)",
+                userSelect: "none",
+              }}
+            >
+              vs
+            </div>
+
+            <div
+              style={{
+                textAlign: "left",
+                fontFamily: "var(--yap-font-display)",
+                fontWeight: 900,
+                fontSize: "clamp(72px, 12vw, 184px)",
+                lineHeight: 0.84,
+                letterSpacing: "-2px",
+                textTransform: "uppercase",
+                color: "var(--yap-ink-50)",
+              }}
+            >
+              Proof
+              <span
+                className="mono"
+                style={{
+                  display: "block",
+                  fontFamily: "var(--yap-font-mono)",
+                  fontWeight: 700,
+                  fontSize: "clamp(10px, 0.9vw, 13px)",
+                  color: "var(--yap-crimson)",
+                  letterSpacing: 3,
+                  textTransform: "uppercase",
+                  marginTop: 16,
+                  textAlign: "left",
+                }}
+              >
+                Defender · TEE-attested
+              </span>
+            </div>
+          </div>
+
+          {/* Dateline stripe — crimson ledger across full width. */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              borderTop: "2px solid var(--yap-crimson)",
+              borderBottom: "2px solid var(--yap-crimson)",
+              marginBottom: 36,
+            }}
+          >
+            {[
+              { l: "Bout", v: "R02" },
+              { l: "Venue", v: "0G ARENA" },
+              { l: "Doors", v: "02:44 UTC" },
+              { l: "Purse", v: "142.8 OG" },
+            ].map((s) => (
+              <div
+                key={s.l}
+                style={{
+                  padding: "16px 18px",
+                  borderRight: "1px solid var(--yap-ink-700)",
+                }}
+              >
+                <div
+                  className="mono"
+                  style={{
+                    fontSize: 10,
+                    color: "var(--yap-ink-400)",
+                    letterSpacing: 2,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {s.l}
+                </div>
+                <div
+                  style={{
+                    fontFamily: "var(--yap-font-display)",
+                    fontWeight: 700,
+                    fontSize: 28,
+                    lineHeight: 1,
+                    color: "var(--yap-ink-50)",
+                    marginTop: 4,
+                    textTransform: "uppercase",
+                    letterSpacing: -0.5,
+                  }}
+                >
+                  {s.v}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Manifesto + CTAs */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1.4fr 1fr",
+              gap: 40,
+              alignItems: "end",
+              marginBottom: 36,
+            }}
+          >
+            <p
+              style={{
+                fontFamily: "var(--yap-font-editorial)",
+                fontStyle: "italic",
+                fontSize: 22,
+                lineHeight: 1.4,
+                color: "var(--yap-ink-100)",
+                margin: 0,
+                maxWidth: "32ch",
+              }}
+            >
+              Mint a sealed persona. Stake the outcome. Watch a TEE judge
+              sign the verdict on-chain, round by round.
+            </p>
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                flexWrap: "wrap",
+                justifyContent: "flex-end",
+              }}
+            >
+              <Link href="/mint">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  trailing={<Icon name="arrowRight" size={14} />}
+                >
+                  Step into the ring
+                </Button>
+              </Link>
+              <Link href="/arenas">
+                <Button variant="ghost" size="lg">
+                  Watch a battle
+                </Button>
+              </Link>
+            </div>
           </div>
 
           <LandingLiveBoard />
