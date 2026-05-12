@@ -167,7 +167,10 @@
   --warning: var(--yap-warning);
   --danger: var(--yap-danger);
   --info: var(--yap-info);
-  --live: var(--yap-danger);
+  /* Live indicator color — sodium amber (via --yap-crimson alias)
+   * so the dot/label is visible on both red page bg AND dark cards.
+   * Was --yap-danger (#E0432B orange-red); rendered invisible on red. */
+  --live: var(--yap-crimson);
   /* Legacy font-family aliases — rebind to Promoter families so
    * components using var(--sans) / var(--mono) immediately pick up
    * Archivo + Space Mono. Pages that adopt Anton display use
