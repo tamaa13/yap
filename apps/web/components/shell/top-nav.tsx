@@ -146,7 +146,7 @@ export function TopNav() {
           top: 0,
           zIndex: 100,
           height: 52,
-          background: "rgba(10,11,15,0.88)",
+          background: "var(--yap-page-bg)",
           backdropFilter: "saturate(1) blur(0px)",
           borderBottom: "1px solid var(--bd-default)",
           display: "flex",

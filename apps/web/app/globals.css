@@ -13,35 +13,40 @@
    ────────────────────────────── */
 
 :root {
-  /* EXPERIMENT v7 — RED-DOMINANT palette inversion. Page bg is
-   * saturated Promoter crimson #C8102E (boxing-corner banner /
-   * Soviet propaganda red). Text is pure white #FFFFFF. Sodium
-   * amber demoted from primary to accent. Black reserved for
-   * dispute / quiet panels. */
-  --yap-ink-950: #6B0817;                /* deepest red sunken */
-  --yap-ink-900: #C8102E;                /* primary red page bg */
-  --yap-ink-800: #A60D26;                /* deeper red elevated panel */
-  --yap-ink-700: #8C0B20;                /* deepest red raised */
-  --yap-ink-600: #2E2A24;                /* heavy ink border (kept dark for separation) */
-  --yap-ink-500: #4F4A42;
-  --yap-ink-400: rgba(255, 255, 255, 0.30);  /* muted text on red */
-  --yap-ink-300: rgba(255, 255, 255, 0.50);
-  --yap-ink-200: rgba(255, 255, 255, 0.70);
-  --yap-ink-100: #F4ECDB;                /* secondary cream text */
-  --yap-ink-50:  #FFFFFF;                /* primary white text */
-  --yap-ink-0:   #FFFFFF;
+  /* EXPERIMENT v8 — PAGE red, COMPONENTS dark. Only the page-
+   * canvas + top nav take saturated crimson; cards, modals,
+   * panels, inputs all keep their dark ink ground. Dark editorial
+   * blocks floating on a red page = fight-poster stage with cast
+   * pieces. Cream/white type on both surfaces.
+   *
+   * The new `--yap-page-bg` token is the ONLY red surface ref;
+   * the legacy `--yap-ink-*` scale is reverted to dark values so
+   * every card/panel/badge/skeleton stays dark via alias chain. */
+  --yap-page-bg: #C8102E;  /* saturated crimson — page canvas + top nav */
 
-  /* EXPERIMENT v7 — sodium amber demoted to accent on red ground.
-   * Red is now the bg (--yap-ink-900); --yap-crimson alias keeps
-   * the amber accent for CTAs / verdict highlights / focus state.
-   * Bruise re-purposed to deep ink black for dispute / quiet
-   * panels that need to recede from the red field. */
+  --yap-ink-950: #050505;  /* deepest (sunken) */
+  --yap-ink-900: #0A0A0A;  /* card primary bg */
+  --yap-ink-800: #141414;  /* elevated card */
+  --yap-ink-700: #1F1F1F;  /* raised modal */
+  --yap-ink-600: #2E2A24;  /* heavy border */
+  --yap-ink-500: #4F4A42;  /* hairline border */
+  --yap-ink-400: #6B665D;  /* muted text */
+  --yap-ink-300: #A29C8D;  /* dim text */
+  --yap-ink-200: #C8C0AE;  /* cream-dim */
+  --yap-ink-100: #EBE1CB;  /* paper-deep */
+  --yap-ink-50:  #F4ECDB;  /* primary cream text */
+  --yap-ink-0:   #FFFFFF;  /* pure white when needed */
+
+  /* EXPERIMENT v8 — sodium amber retained as accent on either red
+   * page OR dark card. Amber-on-red works at display sizes; amber-
+   * on-dark always sings. Deep oxblood `--yap-bruise` returns as
+   * dispute panel reserved color (kicks against red ambient bg). */
   --yap-crimson:        #E69500;  /* sodium amber accent */
   --yap-crimson-soft:   #C48020;  /* hover */
   --yap-crimson-deep:   #B07020;  /* brass-deep, pressed */
   --yap-gold:           #C49A24;  /* warm gold */
   --yap-gold-deep:      #8E7635;
-  --yap-bruise:         #0A0A0A;  /* deep ink black — dispute / quiet only */
+  --yap-bruise:         #6B1F26;  /* deep oxblood — dispute reserved */
 
   --yap-success:        #5BA855;
   --yap-success-bg:     #1C2A1A;
@@ -110,10 +115,12 @@
      re-skin without needing a rename pass. Phase B/C will migrate
      callsites to --yap-* directly where they're touched.
      ────────────────────────────────────────────────────────────── */
-  --bg-canvas: var(--yap-ink-950);
-  --bg-surface: var(--yap-ink-800);
-  --bg-raised: var(--yap-ink-700);
-  --bg-sunken: var(--yap-ink-900);
+  /* Page canvas = saturated red. Cards / panels / modals stay
+   * dark via the ink-* scale (intentionally NOT pointed at red). */
+  --bg-canvas: var(--yap-page-bg);
+  --bg-surface: var(--yap-ink-900);
+  --bg-raised: var(--yap-ink-800);
+  --bg-sunken: var(--yap-ink-700);
   /* Borders were rgba-on-white in the old scheme; on warm-ink they
    * read flatter, so map to the inked stops directly — slightly more
    * contrast at the same visual weight. */
