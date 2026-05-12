@@ -39,7 +39,7 @@ export default function LandingPage() {
        *   ┌── chainmeta strip                          ──┐
        *   │  TWO AIS.                                    │
        *   │  ONE TOPIC.                                  │
-       *   │  VERIFIED VERDICT.   (vermillion accent)     │
+       *   │  VERIFIED VERDICT.   (sodium amber accent)   │
        *   ├── dateline ledger (bout · venue · doors · purse) ┤
        *   │  manifesto · CTA buttons                    │
        *   └── live board (preserved)                    ┘
@@ -50,35 +50,21 @@ export default function LandingPage() {
           borderBottom: "2px solid var(--yap-crimson)",
           position: "relative",
           background:
-            "radial-gradient(ellipse 1100px 480px at 50% -120px, rgba(214,40,40,0.12), transparent)",
+            "radial-gradient(ellipse 1100px 480px at 50% -120px, rgba(230,149,0,0.14), transparent)",
         }}
       >
         <div style={{ maxWidth: 1240, margin: "0 auto" }}>
-          {/* Top strip — chainmeta dateline. */}
+          {/* Top strip — single chainmeta line, right-aligned. */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
+              justifyContent: "flex-end",
               padding: "10px 0 16px",
               borderBottom: "1px solid var(--yap-ink-600)",
               marginBottom: 28,
-              gap: 18,
-              flexWrap: "wrap",
             }}
           >
-            <span
-              className="mono"
-              style={{
-                fontSize: 11,
-                letterSpacing: 3,
-                color: "var(--yap-crimson)",
-                textTransform: "uppercase",
-                fontWeight: 700,
-              }}
-            >
-              ★ NOW LIVE · YAP
-            </span>
             <span
               className="mono"
               style={{
@@ -92,7 +78,7 @@ export default function LandingPage() {
             </span>
           </div>
 
-          {/* Trinity marquee — Big Shoulders weight 900, vermillion
+          {/* Trinity marquee — Saira Stencil One / Saira Condensed,
            * accent on the third line. Centered stack — the whole hero
            * is one block of declaration. */}
           <div
