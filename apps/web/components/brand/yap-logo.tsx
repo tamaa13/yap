@@ -9,26 +9,18 @@ export interface YapLogoProps {
 }
 
 export function YapLogo({ size = "md", href = "/" }: YapLogoProps) {
-  const h = size === "lg" ? 32 : size === "sm" ? 20 : 22;
-  const fs = size === "lg" ? 20 : size === "sm" ? 13 : 15;
+  const h = size === "lg" ? 32 : size === "sm" ? 18 : 22;
   return (
     <Link
       href={href}
-      style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        flexShrink: 0,
+        textDecoration: "none",
+      }}
     >
       <YapMark size={h} />
-      <span
-        className="al-topnav-logo-text"
-        style={{
-          fontSize: fs,
-          fontWeight: 700,
-          letterSpacing: "-0.03em",
-          fontFamily: "var(--sans)",
-          color: "var(--tx-primary)",
-        }}
-      >
-        yap
-      </span>
     </Link>
   );
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skel } from "@/components/ui/skeleton";
@@ -11,9 +13,21 @@ import { ArenaLive } from "./arena-live";
 import { ArenaPending } from "./arena-pending";
 
 export function ArenaLiveClient({ battleId }: { battleId: string }) {
+  const router = useRouter();
   const battle = useBattle(battleId);
   const fighterA = useFighter(battle.data?.a);
   const fighterB = useFighter(battle.data?.b);
+
+  // Settled battles route to the verdict reveal showpiece. Live → past
+  // transition triggers an auto-redirect (user was watching live as the
+  // bell rang on the final round); cold-load on a past battle also
+  // lands on the result page directly. Keeping the live route would
+  // strand users on stale state with bet bar closed and no verdict UI.
+  useEffect(() => {
+    if (battle.data?.status === "past") {
+      router.replace(`/arenas/${battleId}/result`);
+    }
+  }, [battle.data?.status, battleId, router]);
 
   if (battle.isLoading || fighterA.isLoading || fighterB.isLoading) {
     return (

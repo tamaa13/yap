@@ -119,9 +119,9 @@ export function FighterPanel({
       <Link
         href={`/fighters/${fighter.id}`}
         style={{
-          fontFamily: "var(--yap-font-mono)",
-          fontSize: 10,
-          letterSpacing: 1.5,
+          fontFamily: "var(--yap-font-display-2)",
+          fontSize: 14,
+          letterSpacing: 0.6,
           textTransform: "uppercase",
           color: "var(--yap-ink-300)",
           textAlign: "left",

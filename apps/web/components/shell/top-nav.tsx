@@ -59,12 +59,12 @@ function NavLink({ entry, active }: { entry: NavEntry; active: boolean }) {
         gap: 6,
         padding: "0 14px",
         height: 32,
-        fontFamily: "var(--yap-font-mono)",
-        fontSize: 11,
-        letterSpacing: 1.6,
+        fontFamily: "var(--yap-font-display-2)",
+        fontSize: 16,
+        letterSpacing: 0.6,
         textTransform: "uppercase",
-        fontWeight: 500,
-        color: active ? "var(--yap-ink-50)" : "var(--yap-ink-300)",
+        fontWeight: 400,
+        color: active ? "#FFFFFF" : "rgba(255,255,255,0.72)",
         background: "transparent",
         textDecoration: "none",
       }}
@@ -146,7 +146,7 @@ export function TopNav() {
           top: 0,
           zIndex: 100,
           height: 52,
-          background: "rgba(10,11,15,0.88)",
+          background: "var(--yap-page-bg)",
           backdropFilter: "saturate(1) blur(0px)",
           borderBottom: "1px solid var(--bd-default)",
           display: "flex",
@@ -205,8 +205,10 @@ export function TopNav() {
                 background: "var(--bg-surface)",
                 border: "1px solid var(--bd-default)",
                 borderRadius: 4,
-                fontFamily: "var(--mono)",
-                fontSize: 12,
+                fontFamily: "var(--yap-font-display-2)",
+                fontSize: 15,
+                letterSpacing: 0.3,
+                textTransform: "uppercase",
                 whiteSpace: "nowrap",
                 flexShrink: 0,
               }}
@@ -252,13 +254,17 @@ export function TopNav() {
                   <span
                     style={{
                       position: "absolute",
-                      top: 7,
-                      right: 7,
-                      width: 8,
-                      height: 8,
+                      top: 6,
+                      right: 6,
+                      width: 9,
+                      height: 9,
                       borderRadius: "50%",
                       background: "var(--accent)",
-                      boxShadow: "0 0 0 2px rgba(10,11,15,0.88)",
+                      // Cream halo for visibility on red page bg.
+                      // Previously dark rgba(10,11,15,.88) from when
+                      // the top-nav was charcoal; on the red nav it
+                      // read as a dark blob.
+                      boxShadow: "0 0 0 2px var(--yap-ink-50)",
                     }}
                   />
                 )}
@@ -351,8 +357,13 @@ export function TopNav() {
                 <Sigil seed={addr ?? "anon"} size={24} color="#B8B0A2" />
                 <span
                   style={{
-                    fontFamily: "var(--mono)",
-                    fontSize: 12,
+                    // Per v25 mono-lockdown revision: truncated wallet
+                    // addresses in nav read better as Poesing for
+                    // nav-chrome consistency. Full hex (Hash component
+                    // standalone) still renders Anonymous Pro mono.
+                    fontFamily: "var(--yap-font-display-2)",
+                    fontSize: 14,
+                    letterSpacing: 0.3,
                     color: "var(--tx-secondary)",
                   }}
                 >

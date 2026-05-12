@@ -21,7 +21,13 @@ export function useBattle(uiId: string | null | undefined) {
     abi: BATTLE_ESCROW_ABI,
     functionName: "getBattle",
     args: id !== null ? [id] : undefined,
-    query: { enabled },
+    // Poll the battle state so status transitions (Pending → Live →
+    // Verdict → Settled) propagate to consumers. Without this, the
+    // arena-live-client past-redirect at /arenas/[id] never fires —
+    // it watches battle.data.status, which only updated on mount or
+    // explicit refetch. 6s is a kind balance: responsive enough for
+    // a user watching the bell ring, light enough not to thrash RPC.
+    query: { enabled, refetchInterval: enabled ? 6_000 : false },
   });
 
   if (!enabled || !data || id === null) {

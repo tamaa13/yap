@@ -53,8 +53,9 @@ export function BattleCard({ battle }: { battle: Battle }) {
         <span
           style={{
             marginLeft: "auto",
-            fontFamily: "var(--mono)",
-            fontSize: 11,
+            fontFamily: "var(--yap-font-display-2)",
+            fontSize: 13,
+            letterSpacing: 0.2,
             color: "var(--tx-tertiary)",
           }}
         >

@@ -98,8 +98,8 @@ export function EditRoyaltyModal({
             <div
               className="num"
               style={{
-                fontFamily: "var(--yap-font-display)",
-                fontSize: 36,
+                fontFamily: "var(--yap-font-display-2)",
+                fontSize: 40,
                 fontWeight: 400,
                 color: "var(--yap-gold)",
                 lineHeight: 1,

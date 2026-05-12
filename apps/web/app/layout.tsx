@@ -6,6 +6,14 @@ import {
   Inter_Tight,
   Newsreader,
 } from "next/font/google";
+// Rainbowkit CSS first so our globals.css can override its specificity.
+// Copied verbatim from `node_modules/@rainbow-me/rainbowkit/dist/index.css`
+// because the side-effect import in providers-client.tsx silently fails
+// to bundle when this dev tree is run from a git worktree with symlinked
+// pnpm node_modules (webpack drops the resolution; no warning). Keeping
+// a local copy ensures the modal always paints regardless of resolution
+// quirks. Update by re-copying the dist file when the lib bumps.
+import "./_rainbowkit.css";
 import "./globals.css";
 import { EntryGate } from "@/components/shell/entry-gate";
 import { YapCursor } from "@/components/shell/yap-cursor";
