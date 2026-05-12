@@ -35,12 +35,13 @@ export function GateScreen({ action = "this page", body }: GateScreenProps) {
         </h1>
         <p
           style={{
-            fontFamily: "var(--yap-font-body)",
-            fontSize: 15,
+            fontFamily: "var(--yap-font-display-2)",
+            fontSize: 19,
             color: "rgba(255,255,255,0.85)",
             margin: "0 auto 32px",
-            lineHeight: 1.55,
-            maxWidth: "44ch",
+            lineHeight: 1.4,
+            letterSpacing: 0.3,
+            maxWidth: "40ch",
           }}
         >
           {body ??

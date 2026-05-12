@@ -291,9 +291,9 @@ function Splash() {
         style={{
           position: "absolute",
           bottom: 56,
-          fontFamily: "var(--yap-font-mono)",
-          fontSize: 11,
-          letterSpacing: 3,
+          fontFamily: "var(--yap-font-display-2)",
+          fontSize: 16,
+          letterSpacing: 1.5,
           color: "var(--yap-gold)",
           textTransform: "uppercase",
         }}

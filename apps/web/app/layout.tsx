@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Anonymous_Pro, Outfit, Saira_Condensed } from "next/font/google";
+import { Anonymous_Pro, Saira_Condensed } from "next/font/google";
 import localFont from "next/font/local";
 // Rainbowkit CSS first so our globals.css can override its specificity.
 // Copied verbatim from `node_modules/@rainbow-me/rainbowkit/dist/index.css`
@@ -45,13 +45,6 @@ const sairaCondensed = Saira_Condensed({
   display: "swap",
 });
 
-const outfit = Outfit({
-  variable: "--font-outfit",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  display: "swap",
-});
-
 const anonymousPro = Anonymous_Pro({
   variable: "--font-anon-pro",
   subsets: ["latin"],
@@ -73,7 +66,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${riot.variable} ${poesing.variable} ${sairaCondensed.variable} ${outfit.variable} ${anonymousPro.variable}`}
+      className={`${riot.variable} ${poesing.variable} ${sairaCondensed.variable} ${anonymousPro.variable}`}
       suppressHydrationWarning
     >
       <body>
