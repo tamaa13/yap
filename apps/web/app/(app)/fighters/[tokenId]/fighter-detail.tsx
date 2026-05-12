@@ -733,11 +733,22 @@ export function FighterDetail({
                     Settled on-chain via BattleRegistry on every won battle.
                   </div>
                 </div>
+              ) : fighter.w > 0 ? (
+                // Fighter has settled wins on the registry but earnings is
+                // still 0. Pre-royalty-cascade redeploy this is expected —
+                // royalty splits weren't accruing into the fighter's
+                // earnings counter yet. Honest copy beats the old "no wins"
+                // line, which was factually wrong on any fighter with a W.
+                <EmptyState
+                  icon="trend"
+                  title="Wins on record, royalty pending"
+                  body="Settled battles will accrue here once the royalty cascade is live and bettors claim out. The wins themselves are already on-chain via BattleRegistry."
+                />
               ) : (
                 <EmptyState
                   icon="trend"
                   title="Empty purse, for now"
-                  body="No wins, no winnings. Earnings stack up on-chain via BattleRegistry once this fighter takes a round and the bettors claim out."
+                  body="No wins, no winnings yet. Earnings stack up on-chain via BattleRegistry once this fighter takes a round and the bettors claim out."
                 />
               )}
             </Card>
