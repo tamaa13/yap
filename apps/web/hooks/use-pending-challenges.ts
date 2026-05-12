@@ -136,12 +136,12 @@ export function usePendingChallenges(user: `0x${string}` | undefined) {
     query: { enabled: !!battleReads.data && FIGHTER_INFT_ADDRESS !== "" },
   });
 
-  // Third wave: read active rental for each fighterB. If the fighter is
-  // currently rented to the connected wallet, the renter has operational
-  // control during the lease and SHOULD see incoming challenges — the
-  // original owner cannot accept while the fighter is in custody.
-  // Returns (renter, startedAt, expiresAt, paid); zero-address renter means
-  // no active rental.
+  // Third wave: read active rental for each fighterB via the explicit
+  // `getActiveRental(uint256) -> ActiveRental` view (NOT the public
+  // mapping auto-getter `activeRental` which reverts on direct external
+  // call — confirmed via raw eth_call returning "execution reverted").
+  // Returns a single tuple ActiveRental{ renter, startedAt, expiresAt,
+  // paid }; zero-address renter means no active rental.
   const rentalReads = useReadContracts({
     allowFailure: true,
     contracts:
@@ -157,7 +157,7 @@ export function usePendingChallenges(user: `0x${string}` | undefined) {
             return {
               address: RENTAL_ESCROW_ADDRESS as `0x${string}`,
               abi: RENTAL_ESCROW_ABI,
-              functionName: "activeRental",
+              functionName: "getActiveRental",
               args: [fighterB ?? 0n],
             };
           })
