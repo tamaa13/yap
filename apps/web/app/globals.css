@@ -57,12 +57,16 @@
   --yap-info:           #5DA0D6;
   --yap-info-bg:        #11202C;
 
-  /* ── Type families (EXPERIMENT v5 — Riot display) ──────────── */
-  /* Riot (cdnfonts) is single-weight 400. Saira Condensed sits in
-   * the family chain as glyph-coverage fallback, NOT as a weight
-   * boost — components are no longer setting fontWeight 800 on
-   * display callsites; hierarchy is size + tracking + caps. */
+  /* ── Type families (EXPERIMENT v11 — Riot + Groovy Riot) ───── */
+  /* Two display faces:
+   *   --yap-font-display   : Riot — primary display, hero trinity,
+   *                          page titles, fighter names
+   *   --yap-font-display-2 : Groovy Riot — character-clash partner,
+   *                          dateline values, loud stamp caps,
+   *                          manifesto pull-quotes
+   * Both single-weight 400. Hierarchy by size + tracking + caps. */
   --yap-font-display:   var(--font-riot), var(--font-saira-cond), "Archivo Black", Impact, sans-serif;
+  --yap-font-display-2: var(--font-groovy-riot), 'Groovy Riot', var(--font-saira-cond), Impact, sans-serif;
   --yap-font-stencil:   var(--font-riot), var(--font-saira-cond), Impact, sans-serif;
   --yap-font-body:      var(--font-outfit), system-ui, -apple-system, sans-serif;
   --yap-font-mono:      var(--font-anon-pro), ui-monospace, 'SF Mono', monospace;
@@ -518,11 +522,11 @@ a { color: inherit; text-decoration: none; }
   gap: 8px;
   padding: 7px 14px 6px;
   background: var(--yap-crimson);
-  color: var(--yap-ink-50);
-  font-family: var(--yap-font-display);
-  font-weight: 800;
-  font-size: 17px;
-  letter-spacing: 1px;
+  color: var(--yap-ink-900);
+  font-family: var(--yap-font-display-2);
+  font-weight: 400;
+  font-size: 19px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
   line-height: 1;
   clip-path: polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px));

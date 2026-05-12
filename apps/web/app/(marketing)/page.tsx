@@ -69,7 +69,7 @@ export default function LandingPage() {
               className="mono"
               style={{
                 fontSize: 11,
-                color: "var(--yap-ink-300)",
+                color: "rgba(255,255,255,0.85)",
                 letterSpacing: 2,
                 textTransform: "uppercase",
               }}
@@ -140,7 +140,7 @@ export default function LandingPage() {
                 fontSize: "clamp(13px, 1.2vw, 16px)",
                 letterSpacing: 4,
                 lineHeight: 1.3,
-                color: "var(--yap-ink-300)",
+                color: "rgba(255,255,255,0.85)",
                 textTransform: "uppercase",
                 marginTop: 18,
                 textAlign: "center",
@@ -177,7 +177,7 @@ export default function LandingPage() {
                   className="mono"
                   style={{
                     fontSize: 10,
-                    color: "var(--yap-ink-400)",
+                    color: "rgba(255,255,255,0.72)",
                     letterSpacing: 2,
                     textTransform: "uppercase",
                   }}
@@ -186,14 +186,14 @@ export default function LandingPage() {
                 </div>
                 <div
                   style={{
-                    fontFamily: "var(--yap-font-display)",
+                    fontFamily: "var(--yap-font-display-2)",
                     fontWeight: 400,
-                    fontSize: 28,
+                    fontSize: 32,
                     lineHeight: 1,
-                    color: "var(--yap-ink-50)",
+                    color: "#FFFFFF",
                     marginTop: 4,
                     textTransform: "uppercase",
-                    letterSpacing: -0.5,
+                    letterSpacing: -0.3,
                   }}
                 >
                   {s.v}
@@ -214,13 +214,15 @@ export default function LandingPage() {
           >
             <p
               style={{
-                fontFamily: "var(--yap-font-body)",
-                fontWeight: 500,
-                fontSize: 20,
-                lineHeight: 1.45,
-                color: "var(--yap-ink-100)",
+                fontFamily: "var(--yap-font-display-2)",
+                fontWeight: 400,
+                fontSize: 26,
+                lineHeight: 1.2,
+                color: "#FFFFFF",
                 margin: 0,
-                maxWidth: "34ch",
+                maxWidth: "20ch",
+                textTransform: "uppercase",
+                letterSpacing: -0.3,
               }}
             >
               Mint a fighter. Pick a stance. Watch them argue.
@@ -357,7 +359,7 @@ export default function LandingPage() {
       <footer
         style={{
           padding: "40px 56px",
-          color: "var(--yap-ink-400)",
+          color: "rgba(255,255,255,0.72)",
         }}
       >
         <div

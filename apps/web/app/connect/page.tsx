@@ -29,7 +29,7 @@ export default function ConnectPage() {
           style={{
             fontFamily: "var(--yap-font-body)",
             fontSize: 15,
-            color: "var(--yap-ink-300)",
+            color: "rgba(255,255,255,0.85)",
             margin: "0 auto 32px",
             lineHeight: 1.55,
             maxWidth: "44ch",
@@ -93,7 +93,7 @@ export default function ConnectPage() {
           style={{
             fontFamily: "var(--yap-font-mono)",
             fontSize: 11,
-            color: "var(--yap-ink-400)",
+            color: "rgba(255,255,255,0.6)",
             marginTop: 32,
             letterSpacing: 1,
             textTransform: "uppercase",
