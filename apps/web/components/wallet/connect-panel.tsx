@@ -84,18 +84,31 @@ export function ConnectPanel() {
 
         <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 16 }}>
           {context && (
-            <div
-              style={{
-                padding: "10px 12px",
-                background: "var(--accent-muted)",
-                border: "1px solid var(--accent-border)",
-                borderRadius: 4,
-              }}
-            >
-              <div className="label" style={{ marginBottom: 4, color: "var(--accent)" }}>
+            <div>
+              <div
+                style={{
+                  fontFamily: "var(--yap-font-display-2)",
+                  fontSize: 11,
+                  letterSpacing: 1.5,
+                  textTransform: "uppercase",
+                  color: "var(--tx-tertiary)",
+                  marginBottom: 4,
+                }}
+              >
                 You&apos;re about to
               </div>
-              <div style={{ fontSize: 13, color: "var(--tx-primary)" }}>{context}</div>
+              <div
+                style={{
+                  fontFamily: "var(--yap-font-display)",
+                  fontSize: 24,
+                  lineHeight: 1.05,
+                  letterSpacing: "-0.01em",
+                  textTransform: "uppercase",
+                  color: "var(--yap-ink-50)",
+                }}
+              >
+                {context}
+              </div>
             </div>
           )}
 
