@@ -61,6 +61,19 @@ export default function RootLayout({
       className={`${riot.variable} ${poesing.variable} ${anonymousPro.variable}`}
       suppressHydrationWarning
     >
+      <head>
+        {/* Pre-entry paint guard. Runs before React hydration: if this
+         * session hasn't seen the entry splash yet, paint <body> dark
+         * to match the splash bg so first-time visitors don't see a
+         * red flash before the splash overlay mounts. Class removed
+         * in EntryGate.markEntered() once the gate dismisses. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{if(sessionStorage.getItem('yap-entered')!=='1')document.documentElement.classList.add('pre-entry')}catch{}",
+          }}
+        />
+      </head>
       <body>
         <Providers>
           <EntryGate>{children}</EntryGate>
