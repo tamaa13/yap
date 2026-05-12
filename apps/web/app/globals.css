@@ -57,28 +57,31 @@
   --yap-info:           #5DA0D6;
   --yap-info-bg:        #11202C;
 
-  /* ── Type families (EXPERIMENT v21 — POESING EVERYWHERE) ───── */
-  /* FINAL LOCKDOWN (Tama-approved v21) — TWO fonts ship to runtime:
-   *   1. Poesing (--font-poesing) → EVERYTHING except hex content.
-   *      Used via --yap-font-display, --yap-font-display-2,
-   *      --yap-font-body, --yap-font-stencil, --yap-font-editorial.
-   *   2. Anonymous Pro mono (--font-anon-pro) → wallet addresses,
+  /* ── Type families (EXPERIMENT v22 — Riot + Poesing) ───────── */
+  /* FINAL LOCKDOWN (Tama-approved v22) — THREE fonts ship to runtime:
+   *   1. Riot (--font-riot) → hero-tier display: trinity, fighter
+   *      names, page titles, YapMark plate. Used via
+   *      --yap-font-display, --yap-font-stencil, --yap-font-editorial.
+   *   2. Poesing (--font-poesing) → everything ELSE: body, nav,
+   *      cards, numerics, .btn, .mono utility class, stamps, etc.
+   *      Used via --yap-font-display-2, --yap-font-body.
+   *   3. Anonymous Pro mono (--font-anon-pro) → wallet addresses,
    *      tx hashes, token IDs, hex chips, form input fields.
    *      Used via --yap-font-mono only.
    *
-   * No Riot. No Outfit. No Saira. No Big Shoulders. No Atkinson.
-   * No Fragment Mono. No Public Sans. No Anton. No Archivo.
-   * Verify: `grep next/font app/layout.tsx` should show exactly 2
-   * font registrations.
+   * Exception: 404 page renders "404" number in Poesing (only),
+   * subhead + body + CTAs in Riot. Inline override on that
+   * surface (not-found.tsx) handles the split.
    *
-   * License caveat: Poesing is 1001fonts personal-use demo.
-   * Hackathon-OK; verify before shipping commercially. */
-  --yap-font-display:   var(--font-poesing), 'Poesing', Impact, sans-serif;
+   * No Outfit. No Saira. No Big Shoulders. No Atkinson.
+   * License caveat: Poesing + Riot are 1001fonts / cdnfonts demo
+   * licenses — personal-use. Hackathon-OK; verify commercial. */
+  --yap-font-display:   var(--font-riot), "Archivo Black", Impact, sans-serif;
   --yap-font-display-2: var(--font-poesing), 'Poesing', Impact, sans-serif;
-  --yap-font-stencil:   var(--font-poesing), 'Poesing', Impact, sans-serif;
+  --yap-font-stencil:   var(--font-riot), Impact, sans-serif;
   --yap-font-body:      var(--font-poesing), 'Poesing', system-ui, sans-serif;
   --yap-font-mono:      var(--font-anon-pro), ui-monospace, 'SF Mono', monospace;
-  --yap-font-editorial: var(--font-poesing), 'Poesing', Georgia, serif;
+  --yap-font-editorial: var(--font-riot), Georgia, serif;
 
   /* ── Type scale (px) — design system v1 ─────────────────────── */
   --yap-fs-display: 72px; --yap-lh-display: 0.9;
