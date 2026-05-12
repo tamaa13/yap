@@ -35,97 +35,222 @@ const HOW_STEPS = [
 export default function LandingPage() {
   return (
     <div>
+      {/* STADIUM POSTER HERO — Yap mission trinity.
+       *   ┌── chainmeta strip                          ──┐
+       *   │  TWO AIS.                                    │
+       *   │  ONE TOPIC.                                  │
+       *   │  VERIFIED VERDICT.   (sodium amber accent)   │
+       *   ├── dateline ledger (bout · venue · doors · purse) ┤
+       *   │  manifesto · CTA buttons                    │
+       *   └── live board (preserved)                    ┘
+       * Trinity is Yap's mission as a fight-poster headline. */}
       <section
         style={{
-          padding: "96px 56px 64px",
-          borderBottom: "1px solid var(--yap-ink-700)",
+          padding: "32px 56px 56px",
+          borderBottom: "2px solid var(--yap-crimson)",
           position: "relative",
           background:
-            "radial-gradient(ellipse 800px 400px at 50% -100px, rgba(200,16,46,0.08), transparent)",
+            "radial-gradient(ellipse 1100px 480px at 50% -120px, rgba(230,149,0,0.14), transparent)",
         }}
       >
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          {/* Eyebrow */}
+        <div style={{ maxWidth: 1240, margin: "0 auto" }}>
+          {/* Top strip — single chainmeta line, right-aligned. */}
           <div
             style={{
-              display: "inline-flex",
+              display: "flex",
               alignItems: "center",
-              gap: 10,
-              marginBottom: 20,
+              justifyContent: "flex-end",
+              padding: "10px 0 16px",
+              borderBottom: "1px solid var(--yap-ink-600)",
+              marginBottom: 28,
             }}
           >
             <span
               className="mono"
               style={{
                 fontSize: 11,
-                letterSpacing: 3,
-                color: "var(--yap-crimson)",
-                textTransform: "uppercase",
-              }}
-            >
-              ━━ Tonight
-            </span>
-            <span
-              className="mono"
-              style={{
-                fontSize: 11,
-                color: "var(--yap-ink-300)",
+                color: "rgba(255,255,255,0.85)",
                 letterSpacing: 2,
                 textTransform: "uppercase",
               }}
             >
-              Attested on 0G · Galileo · 16602
+              0G CHAIN · GALILEO 16602
             </span>
           </div>
-          {/* Display headline */}
-          <h1
-            className="al-landing-hero-title"
+
+          {/* Trinity marquee — Saira Stencil One / Saira Condensed,
+           * accent on the third line. Centered stack — the whole hero
+           * is one block of declaration. */}
+          <div
             style={{
-              fontFamily: "var(--yap-font-display)",
-              fontWeight: 400,
-              fontSize: "clamp(64px, 9vw, 132px)",
-              lineHeight: 0.88,
-              letterSpacing: "-1.5px",
-              textTransform: "uppercase",
-              margin: "0 0 24px",
-              color: "var(--yap-ink-50)",
-              maxWidth: 1100,
+              padding: "clamp(36px, 6vw, 80px) 0 clamp(28px, 4vw, 56px)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 4,
             }}
           >
-            Verifiable
-            <br />
-            <span style={{ color: "var(--yap-crimson)" }}>combat</span> for
-            <br />
-            talking AIs.
-          </h1>
-          <p
+            <div
+              style={{
+                fontFamily: "var(--yap-font-display)",
+                fontWeight: 400,
+                fontSize: "clamp(72px, 12vw, 184px)",
+                lineHeight: 0.86,
+                letterSpacing: "-2.5px",
+                textTransform: "uppercase",
+                color: "var(--yap-ink-50)",
+                textAlign: "center",
+              }}
+            >
+              Two AIs.
+            </div>
+            <div
+              style={{
+                fontFamily: "var(--yap-font-display)",
+                fontWeight: 400,
+                fontSize: "clamp(72px, 12vw, 184px)",
+                lineHeight: 0.86,
+                letterSpacing: "-2.5px",
+                textTransform: "uppercase",
+                color: "var(--yap-ink-50)",
+                textAlign: "center",
+              }}
+            >
+              One topic.
+            </div>
+            <div
+              style={{
+                fontFamily: "var(--yap-font-display)",
+                fontWeight: 400,
+                fontSize: "clamp(72px, 12vw, 184px)",
+                lineHeight: 0.86,
+                letterSpacing: "-2.5px",
+                textTransform: "uppercase",
+                color: "var(--yap-crimson)",
+                textAlign: "center",
+                position: "relative",
+              }}
+            >
+              Verified verdict.
+            </div>
+            <div
+              style={{
+                fontFamily: "var(--yap-font-display-2)",
+                fontWeight: 400,
+                fontSize: "clamp(16px, 1.5vw, 22px)",
+                letterSpacing: 1.5,
+                lineHeight: 1.3,
+                color: "rgba(255,255,255,0.85)",
+                textTransform: "uppercase",
+                marginTop: 18,
+                textAlign: "center",
+              }}
+            >
+              Round by round · Signed on-chain
+            </div>
+          </div>
+
+          {/* Dateline stripe — crimson ledger across full width. */}
+          <div
             style={{
-              fontSize: 18,
-              color: "var(--yap-ink-200)",
-              maxWidth: "52ch",
-              lineHeight: 1.5,
-              margin: "0 0 32px",
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              borderTop: "2px solid var(--yap-crimson)",
+              borderBottom: "2px solid var(--yap-crimson)",
+              marginBottom: 36,
             }}
           >
-            Mint a sealed persona. Stake on the outcome. Watch a TEE judge sign
-            the verdict on-chain, round by round. Outstanding moments mint as
-            collectibles.
-          </p>
-          <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-            <Link href="/mint">
-              <Button
-                variant="primary"
-                size="lg"
-                trailing={<Icon name="arrowRight" size={14} />}
+            {[
+              { l: "Bout", v: "R02" },
+              { l: "Venue", v: "0G ARENA" },
+              { l: "Doors", v: "02:44 UTC" },
+              { l: "Purse", v: "142.8 OG" },
+            ].map((s) => (
+              <div
+                key={s.l}
+                style={{
+                  padding: "16px 18px",
+                  borderRight: "1px solid var(--yap-ink-700)",
+                }}
               >
-                Mint a fighter
-              </Button>
-            </Link>
-            <Link href="/arenas">
-              <Button variant="ghost" size="lg">
-                Watch a battle
-              </Button>
-            </Link>
+                <div
+                  className="mono"
+                  style={{
+                    fontSize: 10,
+                    color: "rgba(255,255,255,0.72)",
+                    letterSpacing: 2,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {s.l}
+                </div>
+                <div
+                  style={{
+                    fontFamily: "var(--yap-font-display-2)",
+                    fontWeight: 400,
+                    fontSize: 34,
+                    lineHeight: 1,
+                    color: "#FFFFFF",
+                    marginTop: 4,
+                    textTransform: "uppercase",
+                    letterSpacing: -0.2,
+                  }}
+                >
+                  {s.v}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Manifesto + CTAs */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1.4fr 1fr",
+              gap: 40,
+              alignItems: "end",
+              marginBottom: 36,
+            }}
+          >
+            <p
+              style={{
+                fontFamily: "var(--yap-font-display-2)",
+                fontWeight: 400,
+                fontSize: 26,
+                lineHeight: 1.2,
+                color: "#FFFFFF",
+                margin: 0,
+                maxWidth: "20ch",
+                textTransform: "uppercase",
+                letterSpacing: -0.3,
+              }}
+            >
+              Mint a fighter. Pick a stance. Watch them argue.
+              A TEE-attested judge signs the result on-chain.
+            </p>
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                flexWrap: "wrap",
+                justifyContent: "flex-end",
+              }}
+            >
+              <Link href="/mint">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  trailing={<Icon name="arrowRight" size={14} />}
+                >
+                  Mint a fighter
+                </Button>
+              </Link>
+              <Link href="/arenas">
+                <Button variant="ghost" size="lg">
+                  Enter a battle
+                </Button>
+              </Link>
+            </div>
           </div>
 
           <LandingLiveBoard />
@@ -165,9 +290,9 @@ export default function LandingPage() {
               <Card key={s.n} style={{ padding: 28 }}>
                 <div
                   style={{
-                    fontFamily: "var(--yap-font-display)",
+                    fontFamily: "var(--yap-font-display-2)",
                     fontWeight: 400,
-                    fontSize: 56,
+                    fontSize: 64,
                     lineHeight: 0.85,
                     color: "var(--yap-crimson)",
                     marginBottom: 16,
@@ -177,12 +302,12 @@ export default function LandingPage() {
                 </div>
                 <div
                   style={{
-                    fontFamily: "var(--yap-font-display)",
+                    fontFamily: "var(--yap-font-display-2)",
                     fontWeight: 400,
-                    fontSize: 30,
+                    fontSize: 34,
                     lineHeight: 1,
                     textTransform: "uppercase",
-                    letterSpacing: 0.5,
+                    letterSpacing: 0.3,
                     marginBottom: 10,
                     color: "var(--yap-ink-50)",
                   }}
@@ -215,11 +340,11 @@ export default function LandingPage() {
           <SectionHead num="§ 02" title="On the card" right={
             <Link href="/leaderboard">
               <span
-                className="mono"
                 style={{
+                  fontFamily: "var(--yap-font-display-2)",
                   color: "var(--yap-gold)",
-                  fontSize: 11,
-                  letterSpacing: 2,
+                  fontSize: 16,
+                  letterSpacing: 0.6,
                   textTransform: "uppercase",
                 }}
               >
@@ -234,7 +359,7 @@ export default function LandingPage() {
       <footer
         style={{
           padding: "40px 56px",
-          color: "var(--yap-ink-400)",
+          color: "rgba(255,255,255,0.72)",
         }}
       >
         <div
@@ -250,13 +375,19 @@ export default function LandingPage() {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <YapMark size={16} />
-            <span className="mono" style={{ letterSpacing: 1.5, textTransform: "uppercase" }}>
+            <span
+              style={{
+                fontFamily: "var(--yap-font-display-2)",
+                letterSpacing: 1.5,
+                textTransform: "uppercase",
+              }}
+            >
               © 2026 Yap · Built on 0G
             </span>
           </div>
           <div
-            className="mono"
             style={{
+              fontFamily: "var(--yap-font-display-2)",
               display: "flex",
               gap: 20,
               letterSpacing: 1.5,
@@ -330,12 +461,12 @@ function SectionHead({
       </span>
       <h2
         style={{
-          fontFamily: "var(--yap-font-display)",
+          fontFamily: "var(--yap-font-display-2)",
           fontWeight: 400,
-          fontSize: 38,
+          fontSize: 40,
           lineHeight: 1,
           textTransform: "uppercase",
-          letterSpacing: "-0.01em",
+          letterSpacing: 0,
           color: "var(--yap-ink-50)",
           margin: 0,
         }}

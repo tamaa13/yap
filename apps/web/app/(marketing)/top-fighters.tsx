@@ -83,10 +83,10 @@ export function LandingTopFighters() {
             </div>
             <div
               style={{
-                fontFamily: "var(--yap-font-mono)",
-                fontSize: 10,
+                fontFamily: "var(--yap-font-display-2)",
+                fontSize: 13,
                 color: "var(--yap-ink-300)",
-                letterSpacing: 1.5,
+                letterSpacing: 0.5,
                 textTransform: "uppercase",
                 marginTop: 4,
                 marginBottom: 12,

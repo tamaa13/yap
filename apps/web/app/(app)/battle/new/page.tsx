@@ -144,7 +144,20 @@ export default function BattleNewPage() {
       <Breadcrumbs
         items={[{ label: "Arenas", to: "/arenas" }, { label: "Create battle" }]}
       />
-      <h1 style={{ fontSize: 24, marginBottom: 20 }}>Create battle</h1>
+      <h1
+        style={{
+          fontFamily: "var(--yap-font-display)",
+          fontWeight: 400,
+          fontSize: 56,
+          lineHeight: 0.9,
+          letterSpacing: "-0.5px",
+          textTransform: "uppercase",
+          marginBottom: 20,
+          color: "var(--yap-ink-50)",
+        }}
+      >
+        Create battle
+      </h1>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
         {stepLabels.map((l, i) => (

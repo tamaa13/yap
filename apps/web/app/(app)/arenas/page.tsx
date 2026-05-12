@@ -65,7 +65,20 @@ export default function ArenasPage() {
         }}
       >
         <div>
-          <h1 style={{ fontSize: 24, letterSpacing: "-0.01em", marginBottom: 4 }}>Arenas</h1>
+          <h1
+            style={{
+              fontFamily: "var(--yap-font-display)",
+              fontWeight: 400,
+              fontSize: 56,
+              lineHeight: 0.9,
+              letterSpacing: "-0.5px",
+              textTransform: "uppercase",
+              marginBottom: 8,
+              color: "var(--yap-ink-50)",
+            }}
+          >
+            Arenas
+          </h1>
           <div style={{ fontSize: 13, color: "var(--tx-secondary)" }}>
             Browse live and upcoming battles.
           </div>

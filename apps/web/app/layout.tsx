@@ -1,37 +1,44 @@
 import type { Metadata } from "next";
-import { Anton, Archivo, Space_Mono } from "next/font/google";
+import { Anonymous_Pro } from "next/font/google";
+import localFont from "next/font/local";
+// Rainbowkit CSS first so our globals.css can override its specificity.
+// Copied verbatim from `node_modules/@rainbow-me/rainbowkit/dist/index.css`
+// because the side-effect import in providers-client.tsx silently fails
+// to bundle when this dev tree is run from a git worktree with symlinked
+// pnpm node_modules (webpack drops the resolution; no warning). Keeping
+// a local copy ensures the modal always paints regardless of resolution
+// quirks. Update by re-copying the dist file when the lib bumps.
+import "./_rainbowkit.css";
 import "./globals.css";
 import { EntryGate } from "@/components/shell/entry-gate";
 import { YapCursor } from "@/components/shell/yap-cursor";
 import { Providers } from "./providers";
 
-// Promoter design direction — fight-poster editorial. Anton handles
-// display caps (hero, section heads, card titles, KO stamps); Archivo
-// is the body workhorse with full weight range for label/heading
-// hierarchy; Space Mono lands on numerics and IDs (token addresses,
-// 0G amounts, ELO) where the slab letterforms read as "data".
-//
-// Display weight is locked at 400 — Anton ships a single weight by
-// design; loading more would 404. Archivo carries 400-900 because
-// data-rich pages call for serious heading weight headroom. Space
-// Mono pulls 400 and 700 — bold mono lands on stamp serials + table
-// emphasis cells.
-const archivo = Archivo({
-  variable: "--font-archivo",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+// FINAL FONT LOCKDOWN v22 (Tama-approved) — THREE fonts at runtime.
+//   - Riot         → hero trinity, fighter names, page titles,
+//                     YapMark plate, 404 subhead + body + CTAs
+//   - Poesing      → EVERYTHING ELSE: body, nav, cards, numerics,
+//                     stamps, .btn, .mono utility class. Also the
+//                     "404" hero NUMBER specifically (only Poesing
+//                     callsite on that page — sole exception to
+//                     the otherwise-Riot 404 surface).
+//   - Anonymous Pro → Wallet addresses, tx hashes, token IDs, hex.
+const riot = localFont({
+  variable: "--font-riot",
+  src: "./fonts/Riot.woff",
   display: "swap",
+  weight: "400",
 });
 
-const anton = Anton({
-  variable: "--font-anton",
-  subsets: ["latin"],
-  weight: ["400"],
+const poesing = localFont({
+  variable: "--font-poesing",
+  src: "./fonts/Poesing.ttf",
   display: "swap",
+  weight: "400",
 });
 
-const spaceMono = Space_Mono({
-  variable: "--font-space-mono",
+const anonymousPro = Anonymous_Pro({
+  variable: "--font-anon-pro",
   subsets: ["latin"],
   weight: ["400", "700"],
   display: "swap",
@@ -51,7 +58,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${archivo.variable} ${anton.variable} ${spaceMono.variable}`}
+      className={`${riot.variable} ${poesing.variable} ${anonymousPro.variable}`}
       suppressHydrationWarning
     >
       <body>
