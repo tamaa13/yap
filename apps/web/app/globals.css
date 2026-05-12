@@ -27,12 +27,15 @@
   --yap-ink-50:  #F2EDE2;
   --yap-ink-0:   #FBF8F1;
 
-  --yap-crimson:        #C8102E;
-  --yap-crimson-soft:   #A60D26;
-  --yap-crimson-deep:   #7A0918;
-  --yap-gold:           #C9A961;
-  --yap-gold-deep:      #8E7635;
-  --yap-bruise:         #5C2530;
+  /* EXPERIMENT — vermillion / signal-red on charcoal. Bolder, warmer
+   * than Promoter's deep crimson; reads as fight-poster blood-orange,
+   * anti-AI-startup, high-contrast on near-black ground. */
+  --yap-crimson:        #D62828;
+  --yap-crimson-soft:   #B81F1F;
+  --yap-crimson-deep:   #8C1414;
+  --yap-gold:           #F4A261;
+  --yap-gold-deep:      #C97A2B;
+  --yap-bruise:         #6B1F26;
 
   --yap-success:        #5BA855;
   --yap-success-bg:     #1C2A1A;
@@ -43,10 +46,11 @@
   --yap-info:           #5DA0D6;
   --yap-info-bg:        #11202C;
 
-  /* ── Type families ──────────────────────────────────────────── */
-  --yap-font-display: var(--font-anton), "Archivo Black", Impact, sans-serif;
-  --yap-font-body:    var(--font-archivo), "Inter", system-ui, -apple-system, sans-serif;
-  --yap-font-mono:    var(--font-space-mono), "JetBrains Mono", ui-monospace, 'SF Mono', monospace;
+  /* ── Type families (EXPERIMENT — stadium poster stack) ─────── */
+  --yap-font-display:   var(--font-bsd), "Archivo Black", Impact, sans-serif;
+  --yap-font-body:      var(--font-public-sans), system-ui, -apple-system, sans-serif;
+  --yap-font-mono:      var(--font-plex-mono), ui-monospace, 'SF Mono', monospace;
+  --yap-font-editorial: var(--font-fraunces), Georgia, serif;
 
   /* ── Type scale (px) — design system v1 ─────────────────────── */
   --yap-fs-display: 72px; --yap-lh-display: 0.9;
@@ -141,9 +145,9 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-archivo);
-  --font-mono: var(--font-space-mono);
-  --font-display: var(--font-anton);
+  --font-sans: var(--font-public-sans);
+  --font-mono: var(--font-plex-mono);
+  --font-display: var(--font-bsd);
   --color-canvas: var(--bg-canvas);
   --color-surface: var(--bg-surface);
   --color-raised: var(--bg-raised);
