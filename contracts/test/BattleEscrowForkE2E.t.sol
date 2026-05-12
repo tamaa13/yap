@@ -6,6 +6,7 @@ import {MessageHashUtils} from "openzeppelin-contracts/contracts/utils/cryptogra
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 import {BattleEscrow} from "../src/BattleEscrow.sol";
 import {YapFighter} from "../src/YapFighter.sol";
+import {TEEAttestationLib} from "../src/TEEAttestationLib.sol";
 
 /// @notice Fork-test that runs the BattleEscrow lifecycle against the
 ///         live Galileo deploy. Rotates `oracleKey` to a Foundry-
@@ -232,7 +233,7 @@ contract BattleEscrowForkE2ETest is Test {
         (uint8 vv, bytes32 r, bytes32 s) = vm.sign(0xBAD1, digest);
         bytes memory signature = abi.encodePacked(r, s, vv);
 
-        vm.expectRevert(BattleEscrow.InvalidOracleSignature.selector);
+        vm.expectRevert(TEEAttestationLib.InvalidOracleSignature.selector);
         escrow.submitVerdict(id, 0, MOCK_VERDICT_HASH, responseBody, 12, signedText, signature);
     }
 
@@ -260,7 +261,7 @@ contract BattleEscrowForkE2ETest is Test {
         // Mutate responseBody so its sha256 no longer matches
         responseBody[0] = bytes1(uint8(responseBody[0]) ^ 0x01);
 
-        vm.expectRevert(BattleEscrow.ResponseHashMismatch.selector);
+        vm.expectRevert(TEEAttestationLib.ResponseHashMismatch.selector);
         escrow.submitVerdict(id, 0, MOCK_VERDICT_HASH, responseBody, 12, signedText, signature);
     }
 
