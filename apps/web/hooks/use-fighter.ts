@@ -140,28 +140,40 @@ export function useFighter(tokenId: bigint | number | null | undefined) {
       price: listing.active ? listing.price : 0,
     };
   }
-  // RentalEscrow is authoritative for rental state. When listed-for-rent or
-  // currently rented, the NFT's on-chain ownerOf is the escrow contract —
-  // swap the display owner back to the original lister so the UI shows the
-  // effective human owner instead of the custody contract.
+  // RentalEscrow is authoritative for rental state. A fighter can be in
+  // ANY of these states (independently — listing + active are NOT
+  // mutually exclusive: a standing for-rent listing covers future
+  // re-rentals while a current lease may already be active):
+  //   - Listed for rent (rentalState.listing.active === true): swap
+  //     display owner back to the original lister, set forRent + rentPrice
+  //   - Currently rented (rentalState.active != null): surface the
+  //     renter onto Fighter.rentedBy + rentExpiresAt so consumers can
+  //     apply iControl semantics
+  //   - Neither: clear forRent
+  //
+  // Previously the listing branch returned early and the active-rental
+  // overlay never fired when both were true — fighter 20 (active rental
+  // AND standing listing) had rentedBy stuck at null, breaking the
+  // arena-pending isDefender gate for the renter.
   if (rentalState) {
-    const rl = rentalState.listing;
-    if (rl) {
+    if (rentalState.listing) {
       fighter = {
         ...fighter,
-        owner: rl.owner,
+        owner: rentalState.listing.owner,
         forRent: true,
-        rentPrice: rl.pricePerDay,
+        rentPrice: rentalState.listing.pricePerDay,
       };
-    } else if (rentalState.active) {
-      // Active rental (listing deactivated, still in escrow custody).
-      // Don't know original owner from active rental struct alone — keep
-      // whatever owner we already resolved. Mark as rented via forRent=false
-      // (it's not openly listed anymore) but the detail page surfaces the
-      // active renter independently via the rental state hook.
-      fighter = { ...fighter, forRent: false };
     } else {
       fighter = { ...fighter, forRent: false, rentPrice: 0 };
+    }
+    // Parallel (not exclusive) merge — active-rental overlay always
+    // applies when an active lease exists, regardless of listing state.
+    if (rentalState.active) {
+      fighter = {
+        ...fighter,
+        rentedBy: rentalState.active.renter,
+        rentExpiresAt: Number(rentalState.active.expiresAt) * 1000,
+      };
     }
   }
   return { data: fighter, isLoading: false, error: null, refetch } as const;

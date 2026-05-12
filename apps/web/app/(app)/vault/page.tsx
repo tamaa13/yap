@@ -78,6 +78,37 @@ export default function VaultPage() {
   const decline = useDeclineBattle();
   const { push } = useToast();
 
+  // CRITICAL: every hook below must run on every render, regardless of
+  // connection state. Otherwise React detects a hooks-order change when
+  // the wallet flips from disconnected → connected and the early return
+  // at the bottom no longer fires. Previously the GateScreen early return
+  // sat HERE, hoisting itself above useSubnameBatch + useMyMoments +
+  // usePageFromUrl × 2 — those hooks would only run when connected, so
+  // hook count flipped and React threw "Rendered more hooks than
+  // during the previous render" on first connect. Moved the early return
+  // after all hooks (search for "GATE RENDER" below).
+
+  // Batch-resolve subnames for everything in the vault. useSubnameBatch
+  // tolerates an empty list via the `enabled` gate on wagmi's
+  // useReadContract; safe to call regardless of connection state.
+  const allTokenIds = mine.map((f) => f.id);
+  const { labels: subnameLabels } = useSubnameBatch(allTokenIds);
+  const { data: myMoments, isLoading: momentsLoading } = useMyMoments();
+
+  // Per-tab pagination key. Switching tabs picks up that tab's own
+  // page state so jumping back to "owned" after browsing "history"
+  // doesn't reset position. Card-tab pages are 24-wide, table-tab
+  // pages 50-wide.
+  const cardPageKey = `page-${tab}`;
+  const cardPage = usePageFromUrl(cardPageKey);
+  const cardOffset = pageToOffset(cardPage, CARD_GRID_PAGE_SIZE);
+  const tablePageKey = `page-${tab}`;
+  const tablePage = usePageFromUrl(tablePageKey);
+  const tableOffset = pageToOffset(tablePage, TABLE_PAGE_SIZE);
+
+  // GATE RENDER — all hooks above; gate via JSX branch, not early
+  // return. Wallet flips disconnected→connected without changing the
+  // hook count.
   if (ready && !connected) {
     return <GateScreen action="the vault" icon="vault" />;
   }
@@ -98,27 +129,10 @@ export default function VaultPage() {
       !f.forRent &&
       !(f.rentedBy && meLower && f.rentedBy.toLowerCase() === meLower),
   );
-
   const activeBets = myBets.filter((b) => b.status === "active");
   const settledBets = myBets.filter((b) => b.status !== "active");
   const pnl = settledBets.reduce((s, b) => s + (b.pnl ?? 0), 0);
 
-  // Batch-resolve subnames for everything in the vault. One on-chain
-  // multicall instead of one RPC per card.
-  const allTokenIds = mine.map((f) => f.id);
-  const { labels: subnameLabels } = useSubnameBatch(allTokenIds);
-  const { data: myMoments, isLoading: momentsLoading } = useMyMoments();
-
-  // Per-tab pagination key. Switching tabs picks up that tab's own
-  // page state so jumping back to "owned" after browsing "history"
-  // doesn't reset position. Card-tab pages are 24-wide, table-tab
-  // pages 50-wide.
-  const cardPageKey = `page-${tab}`;
-  const cardPage = usePageFromUrl(cardPageKey);
-  const cardOffset = pageToOffset(cardPage, CARD_GRID_PAGE_SIZE);
-  const tablePageKey = `page-${tab}`;
-  const tablePage = usePageFromUrl(tablePageKey);
-  const tableOffset = pageToOffset(tablePage, TABLE_PAGE_SIZE);
   const ownedPage = owned.slice(cardOffset, cardOffset + CARD_GRID_PAGE_SIZE);
   const rentedOutPage = rentedOut.slice(
     cardOffset,
@@ -143,7 +157,20 @@ export default function VaultPage() {
 
   return (
     <PageContainer>
-      <h1 style={{ fontSize: 24, marginBottom: 4 }}>Vault</h1>
+      <h1
+        style={{
+          fontFamily: "var(--yap-font-display)",
+          fontWeight: 400,
+          fontSize: 56,
+          lineHeight: 0.9,
+          letterSpacing: "-0.5px",
+          textTransform: "uppercase",
+          marginBottom: 8,
+          color: "var(--yap-ink-50)",
+        }}
+      >
+        Vault
+      </h1>
       <div style={{ fontSize: 13, color: "var(--tx-secondary)", marginBottom: 20 }}>
         Your roster, your rentals, your stakes, your receipts.
       </div>

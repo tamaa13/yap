@@ -257,56 +257,26 @@ function Splash() {
           position: "relative",
         }}
       >
-        {/* Mark — cream outline + crimson tick corners per design system. */}
+        {/* Wordmark — vermillion bullet + heavy display "YAP". No icon
+         * frame; type IS the brand. */}
         <span
+          aria-hidden
           style={{
-            position: "relative",
-            width: 56,
-            height: 56,
-            border: "2px solid var(--yap-ink-50)",
-            display: "grid",
-            placeItems: "center",
-            background: "var(--yap-ink-950)",
+            display: "inline-block",
+            width: 22,
+            height: 22,
+            background: "var(--yap-crimson)",
+            flexShrink: 0,
           }}
-        >
-          <span
-            style={{
-              fontFamily: "var(--yap-font-display)",
-              fontSize: 38,
-              lineHeight: 1,
-              color: "var(--yap-ink-50)",
-            }}
-          >
-            Y
-          </span>
-          <span
-            style={{
-              position: "absolute",
-              top: -3,
-              left: -3,
-              width: 7,
-              height: 7,
-              background: "var(--yap-crimson)",
-            }}
-          />
-          <span
-            style={{
-              position: "absolute",
-              bottom: -3,
-              right: -3,
-              width: 7,
-              height: 7,
-              background: "var(--yap-crimson)",
-            }}
-          />
-        </span>
+        />
         <span
           style={{
             fontFamily: "var(--yap-font-display)",
-            fontSize: 64,
+            fontWeight: 400,
+            fontSize: 96,
             lineHeight: 1,
+            letterSpacing: "-0.04em",
             color: "var(--yap-ink-50)",
-            letterSpacing: 1,
             textTransform: "uppercase",
           }}
         >
@@ -321,9 +291,9 @@ function Splash() {
         style={{
           position: "absolute",
           bottom: 56,
-          fontFamily: "var(--yap-font-mono)",
-          fontSize: 11,
-          letterSpacing: 3,
+          fontFamily: "var(--yap-font-display-2)",
+          fontSize: 16,
+          letterSpacing: 1.5,
           color: "var(--yap-gold)",
           textTransform: "uppercase",
         }}

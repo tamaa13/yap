@@ -48,21 +48,47 @@ export default function BattleNewPage() {
   const myFighters = useFighters({ owner: addr, limit: 200 });
   const allFighters = useFighters({ limit: 200 });
 
-  const myList = myFighters.data;
+  // Step 1 line-up picker — only fighters the user EFFECTIVELY controls
+  // (can field in a battle right now): owned-and-not-rented-out, OR
+  // rented-in during active lease. Fighters I own that are rented out
+  // are excluded — the renter holds operational control.
+  // myFighters via rental-overlay returns both "I own" and "I rent in"
+  // and "I own + rented out" — need to narrow to iControl===true here.
+  const myList = useMemo(() => {
+    if (!addr) return [];
+    const myAddr = addr.toLowerCase();
+    return myFighters.data.filter((f) => {
+      const iOwn = f.owner.toLowerCase() === myAddr;
+      const iRent = !!f.rentedBy && f.rentedBy.toLowerCase() === myAddr;
+      const hasRenter = !!f.rentedBy;
+      return iRent || (iOwn && !hasRenter);
+    });
+  }, [myFighters.data, addr]);
 
   const opponentsLoading = allFighters.isLoading || myFighters.isLoading;
 
   const opponents = useMemo(() => {
     if (!addr || opponentsLoading) return [];
     const myAddr = addr.toLowerCase();
-    const myIdSet = new Set(myFighters.data.map((f) => f.id));
-    return allFighters.data.filter(
-      (f) =>
-        !myIdSet.has(f.id) &&
-        f.owner.toLowerCase() !== myAddr &&
-        (!f.rentedBy || f.rentedBy.toLowerCase() !== myAddr),
-    );
-  }, [allFighters.data, myFighters.data, addr, opponentsLoading]);
+    // Exclude fighters the CURRENT user effectively controls:
+    //   - rented-in (renter has operational control during the lease)
+    //   - owned outright AND not currently rented out (no other
+    //     effective controller; challenging would be self-challenge)
+    // INCLUDE fighters I own that I've rented OUT — the renter is the
+    // current controller, so I can challenge those (renter accepts).
+    // INCLUDE everyone else's fighters as usual.
+    // Was previously: `!myIdSet.has(f.id) && f.owner !== me && f.rentedBy !== me`
+    // — which dropped my rented-out fighters because myFighters
+    // (filtered by rental overlay) still listed them under me.
+    return allFighters.data.filter((f) => {
+      const iOwn = f.owner.toLowerCase() === myAddr;
+      const iRent = !!f.rentedBy && f.rentedBy.toLowerCase() === myAddr;
+      const hasRenter = !!f.rentedBy;
+      const iControl = iRent || (iOwn && !hasRenter);
+      return !iControl;
+    });
+  }, [allFighters.data, addr, opponentsLoading]);
+
 
   // Local-state opponent pagination — wizard already owns the URL via
   // ?fighter & ?opponent, so paging stays in component state to avoid
@@ -144,7 +170,20 @@ export default function BattleNewPage() {
       <Breadcrumbs
         items={[{ label: "Arenas", to: "/arenas" }, { label: "Create battle" }]}
       />
-      <h1 style={{ fontSize: 24, marginBottom: 20 }}>Create battle</h1>
+      <h1
+        style={{
+          fontFamily: "var(--yap-font-display)",
+          fontWeight: 400,
+          fontSize: 56,
+          lineHeight: 0.9,
+          letterSpacing: "-0.5px",
+          textTransform: "uppercase",
+          marginBottom: 20,
+          color: "var(--yap-ink-50)",
+        }}
+      >
+        Create battle
+      </h1>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
         {stepLabels.map((l, i) => (

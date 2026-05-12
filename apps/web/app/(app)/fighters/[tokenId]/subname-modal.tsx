@@ -155,9 +155,9 @@ export function SubnameModal({
         ) : (
           <>
             <div style={{ fontSize: 13, color: "var(--tx-secondary)", lineHeight: 1.55 }}>
-              Pin a permanent <span className="mono">&lt;label&gt;.yap.0g</span> handle to
+              Pin a permanent <span style={{ fontFamily: "var(--yap-font-mono)" }}>&lt;label&gt;.yap.0g</span> handle to
               this fighter. Lowercase letters, digits, hyphens — 3 to 32 chars.
-              The label binds to <span className="mono">#{tokenId}</span> and travels
+              The label binds to <span style={{ fontFamily: "var(--yap-font-mono)" }}>#{tokenId}</span> and travels
               with the fighter on transfer.
             </div>
             <div>

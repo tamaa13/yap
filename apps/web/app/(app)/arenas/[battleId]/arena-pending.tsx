@@ -94,9 +94,21 @@ export function ArenaPending({
   const expiresAt = createdAt + CHALLENGE_EXPIRY_MS;
 
   const lu = addr?.toLowerCase();
-  const isChallenger =
-    !!lu && fighterA.owner.toLowerCase() === lu;
-  const isDefender = !!lu && fighterB.owner.toLowerCase() === lu;
+  // "iControl" semantics — current user holds operational control over
+  // a fighter iff they're the active renter (lease overrides owner)
+  // OR they own outright with no active lease. Matches contract
+  // `_canUseFighter` which gates on `ownerOf || isExecutor`. Owner of
+  // record can't act while the fighter is in rental custody — renter
+  // accepts on their behalf.
+  const iControl = (f: { owner: string; rentedBy?: string | null }): boolean => {
+    if (!lu) return false;
+    const iOwn = f.owner.toLowerCase() === lu;
+    const iRent = !!f.rentedBy && f.rentedBy.toLowerCase() === lu;
+    const hasRenter = !!f.rentedBy;
+    return iRent || (iOwn && !hasRenter);
+  };
+  const isChallenger = iControl(fighterA);
+  const isDefender = iControl(fighterB);
 
   const onAccept = async () => {
     try {
