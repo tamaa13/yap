@@ -389,6 +389,201 @@ export function MomentCardSkel() {
   );
 }
 
+/**
+ * Mirror of `FighterDetail` (apps/web/app/(app)/fighters/[tokenId]/
+ * fighter-detail.tsx) loading state: breadcrumbs row, 2-col page grid
+ * (1fr · 360px), big hero Card with 120×120 Sigil and 4-up stat grid,
+ * tabs strip, and a content placeholder beneath. The prior loading
+ * state was a single `<Skel h={160} />` block — usable as a flicker
+ * mask but nowhere near matching the loaded layout.
+ */
+export function FighterDetailSkel() {
+  return (
+    <div>
+      {/* Breadcrumbs row */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <Skel w={84} h={11} />
+        <Skel w={6} h={11} />
+        <Skel w={108} h={11} />
+      </div>
+      <div
+        className="al-detail-2col"
+        style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 20 }}
+      >
+        {/* Left column — hero card + tabs + content */}
+        <div>
+          <div
+            style={{
+              padding: 24,
+              marginBottom: 16,
+              background: "var(--yap-ink-800)",
+              border: "1px solid var(--yap-ink-600)",
+            }}
+          >
+            <div style={{ display: "flex", gap: 20, marginBottom: 20 }}>
+              <Skel
+                w={120}
+                h={120}
+                style={{ borderRadius: 6, flexShrink: 0 }}
+              />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {/* Name + TEE badge */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    marginBottom: 8,
+                  }}
+                >
+                  <Skel w={200} h={28} />
+                  <Skel w={56} h={18} />
+                </div>
+                {/* Arch */}
+                <Skel w={120} h={13} style={{ marginBottom: 12 }} />
+                {/* 4-up stat grid (ELO, Record, Battles, Earnings) */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(4, 1fr)",
+                    gap: 14,
+                  }}
+                >
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i}>
+                      <Skel w={48} h={10} style={{ marginBottom: 6 }} />
+                      <Skel w={64} h={20} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            {/* Action button row */}
+            <div style={{ display: "flex", gap: 8 }}>
+              <Skel w={140} h={32} />
+              <Skel w={120} h={32} />
+              <Skel w={100} h={32} />
+            </div>
+          </div>
+          {/* Tabs strip */}
+          <div style={{ display: "flex", gap: 18, marginBottom: 16 }}>
+            <Skel w={66} h={14} />
+            <Skel w={70} h={14} />
+            <Skel w={74} h={14} />
+            <Skel w={56} h={14} />
+          </div>
+          {/* Tab content placeholder — overview body */}
+          <div
+            style={{
+              padding: 20,
+              background: "var(--yap-ink-800)",
+              border: "1px solid var(--yap-ink-600)",
+            }}
+          >
+            <Skel w="100%" h={12} style={{ marginBottom: 8 }} />
+            <Skel w="95%" h={12} style={{ marginBottom: 8 }} />
+            <Skel w="60%" h={12} />
+          </div>
+        </div>
+        {/* Right column — seller/owner panel */}
+        <div
+          style={{
+            padding: 20,
+            background: "var(--yap-ink-800)",
+            border: "1px solid var(--yap-ink-600)",
+            alignSelf: "start",
+          }}
+        >
+          <Skel w={84} h={11} style={{ marginBottom: 14 }} />
+          <Skel w="70%" h={14} style={{ marginBottom: 6 }} />
+          <Skel w="50%" h={12} style={{ marginBottom: 18 }} />
+          <Skel h={36} style={{ marginBottom: 8 }} />
+          <Skel h={36} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Loading shell for `/arenas/[battleId]`. The route picks between
+ * ArenaPending / ArenaLive on the fly so the placeholder has to cover
+ * the shared chrome: Breadcrumbs strip, a big Card with status badge +
+ * topic line + 1fr-auto-1fr fighter row, and a follow-up Card for the
+ * round/bet area below.
+ */
+export function ArenaShellSkel() {
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <Skel w={66} h={11} />
+        <Skel w={6} h={11} />
+        <Skel w={108} h={11} />
+      </div>
+      <div
+        style={{
+          padding: 24,
+          marginBottom: 16,
+          background: "var(--yap-ink-800)",
+          border: "1px solid var(--yap-ink-600)",
+        }}
+      >
+        <Skel w={140} h={20} style={{ marginBottom: 10 }} />
+        <Skel w="80%" h={22} style={{ marginBottom: 8 }} />
+        <Skel w={180} h={12} style={{ marginBottom: 18 }} />
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr auto 1fr",
+            gap: 20,
+            alignItems: "center",
+            padding: "14px 0",
+            borderTop: "1px solid var(--bd-subtle)",
+            borderBottom: "1px solid var(--bd-subtle)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <Skel w={48} h={48} style={{ borderRadius: 99, flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <Skel w={84} h={9} style={{ marginBottom: 6 }} />
+              <Skel w={120} h={15} style={{ marginBottom: 4 }} />
+              <Skel w={90} h={11} />
+            </div>
+          </div>
+          <Skel w={18} h={12} />
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              flexDirection: "row-reverse",
+            }}
+          >
+            <Skel w={48} h={48} style={{ borderRadius: 99, flexShrink: 0 }} />
+            <div style={{ flex: 1, textAlign: "right" }}>
+              <Skel
+                w={84}
+                h={9}
+                style={{ marginBottom: 6, marginLeft: "auto" }}
+              />
+              <Skel
+                w={120}
+                h={15}
+                style={{ marginBottom: 4, marginLeft: "auto" }}
+              />
+              <Skel w={90} h={11} style={{ marginLeft: "auto" }} />
+            </div>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+          <Skel w={140} h={36} />
+          <Skel w={120} h={36} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SkeletonCard({ height = 120 }: { height?: number }) {
   return (
     <div

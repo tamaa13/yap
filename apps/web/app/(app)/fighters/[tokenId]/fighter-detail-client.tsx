@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Skel } from "@/components/ui/skeleton";
+import { FighterDetailSkel } from "@/components/ui/skeleton";
 import { PageContainer } from "@/components/shell/page-container";
 import { useFighter } from "@/hooks/use-fighter";
 import { useFighterBattleHistory } from "@/hooks/use-fighter-battle-history";
@@ -18,7 +18,7 @@ export function FighterDetailClient({ tokenId }: { tokenId: number }) {
   if (isLoading) {
     return (
       <PageContainer>
-        <Skel h={160} />
+        <FighterDetailSkel />
       </PageContainer>
     );
   }
