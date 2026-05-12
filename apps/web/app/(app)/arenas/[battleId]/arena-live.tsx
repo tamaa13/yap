@@ -25,9 +25,11 @@ import type {
   RoundArgument,
 } from "@/lib/battle-state/types";
 import type { ArgumentLine as ArgumentLineType, Battle, Fighter } from "@/lib/types";
+import { useWallet } from "@/hooks/use-wallet";
 import { ArgumentLine } from "./argument-line";
 import { BetBar, type BetLock } from "./bet-bar";
 import { FighterPanel } from "./fighter-panel";
+import { RoundInputPrompt } from "./round-input-prompt";
 
 function parseBattleIdNum(uiId: string): number | null {
   const m = uiId.match(/^b-([0-9a-fA-F]+)$/);
@@ -57,6 +59,43 @@ export function ArenaLive({
     connected: sseConnected,
     spectators,
   } = useBattleState(battleIdNum);
+
+  // iControl: which side (if any) the current viewer owns / has rented.
+  // Renter overrides on-chain owner during an active lease — same
+  // semantics as arena-pending Accept/Decline gating.
+  const { addr } = useWallet();
+  const controlSide: "a" | "b" | null = (() => {
+    if (!addr) return null;
+    const me = addr.toLowerCase();
+    const ctl = (f: Fighter): boolean => {
+      const iOwn = f.owner.toLowerCase() === me;
+      const iRent = !!f.rentedBy && f.rentedBy.toLowerCase() === me;
+      const hasRenter = !!f.rentedBy;
+      return iRent || (iOwn && !hasRenter);
+    };
+    if (ctl(fighterA)) return "a";
+    if (ctl(fighterB)) return "b";
+    return null;
+  })();
+  // Show the stance prompt only when my fighter is the one about to
+  // speak. `_thinking` is the runner's pre-streamRound phase — the
+  // window the runner blocks on round-input for up to 5s.
+  const isMyTurn =
+    !!liveState &&
+    controlSide !== null &&
+    liveState.phase === `${controlSide}_thinking`;
+  const promptedFighterName =
+    controlSide === "a"
+      ? fighterA.name
+      : controlSide === "b"
+        ? fighterB.name
+        : "";
+  // Avoid double-mount thrash on round changes: react keys the prompt on
+  // (round, side) so the countdown resets cleanly between rounds.
+  const promptKey =
+    isMyTurn && liveState
+      ? `${liveState.currentRound}-${controlSide}`
+      : null;
 
   const [args, setArgs] = useState(scriptedArgs.slice(0, 5));
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -288,6 +327,17 @@ export function ArenaLive({
           className="al-arena-center"
           style={{ background: "var(--bg-canvas)", display: "flex", flexDirection: "column", minWidth: 0 }}
         >
+          {isMyTurn && liveState && controlSide && promptKey && (
+            <div style={{ padding: "8px 8px 0 0" }}>
+              <RoundInputPrompt
+                key={promptKey}
+                battleId={battle.id}
+                side={controlSide}
+                round={liveState.currentRound}
+                fighterName={promptedFighterName}
+              />
+            </div>
+          )}
           <div ref={logRef} style={{ flex: 1, overflowY: "auto", padding: "8px 8px 8px 0" }}>
             {liveState && liveState.rounds.length > 0 ? (
               <LiveTranscript

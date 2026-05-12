@@ -228,6 +228,24 @@ function applyEvent(
         tkoAtRound: event.atRound,
         updatedAt: Date.now(),
       };
+
+    case "round-input": {
+      // Spectator-visible mirror of the owner's stance pick. Updates the
+      // client-side `roundInputs` map so prompts that re-mount after the
+      // pick (e.g. opening a second tab on the same battle) see the
+      // settled choice and don't re-render the countdown.
+      if (!prev) return prev;
+      const existing = prev.roundInputs ?? {};
+      const forRound = existing[event.round] ?? {};
+      return {
+        ...prev,
+        roundInputs: {
+          ...existing,
+          [event.round]: { ...forRound, [event.side]: event.choice },
+        },
+        updatedAt: Date.now(),
+      };
+    }
   }
 }
 
