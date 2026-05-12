@@ -205,8 +205,10 @@ export function TopNav() {
                 background: "var(--bg-surface)",
                 border: "1px solid var(--bd-default)",
                 borderRadius: 4,
-                fontFamily: "var(--mono)",
-                fontSize: 12,
+                fontFamily: "var(--yap-font-display-2)",
+                fontSize: 15,
+                letterSpacing: 0.3,
+                textTransform: "uppercase",
                 whiteSpace: "nowrap",
                 flexShrink: 0,
               }}
