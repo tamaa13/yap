@@ -8,7 +8,13 @@ export default function LeaderboardLoading() {
       <div style={{ fontSize: 13, color: "var(--tx-secondary)", marginBottom: 24 }}>
         Global rankings across all fighters.
       </div>
-      <TableSkel rows={10} cols={8} />
+      {/* 7 cols: #, Fighter (Sigil+name), Archetype, ELO, Win %, Earnings, Owner */}
+      <TableSkel
+        rows={10}
+        cols={7}
+        widths={[40, "flex", 100, 70, 60, 90, 130]}
+        fighterCol={1}
+      />
     </PageContainer>
   );
 }
