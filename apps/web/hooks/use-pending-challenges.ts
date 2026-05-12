@@ -7,6 +7,8 @@ import {
   BATTLE_ESCROW_ADDRESS,
   FIGHTER_INFT_ABI,
   FIGHTER_INFT_ADDRESS,
+  RENTAL_ESCROW_ABI,
+  RENTAL_ESCROW_ADDRESS,
 } from "@/lib/contracts";
 
 /** Battle status values from BattleEscrow.Status enum. */
@@ -134,6 +136,35 @@ export function usePendingChallenges(user: `0x${string}` | undefined) {
     query: { enabled: !!battleReads.data && FIGHTER_INFT_ADDRESS !== "" },
   });
 
+  // Third wave: read active rental for each fighterB. If the fighter is
+  // currently rented to the connected wallet, the renter has operational
+  // control during the lease and SHOULD see incoming challenges — the
+  // original owner cannot accept while the fighter is in custody.
+  // Returns (renter, startedAt, expiresAt, paid); zero-address renter means
+  // no active rental.
+  const rentalReads = useReadContracts({
+    allowFailure: true,
+    contracts:
+      battleReads.data && RENTAL_ESCROW_ADDRESS !== ""
+        ? battleReads.data.map((_, i) => {
+            const battle =
+              battleReads.data?.[i].status === "success"
+                ? (battleReads.data[i].result as unknown)
+                : null;
+            const fighterB = Array.isArray(battle)
+              ? (battle[1] as bigint)
+              : (battle as { fighterB?: bigint } | null)?.fighterB;
+            return {
+              address: RENTAL_ESCROW_ADDRESS as `0x${string}`,
+              abi: RENTAL_ESCROW_ABI,
+              functionName: "activeRental",
+              args: [fighterB ?? 0n],
+            };
+          })
+        : [],
+    query: { enabled: !!battleReads.data && RENTAL_ESCROW_ADDRESS !== "" },
+  });
+
   const incoming: PendingChallenge[] = [];
   const outgoing: PendingChallenge[] = [];
 
@@ -191,6 +222,27 @@ export function usePendingChallenges(user: `0x${string}` | undefined) {
       const fighterBOwner =
         ownerRes?.status === "success" ? (ownerRes.result as `0x${string}`) : null;
 
+      // Active-rental renter, if any. Tuple `(renter, startedAt, expiresAt, paid)`.
+      // Zero renter address (or expired lease) means no active rental.
+      const rentalRes = rentalReads.data?.[i];
+      let fighterBRenter: `0x${string}` | null = null;
+      if (rentalRes?.status === "success") {
+        const r = rentalRes.result as unknown;
+        const renterAddr = Array.isArray(r)
+          ? (r[0] as `0x${string}`)
+          : (r as { renter?: `0x${string}` } | null)?.renter ?? null;
+        const rentalExpiresAt = Array.isArray(r)
+          ? Number(r[2] as bigint) * 1000
+          : Number((r as { expiresAt?: bigint } | null)?.expiresAt ?? 0n) * 1000;
+        if (
+          renterAddr &&
+          renterAddr !== "0x0000000000000000000000000000000000000000" &&
+          rentalExpiresAt > Date.now()
+        ) {
+          fighterBRenter = renterAddr;
+        }
+      }
+
       const createdAt = Number(startTime) * 1000;
       const expiresAt = createdAt + CHALLENGE_EXPIRY_MS;
       if (expiresAt <= Date.now()) continue; // skip expired
@@ -208,7 +260,16 @@ export function usePendingChallenges(user: `0x${string}` | undefined) {
       };
 
       const lu = user.toLowerCase();
-      if (fighterBOwner && fighterBOwner.toLowerCase() === lu) {
+      // "I am the defender" — match if EITHER:
+      //   1. I own fighterB on-chain (default ownership case), OR
+      //   2. fighterB is in an active rental WHERE I am the renter.
+      //      During an active lease the renter holds operational control;
+      //      original owner cannot accept since fighterB is in
+      //      RentalEscrow custody. Renter must see + decide on incoming
+      //      challenges or they auto-expire.
+      const ownsAsDefender = !!fighterBOwner && fighterBOwner.toLowerCase() === lu;
+      const rentsAsDefender = !!fighterBRenter && fighterBRenter.toLowerCase() === lu;
+      if (ownsAsDefender || rentsAsDefender) {
         incoming.push(challenge);
       }
       if (creator.toLowerCase() === lu) {
