@@ -470,16 +470,29 @@ export function TopNav() {
             )}
             <div style={{ flex: 1 }} />
             {connected ? (
-              <div
-                style={{
-                  fontFamily: "var(--mono)",
-                  fontSize: 11,
-                  color: "var(--tx-tertiary)",
-                  padding: "8px 12px",
-                }}
-              >
-                {fmtAddr(addr)} · {balance == null ? "—" : fmtNum(balance, 2)} 0G
-              </div>
+              <>
+                <div
+                  style={{
+                    fontFamily: "var(--mono)",
+                    fontSize: 11,
+                    color: "var(--tx-tertiary)",
+                    padding: "8px 12px",
+                  }}
+                >
+                  {fmtAddr(addr)} · {balance == null ? "—" : fmtNum(balance, 2)} 0G
+                </div>
+                <button
+                  className="al-drawer-item"
+                  onClick={() => {
+                    setDrawerOpen(false);
+                    logout();
+                  }}
+                  style={{ color: "var(--danger)" }}
+                >
+                  <Icon name="x" size={14} />
+                  Disconnect
+                </button>
+              </>
             ) : (
               <div style={{ padding: "8px 12px" }}>
                 <Button
