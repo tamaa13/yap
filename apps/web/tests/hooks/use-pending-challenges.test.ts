@@ -57,6 +57,7 @@ function battleStruct(b: BattleSeed) {
     verdictHash: ZERO_HASH as `0x${string}`,
     totalClaimed: 0n,
     settledAt: 0n,
+    royaltyPaid: 0n,
   };
 }
 
