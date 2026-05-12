@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AbilityChip } from "@/components/ui/ability-chip";
 import { Card } from "@/components/ui/card";
 import { RecordBadge, Split, Stamp, TokenTag } from "@/components/ui/badge";
 import { HPBar } from "@/components/ui/hp-bar";
@@ -100,6 +101,10 @@ export function FighterPanel({
             <HPBar label="LGC" value={fighter.logic} color="var(--yap-info)" />
             <HPBar label="WIT" value={fighter.wit} color="var(--yap-warning)" />
           </div>
+          {/* Archetype ability indicator. Read-only scaffold today — */}
+          {/* Phase 8 final adds the in-battle "Use ability" CTA wired */}
+          {/* to AbilityEscrow.useAbility() for the controlling viewer. */}
+          <AbilityChip fighter={fighter} compact />
           {fighter.tags.length > 0 && (
             <div
               className="mono"
