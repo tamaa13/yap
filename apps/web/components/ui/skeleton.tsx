@@ -190,29 +190,125 @@ export function StatCardSkel() {
   );
 }
 
+/**
+ * Compact fighter card placeholder — mirrors the vault + profile shape:
+ * 56×56 Sigil with name + archetype + ELO/W-L mono row, plus the
+ * two-button action row at the bottom (Battle / View in vault,
+ * Source battle / Fighter in moments-similar cards). 16px outer padding
+ * to match the real Card prop.
+ */
 export function FighterCardSkel() {
   return (
     <div
       style={{
-        padding: 14,
+        padding: 16,
         background: "var(--yap-ink-800)",
         border: "1px solid var(--yap-ink-600)",
         borderRadius: 0,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-        <Skel w={48} h={48} style={{ borderRadius: 4, flexShrink: 0 }} />
-        <div style={{ flex: 1 }}>
-          <Skel w="55%" h={12} style={{ marginBottom: 4 }} />
-          <Skel w="35%" h={10} />
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <Skel w={56} h={56} style={{ borderRadius: 99, flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* name (15px 600) */}
+          <Skel w="70%" h={15} style={{ marginBottom: 4 }} />
+          {/* arch (11px tertiary) */}
+          <Skel w="40%" h={11} />
+          {/* ELO + W-L mono row, mt 8 */}
+          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+            <Skel w={50} h={11} />
+            <Skel w={32} h={11} />
+          </div>
         </div>
-        <Skel w={36} h={12} style={{ flexShrink: 0 }} />
       </div>
-      <Skel w="100%" h={6} style={{ marginBottom: 8 }} />
-      <div style={{ display: "flex", gap: 6 }}>
-        <Skel w={50} h={18} />
-        <Skel w={50} h={18} />
-        <Skel w={50} h={18} />
+      {/* action row mt 14 — two equal-width buttons */}
+      <div style={{ display: "flex", gap: 6, marginTop: 14 }}>
+        <Skel h={28} style={{ flex: 1 }} />
+        <Skel h={28} style={{ flex: 1 }} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Marketplace fighter card placeholder — mirrors the larger display
+ * variant in apps/web/app/(app)/market/page.tsx: a 72×72 Sigil top-left
+ * with a TokenTag chip top-right, a big display-2 name (~26px) and a
+ * mono archetype eyebrow, divided from a footer row that shows the
+ * fighter's record + Buy/Hire/ELO split.
+ */
+export function MarketFighterCardSkel() {
+  return (
+    <div
+      style={{
+        padding: 16,
+        background: "var(--yap-ink-800)",
+        border: "1px solid var(--yap-ink-600)",
+        borderRadius: 0,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          marginBottom: 14,
+        }}
+      >
+        <Skel w={72} h={72} style={{ borderRadius: 99, flexShrink: 0 }} />
+        <Skel w={44} h={20} />
+      </div>
+      {/* Display-2 name @ ~26px line — two-line allowance kept simple */}
+      <Skel w="80%" h={26} style={{ marginBottom: 6 }} />
+      {/* Mono archetype eyebrow */}
+      <Skel w={64} h={10} style={{ marginBottom: 12 }} />
+      {/* Footer: record badge + price/hire split, divided by borderTop */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingTop: 10,
+          borderTop: "1px solid var(--yap-ink-700)",
+          gap: 6,
+        }}
+      >
+        <Skel w={60} h={18} />
+        <Skel w={90} h={18} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Moment card placeholder — mirrors MomentCard
+ * (apps/web/components/moment/moment-card.tsx): 56×56 Sigil with
+ * "Moment #N" title, mono battle/round/side meta, Fighter #N
+ * secondary text, and a two-button action row. Same skeleton shape
+ * as the compact FighterCardSkel but with three lines under the title
+ * instead of the ELO/W-L stat row.
+ */
+export function MomentCardSkel() {
+  return (
+    <div
+      style={{
+        padding: 16,
+        background: "var(--yap-ink-800)",
+        border: "1px solid var(--yap-ink-600)",
+        borderRadius: 0,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <Skel w={56} h={56} style={{ borderRadius: 99, flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Skel w="65%" h={14} style={{ marginBottom: 4 }} />
+          <Skel w="80%" h={11} style={{ marginBottom: 6 }} />
+          <Skel w={70} h={11} />
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 6, marginTop: 14 }}>
+        <Skel h={28} style={{ flex: 1 }} />
+        <Skel h={28} style={{ flex: 1 }} />
       </div>
     </div>
   );

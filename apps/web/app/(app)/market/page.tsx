@@ -8,7 +8,7 @@ import { Hash } from "@/components/ui/hash";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Sigil } from "@/components/ui/sigil";
-import { FighterCardSkel } from "@/components/ui/skeleton";
+import { MarketFighterCardSkel } from "@/components/ui/skeleton";
 import { Tabs } from "@/components/ui/tabs";
 import { PageContainer } from "@/components/shell/page-container";
 import { Pagination, usePageFromUrl } from "@/components/ui/pagination";
@@ -342,7 +342,7 @@ export default function MarketPage() {
               }}
             >
               {Array.from({ length: 8 }).map((_, i) => (
-                <FighterCardSkel key={i} />
+                <MarketFighterCardSkel key={i} />
               ))}
             </div>
           ) : list.length === 0 ? (

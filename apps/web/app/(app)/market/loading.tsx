@@ -1,4 +1,4 @@
-import { FighterCardSkel } from "@/components/ui/skeleton";
+import { MarketFighterCardSkel } from "@/components/ui/skeleton";
 import { PageContainer } from "@/components/shell/page-container";
 
 export default function MarketLoading() {
@@ -16,7 +16,7 @@ export default function MarketLoading() {
         }}
       >
         {Array.from({ length: 8 }).map((_, i) => (
-          <FighterCardSkel key={i} />
+          <MarketFighterCardSkel key={i} />
         ))}
       </div>
     </PageContainer>
