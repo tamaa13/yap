@@ -1,28 +1,57 @@
 export interface YapMarkProps {
+  /** Display height of the "Yap" letterforms (the plate hugs them
+   *  with internal padding). */
   size?: number;
-  color?: string;
-  bg?: string;
+  /** Plate fill — defaults to true near-black so the stamp pops
+   *  on the saturated-crimson page. */
+  plate?: string;
+  /** Wordmark fill — defaults to cream. */
+  ink?: string;
 }
 
-// Defaults sourced from Promoter palette: --yap-crimson and --yap-ink-950.
-// Hex literals because SVG attributes don't accept CSS vars; passers can
-// override with hex strings if a different ground/figure pair is needed.
-export function YapMark({ size = 22, color = "#C8102E", bg = "#0E0B08" }: YapMarkProps) {
+/**
+ * Yap mark — black plate + cream Riot wordmark "YAP", fight-poster
+ * seal aesthetic. Replaces the prior free-floating wordmark which
+ * read patchy on the red page (Riot's stencil character lets ground
+ * bleed through). A solid plate guarantees contrast regardless of
+ * the underlying surface.
+ *
+ * Cut-corner geometry via clip-path (`--yap-cut-sm`) matches the
+ * `.btn` button corner shape — the mark + buttons share one
+ * vocabulary.
+ */
+export function YapMark({
+  size = 22,
+  plate = "#0A0A0A",
+  ink = "#F4ECDB",
+}: YapMarkProps) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{ display: "block", flexShrink: 0 }}
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: plate,
+        padding: `${Math.round(size * 0.30)}px ${Math.round(size * 0.45)}px ${Math.round(size * 0.22)}px`,
+        clipPath: "var(--yap-cut-sm)",
+        flexShrink: 0,
+        lineHeight: 1,
+        userSelect: "none",
+      }}
     >
-      <rect x="0" y="0" width="24" height="24" rx="5" fill={color} />
-      <path
-        d="M6 8.5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-4.5L8 18v-2.5H8a2 2 0 0 1-2-2v-5Z"
-        fill={bg}
-      />
-      <circle cx="12" cy="11" r="1.5" fill={color} />
-    </svg>
+      <span
+        style={{
+          fontFamily: "var(--yap-font-display)",
+          fontWeight: 400,
+          fontSize: size,
+          lineHeight: 1,
+          letterSpacing: "-0.02em",
+          textTransform: "uppercase",
+          color: ink,
+        }}
+      >
+        Yap
+      </span>
+    </span>
   );
 }

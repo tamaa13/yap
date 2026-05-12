@@ -758,7 +758,7 @@ export function FighterDetail({
               }}
             >
               <span style={{ color: "var(--tx-secondary)" }}>Token ID</span>
-              <span className="mono">#{fighter.id}</span>
+              <span style={{ fontFamily: "var(--yap-font-mono)", fontSize: 12 }}>#{fighter.id}</span>
             </div>
             <div
               style={{

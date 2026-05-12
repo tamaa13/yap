@@ -13,26 +13,40 @@
    ────────────────────────────── */
 
 :root {
-  /* ── Promoter primary palette ────────────────────────────────── */
-  --yap-ink-950: #0E0B08;
-  --yap-ink-900: #14110E;
-  --yap-ink-800: #1A1612;
-  --yap-ink-700: #221C16;
-  --yap-ink-600: #2C251D;
-  --yap-ink-500: #443A2E;
-  --yap-ink-400: #6E6457;
-  --yap-ink-300: #8A8378;
-  --yap-ink-200: #B8B0A2;
-  --yap-ink-100: #DCD5C7;
-  --yap-ink-50:  #F2EDE2;
-  --yap-ink-0:   #FBF8F1;
+  /* EXPERIMENT v8 — PAGE red, COMPONENTS dark. Only the page-
+   * canvas + top nav take saturated crimson; cards, modals,
+   * panels, inputs all keep their dark ink ground. Dark editorial
+   * blocks floating on a red page = fight-poster stage with cast
+   * pieces. Cream/white type on both surfaces.
+   *
+   * The new `--yap-page-bg` token is the ONLY red surface ref;
+   * the legacy `--yap-ink-*` scale is reverted to dark values so
+   * every card/panel/badge/skeleton stays dark via alias chain. */
+  --yap-page-bg: #C8102E;  /* saturated crimson — page canvas + top nav */
 
-  --yap-crimson:        #C8102E;
-  --yap-crimson-soft:   #A60D26;
-  --yap-crimson-deep:   #7A0918;
-  --yap-gold:           #C9A961;
+  --yap-ink-950: #050505;  /* deepest (sunken) */
+  --yap-ink-900: #0A0A0A;  /* card primary bg */
+  --yap-ink-800: #141414;  /* elevated card */
+  --yap-ink-700: #1F1F1F;  /* raised modal */
+  --yap-ink-600: #2E2A24;  /* heavy border */
+  --yap-ink-500: #4F4A42;  /* hairline border */
+  --yap-ink-400: #6B665D;  /* muted text */
+  --yap-ink-300: #A29C8D;  /* dim text */
+  --yap-ink-200: #C8C0AE;  /* cream-dim */
+  --yap-ink-100: #EBE1CB;  /* paper-deep */
+  --yap-ink-50:  #F4ECDB;  /* primary cream text */
+  --yap-ink-0:   #FFFFFF;  /* pure white when needed */
+
+  /* EXPERIMENT v8 — sodium amber retained as accent on either red
+   * page OR dark card. Amber-on-red works at display sizes; amber-
+   * on-dark always sings. Deep oxblood `--yap-bruise` returns as
+   * dispute panel reserved color (kicks against red ambient bg). */
+  --yap-crimson:        #E69500;  /* sodium amber accent */
+  --yap-crimson-soft:   #C48020;  /* hover */
+  --yap-crimson-deep:   #B07020;  /* brass-deep, pressed */
+  --yap-gold:           #C49A24;  /* warm gold */
   --yap-gold-deep:      #8E7635;
-  --yap-bruise:         #5C2530;
+  --yap-bruise:         #6B1F26;  /* deep oxblood — dispute reserved */
 
   --yap-success:        #5BA855;
   --yap-success-bg:     #1C2A1A;
@@ -43,10 +57,31 @@
   --yap-info:           #5DA0D6;
   --yap-info-bg:        #11202C;
 
-  /* ── Type families ──────────────────────────────────────────── */
-  --yap-font-display: var(--font-anton), "Archivo Black", Impact, sans-serif;
-  --yap-font-body:    var(--font-archivo), "Inter", system-ui, -apple-system, sans-serif;
-  --yap-font-mono:    var(--font-space-mono), "JetBrains Mono", ui-monospace, 'SF Mono', monospace;
+  /* ── Type families (EXPERIMENT v22 — Riot + Poesing) ───────── */
+  /* FINAL LOCKDOWN (Tama-approved v22) — THREE fonts ship to runtime:
+   *   1. Riot (--font-riot) → hero-tier display: trinity, fighter
+   *      names, page titles, YapMark plate. Used via
+   *      --yap-font-display, --yap-font-stencil, --yap-font-editorial.
+   *   2. Poesing (--font-poesing) → everything ELSE: body, nav,
+   *      cards, numerics, .btn, .mono utility class, stamps, etc.
+   *      Used via --yap-font-display-2, --yap-font-body.
+   *   3. Anonymous Pro mono (--font-anon-pro) → wallet addresses,
+   *      tx hashes, token IDs, hex chips, form input fields.
+   *      Used via --yap-font-mono only.
+   *
+   * Exception: 404 page renders "404" number in Poesing (only),
+   * subhead + body + CTAs in Riot. Inline override on that
+   * surface (not-found.tsx) handles the split.
+   *
+   * No Outfit. No Saira. No Big Shoulders. No Atkinson.
+   * License caveat: Poesing + Riot are 1001fonts / cdnfonts demo
+   * licenses — personal-use. Hackathon-OK; verify commercial. */
+  --yap-font-display:   var(--font-riot), "Archivo Black", Impact, sans-serif;
+  --yap-font-display-2: var(--font-poesing), 'Poesing', Impact, sans-serif;
+  --yap-font-stencil:   var(--font-riot), Impact, sans-serif;
+  --yap-font-body:      var(--font-poesing), 'Poesing', system-ui, sans-serif;
+  --yap-font-mono:      var(--font-anon-pro), ui-monospace, 'SF Mono', monospace;
+  --yap-font-editorial: var(--font-riot), Georgia, serif;
 
   /* ── Type scale (px) — design system v1 ─────────────────────── */
   --yap-fs-display: 72px; --yap-lh-display: 0.9;
@@ -76,8 +111,8 @@
   --yap-sh-1: 0 1px 0 rgba(0,0,0,.4), 0 2px 6px rgba(0,0,0,.25);
   --yap-sh-2: 0 2px 0 rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.35);
   --yap-sh-3: 0 4px 0 rgba(0,0,0,.55), 0 16px 48px rgba(0,0,0,.5);
-  --yap-glow-crimson: 0 0 0 1px rgba(200,16,46,.5), 0 0 24px rgba(200,16,46,.35);
-  --yap-glow-gold:    0 0 0 1px rgba(201,169,97,.4), 0 0 18px rgba(201,169,97,.25);
+  --yap-glow-crimson: 0 0 0 1px rgba(230,149,0,.4), 0 0 18px rgba(230,149,0,.3);
+  --yap-glow-gold:    0 0 0 1px rgba(196,154,36,.4), 0 0 18px rgba(196,154,36,.25);
 
   /* ── Motion timing (mirrors MOTION.md — design within these) ── */
   --yap-t-fast:   140ms;
@@ -95,10 +130,12 @@
      re-skin without needing a rename pass. Phase B/C will migrate
      callsites to --yap-* directly where they're touched.
      ────────────────────────────────────────────────────────────── */
-  --bg-canvas: var(--yap-ink-950);
-  --bg-surface: var(--yap-ink-800);
-  --bg-raised: var(--yap-ink-700);
-  --bg-sunken: var(--yap-ink-900);
+  /* Page canvas = saturated red. Cards / panels / modals stay
+   * dark via the ink-* scale (intentionally NOT pointed at red). */
+  --bg-canvas: var(--yap-page-bg);
+  --bg-surface: var(--yap-ink-900);
+  --bg-raised: var(--yap-ink-800);
+  --bg-sunken: var(--yap-ink-700);
   /* Borders were rgba-on-white in the old scheme; on warm-ink they
    * read flatter, so map to the inked stops directly — slightly more
    * contrast at the same visual weight. */
@@ -141,9 +178,9 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-archivo);
-  --font-mono: var(--font-space-mono);
-  --font-display: var(--font-anton);
+  --font-sans: var(--font-public-sans);
+  --font-mono: var(--font-plex-mono);
+  --font-display: var(--font-bsd);
   --color-canvas: var(--bg-canvas);
   --color-surface: var(--bg-surface);
   --color-raised: var(--bg-raised);
@@ -221,7 +258,7 @@ body {
 
 #yap-cursor .yap-cursor-tag {
   position: absolute; left: 42px; top: -10px;
-  font-family: var(--display); font-size: 13px; letter-spacing: 1.5px;
+  font-family: var(--yap-font-display-2); font-size: 14px; letter-spacing: 0.5px;
   text-transform: uppercase; color: var(--yap-ink-50); line-height: 1;
   white-space: nowrap;
   background: var(--yap-ink-800); padding: 5px 9px 4px;
@@ -312,9 +349,35 @@ a { color: inherit; text-decoration: none; }
 /* (selection moved up next to body so it picks up the Promoter palette
  * directly without going through the muted alias.) */
 
-.mono { font-family: var(--mono); font-feature-settings: 'zero', 'ss01'; }
-.label { font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tx-tertiary); }
-.num { font-family: var(--mono); font-feature-settings: 'zero', 'tnum'; }
+/* FINAL LOCKDOWN (v19) — `.mono` UTILITY CLASS swapped to Poesing.
+ *
+ * Rationale: 60+ callsites used `className="mono"` for tracked
+ * uppercase labels (chain meta, eyebrows, status caps, dateline
+ * fragments) — almost none of them were rendering hex. Routing
+ * the class through Poesing flips them all at once.
+ *
+ * Anonymous Pro mono is preserved for TRUE hex content via
+ * inline `fontFamily: var(--yap-font-mono)`:
+ *   - <Hash> primitive (hash.tsx) — inline ref, untouched
+ *   - <TokenTag> .token-badge — inline ref in globals.css, untouched
+ *   - Form inputs (.input/.textarea/.select) — chars typed by user
+ *   - 3 known direct-hex `className="mono"` callsites have been
+ *     overridden inline below: arena-live battle.id, fighter-
+ *     detail fighter.id, subname-modal tokenId + yap.0g handle
+ *
+ * Mono usage strict — DO NOT use `className="mono"` for hex; reach
+ * for <Hash> / <TokenTag> primitives, or inline `var(--yap-font-
+ * mono)` style if a primitive doesn't fit. */
+.mono { font-family: var(--yap-font-display-2); }
+.label {
+  font-family: var(--yap-font-display-2);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tx-tertiary);
+}
+.num { font-family: var(--yap-font-display-2); }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -396,10 +459,10 @@ a { color: inherit; text-decoration: none; }
   color: var(--btn-fg);
   border: 1.5px solid var(--btn-bd);
   padding: var(--btn-pad-y) var(--btn-pad-x);
-  font-family: var(--yap-font-display);
+  font-family: var(--yap-font-display-2);
   font-weight: 400;
   font-size: var(--btn-fs);
-  letter-spacing: 2px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
   cursor: pointer;
   display: inline-flex;
@@ -470,9 +533,9 @@ a { color: inherit; text-decoration: none; }
   padding: 4px 9px;
   background: var(--yap-ink-700);
   color: var(--yap-ink-100);
-  font-family: var(--yap-font-mono);
-  font-size: 10.5px;
-  letter-spacing: 1.5px;
+  font-family: var(--yap-font-display-2);
+  font-size: 13px;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
   line-height: 1.4;
   border: none;
@@ -496,11 +559,11 @@ a { color: inherit; text-decoration: none; }
   gap: 8px;
   padding: 7px 14px 6px;
   background: var(--yap-crimson);
-  color: var(--yap-ink-50);
-  font-family: var(--yap-font-display);
+  color: var(--yap-ink-900);
+  font-family: var(--yap-font-display-2);
   font-weight: 400;
-  font-size: 17px;
-  letter-spacing: 1px;
+  font-size: 19px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
   line-height: 1;
   clip-path: polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px));
@@ -513,9 +576,9 @@ a { color: inherit; text-decoration: none; }
   width: 8px; height: 8px; background: currentColor; border-radius: 50%;
 }
 .stamp-badge .ser {
-  font-family: var(--yap-font-mono);
-  font-size: 9px;
-  letter-spacing: 1.5px;
+  font-family: var(--yap-font-display-2);
+  font-size: 11px;
+  letter-spacing: 0.4px;
   opacity: .7;
   padding-left: 8px;
   border-left: 1px solid currentColor;
@@ -545,7 +608,7 @@ a { color: inherit; text-decoration: none; }
   padding: 6px 14px 5px 22px;
   background: var(--yap-ink-50);
   color: var(--yap-ink-900);
-  font-family: var(--yap-font-display);
+  font-family: var(--yap-font-display-2);
   font-weight: 400;
   font-size: 15px;
   letter-spacing: 0.8px;
@@ -611,9 +674,9 @@ a { color: inherit; text-decoration: none; }
   background: var(--yap-ink-700);
   color: var(--yap-ink-300);
   padding: 7px 9px;
-  font-family: var(--yap-font-mono);
-  font-size: 9.5px;
-  letter-spacing: 2px;
+  font-family: var(--yap-font-display-2);
+  font-size: 12px;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
   display: flex;
   align-items: center;
@@ -622,7 +685,7 @@ a { color: inherit; text-decoration: none; }
   background: var(--yap-ink-50);
   color: var(--yap-ink-900);
   padding: 6px 11px 5px;
-  font-family: var(--yap-font-display);
+  font-family: var(--yap-font-display-2);
   font-weight: 400;
   font-size: 17px;
   letter-spacing: 0.5px;
@@ -638,7 +701,7 @@ a { color: inherit; text-decoration: none; }
 /* Record — fight-card "14×3" with crimson W + dim L. Anton display.
    Reads as one glyph ("record"), not three (W / × / L). */
 .record-badge {
-  font-family: var(--yap-font-display);
+  font-family: var(--yap-font-display-2);
   font-weight: 400;
   font-size: 26px;
   line-height: 1;
@@ -657,9 +720,9 @@ a { color: inherit; text-decoration: none; }
 }
 .record-badge .l  { color: var(--yap-ink-300); }
 .record-badge .lbl {
-  font-family: var(--yap-font-mono);
-  font-size: 9px;
-  letter-spacing: 2px;
+  font-family: var(--yap-font-display-2);
+  font-size: 12px;
+  letter-spacing: 0.4px;
   color: var(--yap-ink-400);
   margin-left: 8px;
   align-self: center;
@@ -730,7 +793,7 @@ a { color: inherit; text-decoration: none; }
   border-bottom: 1px solid var(--yap-ink-600);
 }
 .al-card .card-title {
-  font-family: var(--yap-font-display);
+  font-family: var(--yap-font-display-2);
   font-weight: 400;
   font-size: 22px;
   text-transform: uppercase;
@@ -746,9 +809,9 @@ a { color: inherit; text-decoration: none; }
   gap: var(--yap-s-2);
 }
 .al-card .role-tag {
-  font-family: var(--yap-font-mono);
-  font-size: 10px;
-  letter-spacing: 1.5px;
+  font-family: var(--yap-font-display-2);
+  font-size: 13px;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
   color: var(--yap-gold);
 }
