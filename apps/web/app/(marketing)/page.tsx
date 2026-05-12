@@ -290,9 +290,9 @@ export default function LandingPage() {
               <Card key={s.n} style={{ padding: 28 }}>
                 <div
                   style={{
-                    fontFamily: "var(--yap-font-display)",
+                    fontFamily: "var(--yap-font-display-2)",
                     fontWeight: 400,
-                    fontSize: 56,
+                    fontSize: 64,
                     lineHeight: 0.85,
                     color: "var(--yap-crimson)",
                     marginBottom: 16,
@@ -375,13 +375,19 @@ export default function LandingPage() {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <YapMark size={16} />
-            <span className="mono" style={{ letterSpacing: 1.5, textTransform: "uppercase" }}>
+            <span
+              style={{
+                fontFamily: "var(--yap-font-display-2)",
+                letterSpacing: 1.5,
+                textTransform: "uppercase",
+              }}
+            >
               © 2026 Yap · Built on 0G
             </span>
           </div>
           <div
-            className="mono"
             style={{
+              fontFamily: "var(--yap-font-display-2)",
               display: "flex",
               gap: 20,
               letterSpacing: 1.5,

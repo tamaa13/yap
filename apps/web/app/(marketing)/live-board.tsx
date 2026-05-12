@@ -28,9 +28,12 @@ export function LandingLiveBoard() {
           padding: "28px 20px",
           border: "1px dashed var(--bd-default)",
           borderRadius: 6,
-          fontSize: 13,
-          color: "var(--tx-secondary)",
+          fontFamily: "var(--yap-font-display-2)",
+          fontSize: 18,
+          letterSpacing: 0.3,
+          color: "rgba(255,255,255,0.85)",
           textAlign: "center",
+          background: "var(--yap-ink-900)",
         }}
       >
         No live battles yet. <Link href="/battle/new" style={{ color: "var(--accent)" }}>Create the first one.</Link>
