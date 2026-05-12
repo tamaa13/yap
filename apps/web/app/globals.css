@@ -57,14 +57,22 @@
   --yap-info:           #5DA0D6;
   --yap-info-bg:        #11202C;
 
-  /* ── Type families (EXPERIMENT v11 — Riot + Groovy Riot) ───── */
+  /* ── Type families (EXPERIMENT v12 — Riot + Groovy Riot) ───── */
   /* Two display faces:
    *   --yap-font-display   : Riot — primary display, hero trinity,
-   *                          page titles, fighter names
-   *   --yap-font-display-2 : Groovy Riot — character-clash partner,
-   *                          dateline values, loud stamp caps,
-   *                          manifesto pull-quotes
-   * Both single-weight 400. Hierarchy by size + tracking + caps. */
+   *                          page titles, fighter names, anywhere
+   *                          containing digits (Riot has full 0-9).
+   *   --yap-font-display-2 : Groovy Riot — character-clash partner
+   *                          for LETTERS-ONLY moments.
+   *
+   * ⚠ WARNING: Groovy Riot is a DEMO font. Its 0-9 numeral glyphs
+   *   are replaced with decorative dingbats (leaves / flowers) to
+   *   force a commercial license purchase. NEVER use this token
+   *   on any string containing digits. Forbidden contexts include
+   *   token IDs (R02), addresses (0x…), ELO ratings (1842), OG
+   *   amounts (142.8), timestamps (02:44 UTC), block numbers.
+   *   Allowed contexts: pure letter strings (CHALLENGER, VERDICT,
+   *   ENTER A BATTLE, MAIN CARD). When in doubt, use Riot. */
   --yap-font-display:   var(--font-riot), var(--font-saira-cond), "Archivo Black", Impact, sans-serif;
   --yap-font-display-2: var(--font-groovy-riot), 'Groovy Riot', var(--font-saira-cond), Impact, sans-serif;
   --yap-font-stencil:   var(--font-riot), var(--font-saira-cond), Impact, sans-serif;
@@ -523,10 +531,10 @@ a { color: inherit; text-decoration: none; }
   padding: 7px 14px 6px;
   background: var(--yap-crimson);
   color: var(--yap-ink-900);
-  font-family: var(--yap-font-display-2);
+  font-family: var(--yap-font-display);
   font-weight: 400;
-  font-size: 19px;
-  letter-spacing: 0.5px;
+  font-size: 17px;
+  letter-spacing: 1px;
   text-transform: uppercase;
   line-height: 1;
   clip-path: polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px));
