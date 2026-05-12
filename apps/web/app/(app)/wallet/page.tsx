@@ -13,7 +13,7 @@ import { useWallet } from "@/hooks/use-wallet";
 import { fmtAddr } from "@/lib/format";
 
 export default function WalletPage() {
-  const { ready, connected, addr, logout } = useWallet();
+  const { ready, connected, addr } = useWallet();
   const balance = useBalance();
   const { data: bets } = useMyBets();
 
@@ -89,13 +89,6 @@ export default function WalletPage() {
             onClick={() => addr && navigator.clipboard?.writeText(addr)}
           >
             Copy address
-          </Button>
-          <Button
-            variant="destructive"
-            leading={<Icon name="x" size={14} />}
-            onClick={() => logout()}
-          >
-            Disconnect
           </Button>
         </div>
       </Card>
