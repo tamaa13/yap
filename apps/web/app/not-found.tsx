@@ -8,11 +8,12 @@ import { TopNav } from "@/components/shell/top-nav";
  * primitive, matches the EntryGate / GateScreen "content centered
  * on red" pattern from v6.
  *
- * Font exception: 404 surface renders **entirely in Riot** per
- * Tama. Overrides the locked Poesing-default for body / subhead /
- * `.btn` cascade on this single page. Sport vocabulary kept; the
- * match isn't on tonight's program — back to the ring or browse
- * arenas.
+ * Font allocation (v21 lockdown): everything renders in Poesing
+ * via the body cascade + token aliases. Anonymous Pro mono is
+ * reserved for hex content (none on this page).
+ *
+ * Voice: sport vocabulary, no AI-app boilerplate. The match isn't
+ * on tonight's program — back to the ring or browse arenas.
  */
 export default function NotFound() {
   return (
@@ -30,7 +31,7 @@ export default function NotFound() {
           textAlign: "center",
         }}
       >
-        {/* 404 hero — Riot display, hard ink offset for poster pop */}
+        {/* 404 hero — Poesing display, hard ink offset for poster pop */}
         <div
           style={{
             fontFamily: "var(--yap-font-display)",
@@ -46,13 +47,11 @@ export default function NotFound() {
           404
         </div>
 
-        {/* Subhead — Riot, sized down ~12% from prior Poesing 56 max
-         * since Riot reads heavier optical weight at the same px. */}
+        {/* Subhead — Poesing */}
         <div
           style={{
-            fontFamily: "var(--yap-font-display)",
             fontWeight: 400,
-            fontSize: "clamp(30px, 4.5vw, 50px)",
+            fontSize: "clamp(34px, 5vw, 56px)",
             color: "var(--yap-ink-0)",
             textTransform: "uppercase",
             letterSpacing: 0.5,
@@ -62,25 +61,22 @@ export default function NotFound() {
           Off the card
         </div>
 
-        {/* Body — explicit Riot override, sized down from 18 → 16 */}
+        {/* Body — body cascade Poesing */}
         <p
           style={{
-            fontFamily: "var(--yap-font-display)",
-            maxWidth: "32ch",
+            maxWidth: "44ch",
             color: "rgba(255,255,255,0.85)",
-            fontSize: 16,
-            lineHeight: 1.4,
-            letterSpacing: 0.5,
-            textTransform: "uppercase",
+            fontSize: 18,
+            lineHeight: 1.45,
+            letterSpacing: 0.2,
             margin: 0,
           }}
         >
           This match isn&apos;t on tonight&apos;s program.
         </p>
 
-        {/* CTAs — primary amber .btn + ghost outline. Inline
-         * fontFamily override on each Link so the Riot exception
-         * also extends to the buttons on this page. */}
+        {/* CTAs — primary amber + ghost outline. .btn cascade renders
+         * Poesing via the v18 utility class swap. */}
         <div
           style={{
             display: "flex",
@@ -90,18 +86,10 @@ export default function NotFound() {
             justifyContent: "center",
           }}
         >
-          <Link
-            href="/"
-            className="btn"
-            style={{ fontFamily: "var(--yap-font-display)" }}
-          >
+          <Link href="/" className="btn">
             ← Back to the ring
           </Link>
-          <Link
-            href="/arenas"
-            className="btn btn--ghost"
-            style={{ fontFamily: "var(--yap-font-display)" }}
-          >
+          <Link href="/arenas" className="btn btn--ghost">
             Browse arenas →
           </Link>
         </div>
