@@ -4,9 +4,8 @@ pragma solidity ^0.8.19;
 import {AccessControl} from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
-import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import {MessageHashUtils} from "openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
+import {TEEAttestationLib} from "./TEEAttestationLib.sol";
 
 interface IBattleRegistry {
     function registerBattle(
@@ -47,8 +46,6 @@ interface IDASigners {
 ///         contract verifies the signature recovers to {oracleKey}, which
 ///         admin sets equal to the provider's teeSignerAddress.
 contract BattleEscrow is AccessControl, ReentrancyGuard {
-    using ECDSA for bytes32;
-    using MessageHashUtils for bytes32;
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
@@ -256,17 +253,12 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
     error SameFighter();
     error NotFighterUser();
     error ChallengeNotExpired();
-    error InvalidOracleSignature();
     error OracleKeyNotSet();
     error DefenderStakeTooLow();
     error DisputeAlreadyExtended();
     error VerdictNotStuck();
     error InvalidVerdictHash();
     error NoDust();
-    error InvalidSignedTextFormat();
-    error ResponseHashMismatch();
-    error CanonicalContentMissing();
-    error InvalidContentOffset();
 
     constructor(
         address admin,
@@ -498,33 +490,19 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
         Battle storage b = battles[battleId];
         if (b.status != Status.Live) revert InvalidState();
 
-        // 1. ECDSA recovery on EIP-191 of signedText → oracleKey.
-        bytes32 digest = MessageHashUtils.toEthSignedMessageHash(signedText);
-        if (digest.recover(teeSignature) != oracleKey) {
-            revert InvalidOracleSignature();
-        }
-
-        // 2. Parse 2nd field of signedText (response sha256) and verify the
-        //    submitted responseBody hashes to it. Format expectation:
-        //      [0..63]   reqSha (64 hex)
-        //      [64]      ':'
-        //      [65..128] respSha (64 hex)
-        //      [129]     ':'
-        //      [130..]   providerType ':' providerIdentity ':' tlsCertSha
-        if (signedText.length < 130) revert InvalidSignedTextFormat();
-        if (signedText[64] != bytes1(":") || signedText[129] != bytes1(":")) {
-            revert InvalidSignedTextFormat();
-        }
-        bytes32 expectedRespSha = _hex64ToBytes32(signedText, 65);
-        if (sha256(responseBody) != expectedRespSha) {
-            revert ResponseHashMismatch();
-        }
-
-        // 3. Reconstruct canonical and confirm it lives at responseBody[contentOffset:]
-        //    between JSON quote characters (so contentOffset cannot point at
-        //    an unrelated substring elsewhere in the JSON envelope).
+        // 1-3. ECDSA recovery + signedText format + sha256(responseBody) +
+        //      canonical-at-offset verification, all delegated to the shared
+        //      TEE attestation library so the same primitive is reused by
+        //      YapFighter.recordMintScores and future scoring/judging paths.
         bytes memory canonical = _verdictCanonicalText(battleId, winner, verdictHash);
-        _verifyCanonicalAtOffset(responseBody, contentOffset, canonical);
+        TEEAttestationLib.verifyAttestation(
+            canonical,
+            responseBody,
+            contentOffset,
+            signedText,
+            teeSignature,
+            oracleKey
+        );
 
         // 4. Anchor verdict to current 0G DA epoch. Best-effort: low-level
         //    staticcall bypasses Solidity's extcodesize auto-check so the
@@ -551,64 +529,6 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
         emit BattleDAAnchored(battleId, uint64(daEpoch));
     }
 
-    /// @dev Converts 64 ASCII hex characters at `data[offset..offset+64]` into a
-    ///      bytes32 value. Reverts on out-of-bounds or invalid hex chars.
-    function _hex64ToBytes32(bytes calldata data, uint256 offset)
-        internal
-        pure
-        returns (bytes32)
-    {
-        if (offset + 64 > data.length) revert InvalidSignedTextFormat();
-        uint256 v = 0;
-        unchecked {
-            for (uint256 i = 0; i < 64; ++i) {
-                uint8 c = uint8(data[offset + i]);
-                uint8 nibble;
-                if (c >= 0x30 && c <= 0x39) {
-                    nibble = c - 0x30;
-                } else if (c >= 0x61 && c <= 0x66) {
-                    nibble = c - 0x61 + 10;
-                } else if (c >= 0x41 && c <= 0x46) {
-                    nibble = c - 0x41 + 10;
-                } else {
-                    revert InvalidSignedTextFormat();
-                }
-                v = (v << 4) | nibble;
-            }
-        }
-        return bytes32(v);
-    }
-
-    /// @dev Verifies that {canonical} bytes appear at responseBody[offset:offset+canonical.length]
-    ///      and that the byte immediately before {offset} and immediately after
-    ///      the canonical run are both ASCII double-quote chars. The quote
-    ///      requirement prevents an attacker from passing an offset that points
-    ///      at an unrelated substring inside the JSON envelope (e.g. inside a
-    ///      different field, or spanning two field boundaries).
-    function _verifyCanonicalAtOffset(
-        bytes calldata responseBody,
-        uint256 offset,
-        bytes memory canonical
-    ) internal pure {
-        uint256 len = canonical.length;
-        // offset must be ≥ 1 (so we can read the pre-byte) and the canonical
-        // run plus the post-byte must fit inside responseBody.
-        if (offset == 0 || offset + len + 1 > responseBody.length) {
-            revert InvalidContentOffset();
-        }
-        if (
-            responseBody[offset - 1] != bytes1('"') ||
-            responseBody[offset + len] != bytes1('"')
-        ) {
-            revert InvalidContentOffset();
-        }
-        for (uint256 i = 0; i < len; ++i) {
-            if (responseBody[offset + i] != canonical[i]) {
-                revert CanonicalContentMissing();
-            }
-        }
-    }
-
     /// @notice View helper — returns the EIP-191 personal_sign digest of an
     ///         arbitrary signedText payload. Useful for off-chain clients that
     ///         want to reproduce the digest the contract verifies.
@@ -617,7 +537,7 @@ contract BattleEscrow is AccessControl, ReentrancyGuard {
         pure
         returns (bytes32)
     {
-        return MessageHashUtils.toEthSignedMessageHash(signedText);
+        return TEEAttestationLib.signedTextDigest(signedText);
     }
 
     /// @notice View helper — returns the raw canonical text that the 0G

@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import {Test} from "forge-std/Test.sol";
 import {BattleEscrow} from "../src/BattleEscrow.sol";
 import {BattleRegistry} from "../src/BattleRegistry.sol";
+import {TEEAttestationLib} from "../src/TEEAttestationLib.sol";
 import {MessageHashUtils} from "openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
@@ -574,7 +575,7 @@ contract BattleEscrowTest is Test {
         // Args signed by a wrong key (not oracleKey) — ECDSA recovery on the
         // signedText routing proof should reject.
         VerdictArgs memory bad = _buildVerdictArgs(id, 0, MOCK_VERDICT_HASH, 0xBAD);
-        vm.expectRevert(BattleEscrow.InvalidOracleSignature.selector);
+        vm.expectRevert(TEEAttestationLib.InvalidOracleSignature.selector);
         escrow.submitVerdict(
             id,
             0,
@@ -593,7 +594,7 @@ contract BattleEscrowTest is Test {
         // reconstruct canonical-for-winner=1, which won't appear at the
         // claimed offset → CanonicalContentMissing.
         VerdictArgs memory v0 = _buildVerdictArgs(id, 0, MOCK_VERDICT_HASH, ORACLE_PRIV_KEY);
-        vm.expectRevert(BattleEscrow.CanonicalContentMissing.selector);
+        vm.expectRevert(TEEAttestationLib.CanonicalContentMissing.selector);
         escrow.submitVerdict(
             id,
             1,
@@ -751,7 +752,7 @@ contract BattleEscrowTest is Test {
         // Flip a byte in responseBody so its sha256 no longer matches the
         // signed routing-proof's response hash.
         v.responseBody[0] = bytes1(uint8(v.responseBody[0]) ^ 0x01);
-        vm.expectRevert(BattleEscrow.ResponseHashMismatch.selector);
+        vm.expectRevert(TEEAttestationLib.ResponseHashMismatch.selector);
         escrow.submitVerdict(
             id,
             0,
@@ -767,7 +768,7 @@ contract BattleEscrowTest is Test {
         uint256 id = _create();
         VerdictArgs memory v = _buildVerdictArgs(id, 0, MOCK_VERDICT_HASH, ORACLE_PRIV_KEY);
         // Offset that does not point at a quote-bracketed canonical run.
-        vm.expectRevert(BattleEscrow.InvalidContentOffset.selector);
+        vm.expectRevert(TEEAttestationLib.InvalidContentOffset.selector);
         escrow.submitVerdict(
             id,
             0,
@@ -792,7 +793,7 @@ contract BattleEscrowTest is Test {
         // Old oracle key signs an attestation that no longer recovers to
         // oracleKey post-rotation.
         VerdictArgs memory oldArgs = _buildVerdictArgs(id, 0, MOCK_VERDICT_HASH, ORACLE_PRIV_KEY);
-        vm.expectRevert(BattleEscrow.InvalidOracleSignature.selector);
+        vm.expectRevert(TEEAttestationLib.InvalidOracleSignature.selector);
         escrow.submitVerdict(
             id,
             0,
