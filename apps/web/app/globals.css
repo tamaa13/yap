@@ -57,31 +57,28 @@
   --yap-info:           #5DA0D6;
   --yap-info-bg:        #11202C;
 
-  /* ── Type families (EXPERIMENT v17 — Poesing site-wide) ────── */
-  /* Final allocation (Tama-locked):
-   *   --yap-font-display   : Riot — hero trinity, fighter names,
-   *                          page titles, YapMark plate.
-   *   --yap-font-display-2 : Poesing — EVERYTHING ELSE. Body
-   *                          prose, navigation, card titles, card
-   *                          meta, numerics, labels, eyebrows,
-   *                          CTAs, stamps, modals, footer, empty
-   *                          states, helper text. Full 0-9 +
-   *                          punctuation verified.
-   *   --yap-font-body      : aliased to Poesing — every callsite
-   *                          inheriting body cascade picks it up.
-   *   --yap-font-mono      : Anonymous Pro — RESERVED for hex /
-   *                          addresses / tx hashes / token IDs.
-   *                          The only non-Poesing, non-Riot escape.
+  /* ── Type families (EXPERIMENT v21 — POESING EVERYWHERE) ───── */
+  /* FINAL LOCKDOWN (Tama-approved v21) — TWO fonts ship to runtime:
+   *   1. Poesing (--font-poesing) → EVERYTHING except hex content.
+   *      Used via --yap-font-display, --yap-font-display-2,
+   *      --yap-font-body, --yap-font-stencil, --yap-font-editorial.
+   *   2. Anonymous Pro mono (--font-anon-pro) → wallet addresses,
+   *      tx hashes, token IDs, hex chips, form input fields.
+   *      Used via --yap-font-mono only.
    *
-   * Outfit dropped from the stack entirely.
+   * No Riot. No Outfit. No Saira. No Big Shoulders. No Atkinson.
+   * No Fragment Mono. No Public Sans. No Anton. No Archivo.
+   * Verify: `grep next/font app/layout.tsx` should show exactly 2
+   * font registrations.
+   *
    * License caveat: Poesing is 1001fonts personal-use demo.
    * Hackathon-OK; verify before shipping commercially. */
-  --yap-font-display:   var(--font-riot), "Archivo Black", Impact, sans-serif;
+  --yap-font-display:   var(--font-poesing), 'Poesing', Impact, sans-serif;
   --yap-font-display-2: var(--font-poesing), 'Poesing', Impact, sans-serif;
-  --yap-font-stencil:   var(--font-riot), Impact, sans-serif;
+  --yap-font-stencil:   var(--font-poesing), 'Poesing', Impact, sans-serif;
   --yap-font-body:      var(--font-poesing), 'Poesing', system-ui, sans-serif;
   --yap-font-mono:      var(--font-anon-pro), ui-monospace, 'SF Mono', monospace;
-  --yap-font-editorial: var(--font-riot), Georgia, serif;
+  --yap-font-editorial: var(--font-poesing), 'Poesing', Georgia, serif;
 
   /* ── Type scale (px) — design system v1 ─────────────────────── */
   --yap-fs-display: 72px; --yap-lh-display: 0.9;
