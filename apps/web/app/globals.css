@@ -13,33 +13,35 @@
    ────────────────────────────── */
 
 :root {
-  /* EXPERIMENT v4 — true black + sodium amber. Warm fight-poster
-   * lamp on pitch dark. Cream foreground, sodium amber as the only
-   * brand accent, deep oxblood reserved for dispute panels only. */
-  --yap-ink-950: #050505;
-  --yap-ink-900: #0A0A0A;
-  --yap-ink-800: #141414;
-  --yap-ink-700: #1F1F1F;
-  --yap-ink-600: #2E2A24;
+  /* EXPERIMENT v7 — RED-DOMINANT palette inversion. Page bg is
+   * saturated Promoter crimson #C8102E (boxing-corner banner /
+   * Soviet propaganda red). Text is pure white #FFFFFF. Sodium
+   * amber demoted from primary to accent. Black reserved for
+   * dispute / quiet panels. */
+  --yap-ink-950: #6B0817;                /* deepest red sunken */
+  --yap-ink-900: #C8102E;                /* primary red page bg */
+  --yap-ink-800: #A60D26;                /* deeper red elevated panel */
+  --yap-ink-700: #8C0B20;                /* deepest red raised */
+  --yap-ink-600: #2E2A24;                /* heavy ink border (kept dark for separation) */
   --yap-ink-500: #4F4A42;
-  --yap-ink-400: #6B665D;
-  --yap-ink-300: #A29C8D;
-  --yap-ink-200: #C8C0AE;
-  --yap-ink-100: #EBE1CB;
-  --yap-ink-50:  #F4ECDB;
+  --yap-ink-400: rgba(255, 255, 255, 0.30);  /* muted text on red */
+  --yap-ink-300: rgba(255, 255, 255, 0.50);
+  --yap-ink-200: rgba(255, 255, 255, 0.70);
+  --yap-ink-100: #F4ECDB;                /* secondary cream text */
+  --yap-ink-50:  #FFFFFF;                /* primary white text */
   --yap-ink-0:   #FFFFFF;
 
-  /* EXPERIMENT v4 — sodium amber as primary accent. Warm fight-
-   * poster lamp on pitch-dark. Deep oxblood `--yap-bruise` is
-   * RESERVED for dispute panels only; never used ambiently. The
-   * legacy `--yap-crimson` token name remains so existing components
-   * pick up the amber without per-file edits. */
-  --yap-crimson:        #E69500;  /* sodium amber */
+  /* EXPERIMENT v7 — sodium amber demoted to accent on red ground.
+   * Red is now the bg (--yap-ink-900); --yap-crimson alias keeps
+   * the amber accent for CTAs / verdict highlights / focus state.
+   * Bruise re-purposed to deep ink black for dispute / quiet
+   * panels that need to recede from the red field. */
+  --yap-crimson:        #E69500;  /* sodium amber accent */
   --yap-crimson-soft:   #C48020;  /* hover */
   --yap-crimson-deep:   #B07020;  /* brass-deep, pressed */
   --yap-gold:           #C49A24;  /* warm gold */
   --yap-gold-deep:      #8E7635;
-  --yap-bruise:         #6B1F26;  /* deep oxblood — dispute only */
+  --yap-bruise:         #0A0A0A;  /* deep ink black — dispute / quiet only */
 
   --yap-success:        #5BA855;
   --yap-success-bg:     #1C2A1A;
@@ -89,7 +91,7 @@
   --yap-sh-1: 0 1px 0 rgba(0,0,0,.4), 0 2px 6px rgba(0,0,0,.25);
   --yap-sh-2: 0 2px 0 rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.35);
   --yap-sh-3: 0 4px 0 rgba(0,0,0,.55), 0 16px 48px rgba(0,0,0,.5);
-  --yap-glow-crimson: 0 0 0 1px rgba(230,149,0,.5), 0 0 24px rgba(230,149,0,.35);
+  --yap-glow-crimson: 0 0 0 1px rgba(230,149,0,.4), 0 0 18px rgba(230,149,0,.3);
   --yap-glow-gold:    0 0 0 1px rgba(196,154,36,.4), 0 0 18px rgba(196,154,36,.25);
 
   /* ── Motion timing (mirrors MOTION.md — design within these) ── */
