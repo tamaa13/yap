@@ -140,52 +140,127 @@ export function BattleCardSkel({ style }: { style?: CSSProperties }) {
   );
 }
 
-export function TableSkel({ rows = 6, cols = 5 }: { rows?: number; cols?: number }) {
+export interface TableSkelProps {
+  rows?: number;
+  cols?: number;
+  /** Per-column width override. `"flex"` lets the column expand to fill
+   *  the remaining space (matches a real `<td>` with no width clamp).
+   *  Numeric or string values pass through as fixed widths. Defaults
+   *  approximate the leaderboard layout. */
+  widths?: Array<number | string | "flex">;
+  /** Render a faux header row above the data rows so the placeholder
+   *  matches tables that actually show one. Both wallet + leaderboard
+   *  draw a header so it's on by default. */
+  header?: boolean;
+  /** Sigil-flagged column index — that column's leading bar gets a 28×28
+   *  circular placeholder to mirror tables like leaderboard that pack a
+   *  Sigil + name into a single fighter cell. */
+  fighterCol?: number;
+}
+
+export function TableSkel({
+  rows = 6,
+  cols = 5,
+  widths,
+  header = true,
+  fighterCol,
+}: TableSkelProps) {
+  const computedWidths: Array<number | string | "flex"> = Array.from(
+    { length: cols },
+    (_, c) => widths?.[c] ?? (c === 0 ? 30 : c === 1 ? "flex" : 70),
+  );
+
+  const renderRow = (rowIdx: number, isHeader: boolean) => (
+    <div
+      key={isHeader ? "header" : rowIdx}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "12px 14px",
+        borderTop:
+          rowIdx === 0 && !isHeader && !header
+            ? "none"
+            : "1px solid var(--bd-subtle)",
+        background: isHeader ? "var(--bg-sunken)" : undefined,
+      }}
+    >
+      {computedWidths.map((w, c) => {
+        const flexShrink = w === "flex" ? 1 : 0;
+        const flexGrow = w === "flex" ? 1 : 0;
+        // Fighter column: avatar + label pair when not the header row.
+        if (!isHeader && c === fighterCol) {
+          return (
+            <div
+              key={c}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                flex: w === "flex" ? "1 1 0" : `0 0 ${typeof w === "number" ? `${w}px` : w}`,
+                minWidth: 0,
+              }}
+            >
+              <Skel
+                w={28}
+                h={28}
+                style={{ borderRadius: 99, flexShrink: 0 }}
+              />
+              <Skel w="60%" h={12} />
+            </div>
+          );
+        }
+        return (
+          <Skel
+            key={c}
+            w={w === "flex" ? "100%" : w}
+            h={isHeader ? 10 : 12}
+            style={{
+              flexShrink,
+              flexGrow,
+              flexBasis: w === "flex" ? 0 : undefined,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+
   return (
     <div
       style={{
-        padding: "6px 0",
+        padding: "0",
         background: "var(--yap-ink-800)",
         border: "1px solid var(--yap-ink-600)",
         borderRadius: 0,
       }}
     >
-      {Array.from({ length: rows }).map((_, r) => (
-        <div
-          key={r}
-          style={{
-            display: "flex",
-            gap: 12,
-            padding: "12px 14px",
-            borderTop: r > 0 ? "1px solid var(--bd-subtle)" : "none",
-          }}
-        >
-          {Array.from({ length: cols }).map((_, c) => (
-            <Skel
-              key={c}
-              w={c === 0 ? 30 : c === 1 ? 160 : 70}
-              h={12}
-              style={{ flexShrink: 0 }}
-            />
-          ))}
-        </div>
-      ))}
+      {header && renderRow(-1, true)}
+      {Array.from({ length: rows }).map((_, r) => renderRow(r, false))}
     </div>
   );
 }
 
-export function StatCardSkel() {
+/**
+ * Mirrors `<StatCard>` (components/ui/stat-card.tsx): 16px padding,
+ * 6px border radius, label (~11px tertiary, mb 6), value (~22px num),
+ * optional sub-line (~12px tertiary, mt 4). The real component renders
+ * a sub on every wallet/vault call site we have, so the placeholder
+ * scaffolds the three-line height by default.
+ */
+export function StatCardSkel({ withSub = true }: { withSub?: boolean } = {}) {
   return (
     <div
       style={{
         padding: 16,
         background: "var(--yap-ink-800)",
         border: "1px solid var(--yap-ink-600)",
-        borderRadius: 0,
+        borderRadius: 6,
       }}
     >
-      <Skel w={80} h={10} style={{ marginBottom: 8 }} />
+      <Skel w={80} h={11} style={{ marginBottom: 6 }} />
       <Skel w={120} h={22} />
+      {withSub && <Skel w={56} h={12} style={{ marginTop: 4 }} />}
     </div>
   );
 }
