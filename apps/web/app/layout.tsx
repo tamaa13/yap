@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
-import { Anonymous_Pro } from "next/font/google";
-import localFont from "next/font/local";
+import {
+  Boldonse,
+  Caprasimo,
+  DM_Mono,
+  Inter_Tight,
+  Newsreader,
+} from "next/font/google";
 // Rainbowkit CSS first so our globals.css can override its specificity.
 // Copied verbatim from `node_modules/@rainbow-me/rainbowkit/dist/index.css`
 // because the side-effect import in providers-client.tsx silently fails
@@ -14,33 +19,49 @@ import { EntryGate } from "@/components/shell/entry-gate";
 import { YapCursor } from "@/components/shell/yap-cursor";
 import { Providers } from "./providers";
 
-// FINAL FONT LOCKDOWN v22 (Tama-approved) — THREE fonts at runtime.
-//   - Riot         → hero trinity, fighter names, page titles,
-//                     YapMark plate, 404 subhead + body + CTAs
-//   - Poesing      → EVERYTHING ELSE: body, nav, cards, numerics,
-//                     stamps, .btn, .mono utility class. Also the
-//                     "404" hero NUMBER specifically (only Poesing
-//                     callsite on that page — sole exception to
-//                     the otherwise-Riot 404 surface).
-//   - Anonymous Pro → Wallet addresses, tx hashes, token IDs, hex.
-const riot = localFont({
-  variable: "--font-riot",
-  src: "./fonts/Riot.woff",
-  display: "swap",
-  weight: "400",
-});
-
-const poesing = localFont({
-  variable: "--font-poesing",
-  src: "./fonts/Poesing.ttf",
-  display: "swap",
-  weight: "400",
-});
-
-const anonymousPro = Anonymous_Pro({
-  variable: "--font-anon-pro",
+// Overprint design direction — Risograph zine / overprint registration.
+// Cream paper, cobalt + fluo + plum accents with `mix-blend-mode:
+// multiply` so paper grain pulls through every coloured surface.
+//
+// Type stack:
+//   - Boldonse        → display (heavy stencil/condensed)
+//   - Caprasimo       → poster serif (slabby ornamental)
+//   - Inter Tight     → body (variable 400-800)
+//   - Newsreader      → editorial italic (canonical verdict text)
+//   - DM Mono         → mono (receipt labels, ids, hashes)
+const boldonse = Boldonse({
+  variable: "--font-boldonse",
   subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: ["400"],
+  display: "swap",
+});
+
+const caprasimo = Caprasimo({
+  variable: "--font-caprasimo",
+  subsets: ["latin"],
+  weight: ["400"],
+  display: "swap",
+});
+
+const interTight = Inter_Tight({
+  variable: "--font-inter-tight",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+});
+
+const newsreader = Newsreader({
+  variable: "--font-newsreader",
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  style: ["italic"],
+  display: "swap",
+});
+
+const dmMono = DM_Mono({
+  variable: "--font-dm-mono",
+  subsets: ["latin"],
+  weight: ["400", "500"],
   display: "swap",
 });
 
@@ -58,7 +79,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${riot.variable} ${poesing.variable} ${anonymousPro.variable}`}
+      className={`${boldonse.variable} ${caprasimo.variable} ${interTight.variable} ${newsreader.variable} ${dmMono.variable}`}
       suppressHydrationWarning
     >
       <body>
