@@ -103,7 +103,7 @@ export function Modal({
                 <div
                   style={{
                     fontFamily: "var(--yap-font-display)",
-                    fontWeight: 400,
+                    fontWeight: 800,
                     fontSize: 22,
                     lineHeight: 1,
                     textTransform: "uppercase",

@@ -53,7 +53,7 @@ export function MomentListingCard({
       <div
         style={{
           fontFamily: "var(--yap-font-display)",
-          fontWeight: 400,
+          fontWeight: 800,
           fontSize: 22,
           lineHeight: 0.95,
           textTransform: "uppercase",

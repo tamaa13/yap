@@ -49,7 +49,7 @@ export function EmptyState({
       <div
         style={{
           fontFamily: "var(--yap-font-display)",
-          fontWeight: 400,
+          fontWeight: 800,
           fontSize: 28,
           lineHeight: 1,
           textTransform: "uppercase",

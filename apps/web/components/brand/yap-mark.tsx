@@ -1,28 +1,58 @@
 export interface YapMarkProps {
+  /** Display height. Letter weight scales with size. */
   size?: number;
+  /** Mark color. Defaults to vermillion. */
   color?: string;
-  bg?: string;
+  /** Optional left-side bullet dot — set to false to drop. */
+  dot?: boolean;
 }
 
-// Defaults sourced from Promoter palette: --yap-crimson and --yap-ink-950.
-// Hex literals because SVG attributes don't accept CSS vars; passers can
-// override with hex strings if a different ground/figure pair is needed.
-export function YapMark({ size = 22, color = "#C8102E", bg = "#0E0B08" }: YapMarkProps) {
+/**
+ * Yap wordmark — pure typographic mark, no icon.
+ *
+ * The brand is the type, set in heavy Saira Condensed tracked tight
+ * with a vermillion bullet leading the letter group. A wordmark-only
+ * mark reads as senior + restrained; an icon would add noise without
+ * carrying any combat-sport meaning.
+ *
+ * Caller passes `size` in px (height); the type renders ~1.4× that
+ * width so it can sit in topbars / footers as a horizontal element.
+ */
+export function YapMark({
+  size = 22,
+  color = "#D62828",
+  dot = true,
+}: YapMarkProps) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{ display: "block", flexShrink: 0 }}
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: Math.max(6, size * 0.35),
+        height: size,
+        fontFamily: "var(--yap-font-display)",
+        fontWeight: 900,
+        fontSize: size,
+        lineHeight: 1,
+        letterSpacing: "-0.04em",
+        textTransform: "uppercase",
+        color: "currentColor",
+        userSelect: "none",
+      }}
     >
-      <rect x="0" y="0" width="24" height="24" rx="5" fill={color} />
-      <path
-        d="M6 8.5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-4.5L8 18v-2.5H8a2 2 0 0 1-2-2v-5Z"
-        fill={bg}
-      />
-      <circle cx="12" cy="11" r="1.5" fill={color} />
-    </svg>
+      {dot ? (
+        <span
+          aria-hidden
+          style={{
+            display: "inline-block",
+            width: Math.max(8, size * 0.32),
+            height: Math.max(8, size * 0.32),
+            background: color,
+            flexShrink: 0,
+          }}
+        />
+      ) : null}
+      Yap
+    </span>
   );
 }

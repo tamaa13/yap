@@ -13,19 +13,21 @@
    ────────────────────────────── */
 
 :root {
-  /* ── Promoter primary palette ────────────────────────────────── */
-  --yap-ink-950: #0E0B08;
-  --yap-ink-900: #14110E;
-  --yap-ink-800: #1A1612;
-  --yap-ink-700: #221C16;
-  --yap-ink-600: #2C251D;
-  --yap-ink-500: #443A2E;
-  --yap-ink-400: #6E6457;
-  --yap-ink-300: #8A8378;
-  --yap-ink-200: #B8B0A2;
-  --yap-ink-100: #DCD5C7;
-  --yap-ink-50:  #F2EDE2;
-  --yap-ink-0:   #FBF8F1;
+  /* EXPERIMENT v3 — true near-black palette. Warm-brown undertone
+   * dropped entirely. Neutral cold-grey scale so vermillion red is
+   * the only warm element on screen. Sport-poster cleanliness. */
+  --yap-ink-950: #0A0A0A;
+  --yap-ink-900: #0F0F10;
+  --yap-ink-800: #16161A;
+  --yap-ink-700: #1D1D22;
+  --yap-ink-600: #2A2A30;
+  --yap-ink-500: #3D3D45;
+  --yap-ink-400: #6A6A72;
+  --yap-ink-300: #8B8B92;
+  --yap-ink-200: #B4B4BA;
+  --yap-ink-100: #D8D8DC;
+  --yap-ink-50:  #F0F0F2;
+  --yap-ink-0:   #FFFFFF;
 
   /* EXPERIMENT — vermillion / signal-red on charcoal. Bolder, warmer
    * than Promoter's deep crimson; reads as fight-poster blood-orange,
@@ -46,11 +48,12 @@
   --yap-info:           #5DA0D6;
   --yap-info-bg:        #11202C;
 
-  /* ── Type families (EXPERIMENT — stadium poster stack) ─────── */
-  --yap-font-display:   var(--font-bsd), "Archivo Black", Impact, sans-serif;
-  --yap-font-body:      var(--font-public-sans), system-ui, -apple-system, sans-serif;
-  --yap-font-mono:      var(--font-plex-mono), ui-monospace, 'SF Mono', monospace;
-  --yap-font-editorial: var(--font-fraunces), Georgia, serif;
+  /* ── Type families (EXPERIMENT v3 — sport masthead stack) ──── */
+  --yap-font-stencil:   var(--font-stencil), "Stencil Std", Impact, sans-serif;
+  --yap-font-display:   var(--font-saira-cond), "Saira Condensed", "Archivo Black", Impact, sans-serif;
+  --yap-font-body:      var(--font-outfit), system-ui, -apple-system, sans-serif;
+  --yap-font-mono:      var(--font-anon-pro), ui-monospace, 'SF Mono', monospace;
+  --yap-font-editorial: var(--font-saira-cond), Georgia, serif;
 
   /* ── Type scale (px) — design system v1 ─────────────────────── */
   --yap-fs-display: 72px; --yap-lh-display: 0.9;
@@ -80,8 +83,8 @@
   --yap-sh-1: 0 1px 0 rgba(0,0,0,.4), 0 2px 6px rgba(0,0,0,.25);
   --yap-sh-2: 0 2px 0 rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.35);
   --yap-sh-3: 0 4px 0 rgba(0,0,0,.55), 0 16px 48px rgba(0,0,0,.5);
-  --yap-glow-crimson: 0 0 0 1px rgba(200,16,46,.5), 0 0 24px rgba(200,16,46,.35);
-  --yap-glow-gold:    0 0 0 1px rgba(201,169,97,.4), 0 0 18px rgba(201,169,97,.25);
+  --yap-glow-crimson: 0 0 0 1px rgba(214,40,40,.5), 0 0 24px rgba(214,40,40,.35);
+  --yap-glow-gold:    0 0 0 1px rgba(244,162,97,.4), 0 0 18px rgba(244,162,97,.25);
 
   /* ── Motion timing (mirrors MOTION.md — design within these) ── */
   --yap-t-fast:   140ms;
@@ -401,7 +404,7 @@ a { color: inherit; text-decoration: none; }
   border: 1.5px solid var(--btn-bd);
   padding: var(--btn-pad-y) var(--btn-pad-x);
   font-family: var(--yap-font-display);
-  font-weight: 400;
+  font-weight: 800;
   font-size: var(--btn-fs);
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -502,7 +505,7 @@ a { color: inherit; text-decoration: none; }
   background: var(--yap-crimson);
   color: var(--yap-ink-50);
   font-family: var(--yap-font-display);
-  font-weight: 400;
+  font-weight: 800;
   font-size: 17px;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -550,7 +553,7 @@ a { color: inherit; text-decoration: none; }
   background: var(--yap-ink-50);
   color: var(--yap-ink-900);
   font-family: var(--yap-font-display);
-  font-weight: 400;
+  font-weight: 800;
   font-size: 15px;
   letter-spacing: 0.8px;
   text-transform: uppercase;
@@ -627,7 +630,7 @@ a { color: inherit; text-decoration: none; }
   color: var(--yap-ink-900);
   padding: 6px 11px 5px;
   font-family: var(--yap-font-display);
-  font-weight: 400;
+  font-weight: 800;
   font-size: 17px;
   letter-spacing: 0.5px;
   display: flex;
@@ -643,7 +646,7 @@ a { color: inherit; text-decoration: none; }
    Reads as one glyph ("record"), not three (W / × / L). */
 .record-badge {
   font-family: var(--yap-font-display);
-  font-weight: 400;
+  font-weight: 800;
   font-size: 26px;
   line-height: 1;
   letter-spacing: 0.5px;
@@ -735,7 +738,7 @@ a { color: inherit; text-decoration: none; }
 }
 .al-card .card-title {
   font-family: var(--yap-font-display);
-  font-weight: 400;
+  font-weight: 800;
   font-size: 22px;
   text-transform: uppercase;
   letter-spacing: 0.5px;

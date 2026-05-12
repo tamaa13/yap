@@ -35,14 +35,15 @@ const HOW_STEPS = [
 export default function LandingPage() {
   return (
     <div>
-      {/* STADIUM POSTER HERO — asymmetric VS marquee.
-       *   ┌── eyebrow strip (chainmeta · dateline) ──┐
-       *   │  TRUST   /italic VS/   PROOF             │
-       *   ├── dateline stripe (date · venue · chain) ┤
-       *   │  manifesto · CTA buttons                 │
-       *   └── live board (preserved)                 ┘
-       * Premise: TRUST vs PROOF — and PROOF wins. The verifiable-AI
-       * thesis as a fight card. */}
+      {/* STADIUM POSTER HERO — Yap mission trinity.
+       *   ┌── chainmeta strip                          ──┐
+       *   │  TWO AIS.                                    │
+       *   │  ONE TOPIC.                                  │
+       *   │  VERIFIED VERDICT.   (vermillion accent)     │
+       *   ├── dateline ledger (bout · venue · doors · purse) ┤
+       *   │  manifesto · CTA buttons                    │
+       *   └── live board (preserved)                    ┘
+       * Trinity is Yap's mission as a fight-poster headline. */}
       <section
         style={{
           padding: "32px 56px 56px",
@@ -53,8 +54,7 @@ export default function LandingPage() {
         }}
       >
         <div style={{ maxWidth: 1240, margin: "0 auto" }}>
-          {/* Top strip — chainmeta dateline (mono stripe top, top
-           * border-rule across full width below it). */}
+          {/* Top strip — chainmeta dateline. */}
           <div
             style={{
               display: "flex",
@@ -77,7 +77,7 @@ export default function LandingPage() {
                 fontWeight: 700,
               }}
             >
-              ★ MAIN CARD · TONIGHT
+              ★ NOW LIVE · YAP
             </span>
             <span
               className="mono"
@@ -88,97 +88,79 @@ export default function LandingPage() {
                 textTransform: "uppercase",
               }}
             >
-              0G CHAIN · GALILEO 16602 · 02:44 UTC
+              0G CHAIN · GALILEO 16602
             </span>
           </div>
 
-          {/* Stadium VS marquee — 3-column asymmetric grid. */}
+          {/* Trinity marquee — Big Shoulders weight 900, vermillion
+           * accent on the third line. Centered stack — the whole hero
+           * is one block of declaration. */}
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "1fr auto 1fr",
+              padding: "clamp(36px, 6vw, 80px) 0 clamp(28px, 4vw, 56px)",
+              display: "flex",
+              flexDirection: "column",
               alignItems: "center",
-              gap: "clamp(24px, 4vw, 56px)",
-              padding: "clamp(40px, 6vw, 88px) 0 clamp(32px, 5vw, 64px)",
+              gap: 4,
             }}
           >
             <div
               style={{
-                textAlign: "right",
-                fontFamily: "var(--yap-font-display)",
-                fontWeight: 800,
-                fontSize: "clamp(72px, 12vw, 184px)",
-                lineHeight: 0.84,
-                letterSpacing: "-2px",
-                textTransform: "uppercase",
-                color: "var(--yap-ink-200)",
-              }}
-            >
-              Trust
-              <span
-                className="mono"
-                style={{
-                  display: "block",
-                  fontFamily: "var(--yap-font-mono)",
-                  fontWeight: 400,
-                  fontSize: "clamp(10px, 0.9vw, 13px)",
-                  color: "var(--yap-ink-400)",
-                  letterSpacing: 3,
-                  textTransform: "uppercase",
-                  marginTop: 16,
-                  textAlign: "right",
-                }}
-              >
-                Challenger · narrative
-              </span>
-            </div>
-
-            <div
-              style={{
-                fontFamily: "var(--yap-font-editorial)",
-                fontStyle: "italic",
-                fontWeight: 500,
-                fontSize: "clamp(96px, 14vw, 220px)",
-                lineHeight: 0.85,
-                color: "var(--yap-crimson)",
-                letterSpacing: "-6px",
-                textShadow:
-                  "0 0 0 var(--yap-crimson), 0 8px 60px rgba(214,40,40,0.4)",
-                userSelect: "none",
-              }}
-            >
-              vs
-            </div>
-
-            <div
-              style={{
-                textAlign: "left",
                 fontFamily: "var(--yap-font-display)",
                 fontWeight: 900,
                 fontSize: "clamp(72px, 12vw, 184px)",
-                lineHeight: 0.84,
-                letterSpacing: "-2px",
+                lineHeight: 0.86,
+                letterSpacing: "-2.5px",
                 textTransform: "uppercase",
                 color: "var(--yap-ink-50)",
+                textAlign: "center",
               }}
             >
-              Proof
-              <span
-                className="mono"
-                style={{
-                  display: "block",
-                  fontFamily: "var(--yap-font-mono)",
-                  fontWeight: 700,
-                  fontSize: "clamp(10px, 0.9vw, 13px)",
-                  color: "var(--yap-crimson)",
-                  letterSpacing: 3,
-                  textTransform: "uppercase",
-                  marginTop: 16,
-                  textAlign: "left",
-                }}
-              >
-                Defender · TEE-attested
-              </span>
+              Two AIs.
+            </div>
+            <div
+              style={{
+                fontFamily: "var(--yap-font-display)",
+                fontWeight: 900,
+                fontSize: "clamp(72px, 12vw, 184px)",
+                lineHeight: 0.86,
+                letterSpacing: "-2.5px",
+                textTransform: "uppercase",
+                color: "var(--yap-ink-50)",
+                textAlign: "center",
+              }}
+            >
+              One topic.
+            </div>
+            <div
+              style={{
+                fontFamily: "var(--yap-font-display)",
+                fontWeight: 900,
+                fontSize: "clamp(72px, 12vw, 184px)",
+                lineHeight: 0.86,
+                letterSpacing: "-2.5px",
+                textTransform: "uppercase",
+                color: "var(--yap-crimson)",
+                textAlign: "center",
+                position: "relative",
+              }}
+            >
+              Verified verdict.
+            </div>
+            <div
+              style={{
+                fontFamily: "var(--yap-font-mono)",
+                fontWeight: 400,
+                fontSize: "clamp(13px, 1.2vw, 16px)",
+                letterSpacing: 4,
+                lineHeight: 1.3,
+                color: "var(--yap-ink-300)",
+                textTransform: "uppercase",
+                marginTop: 18,
+                textAlign: "center",
+              }}
+            >
+              Round by round · Signed on-chain
             </div>
           </div>
 
@@ -246,17 +228,17 @@ export default function LandingPage() {
           >
             <p
               style={{
-                fontFamily: "var(--yap-font-editorial)",
-                fontStyle: "italic",
-                fontSize: 22,
-                lineHeight: 1.4,
+                fontFamily: "var(--yap-font-body)",
+                fontWeight: 500,
+                fontSize: 20,
+                lineHeight: 1.45,
                 color: "var(--yap-ink-100)",
                 margin: 0,
-                maxWidth: "32ch",
+                maxWidth: "34ch",
               }}
             >
-              Mint a sealed persona. Stake the outcome. Watch a TEE judge
-              sign the verdict on-chain, round by round.
+              Mint a fighter. Pick a stance. Watch them argue.
+              A TEE-attested judge signs the result on-chain.
             </p>
             <div
               style={{
@@ -272,12 +254,12 @@ export default function LandingPage() {
                   size="lg"
                   trailing={<Icon name="arrowRight" size={14} />}
                 >
-                  Step into the ring
+                  Mint a fighter
                 </Button>
               </Link>
               <Link href="/arenas">
                 <Button variant="ghost" size="lg">
-                  Watch a battle
+                  Enter a battle
                 </Button>
               </Link>
             </div>
@@ -321,7 +303,7 @@ export default function LandingPage() {
                 <div
                   style={{
                     fontFamily: "var(--yap-font-display)",
-                    fontWeight: 400,
+                    fontWeight: 800,
                     fontSize: 56,
                     lineHeight: 0.85,
                     color: "var(--yap-crimson)",
@@ -333,7 +315,7 @@ export default function LandingPage() {
                 <div
                   style={{
                     fontFamily: "var(--yap-font-display)",
-                    fontWeight: 400,
+                    fontWeight: 800,
                     fontSize: 30,
                     lineHeight: 1,
                     textTransform: "uppercase",
@@ -486,7 +468,7 @@ function SectionHead({
       <h2
         style={{
           fontFamily: "var(--yap-font-display)",
-          fontWeight: 400,
+          fontWeight: 800,
           fontSize: 38,
           lineHeight: 1,
           textTransform: "uppercase",
