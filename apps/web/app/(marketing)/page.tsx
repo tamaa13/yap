@@ -340,11 +340,11 @@ export default function LandingPage() {
           <SectionHead num="§ 02" title="On the card" right={
             <Link href="/leaderboard">
               <span
-                className="mono"
                 style={{
+                  fontFamily: "var(--yap-font-display-2)",
                   color: "var(--yap-gold)",
-                  fontSize: 11,
-                  letterSpacing: 2,
+                  fontSize: 16,
+                  letterSpacing: 0.6,
                   textTransform: "uppercase",
                 }}
               >
