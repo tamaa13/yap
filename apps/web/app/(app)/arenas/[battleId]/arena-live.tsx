@@ -1095,18 +1095,27 @@ function CommentatorTicker({
         .sort((a, b) => b.number - a.number)[0]
     : undefined;
 
-  // Speak completed commentary when TTS is on. Fire once per round.done
-  // transition; track the last spoken round in a ref so re-renders during
-  // streaming don't re-trigger speech.
+  // Speak commentary when TTS is on. Previously gated on
+  // `latest.commentary.done` which the runner doesn't reliably flip on
+  // SSE final chunk — speech never started. Now fires on first
+  // non-empty content per round; once per round via the spokenFor ref.
+  // Chrome's autoplay policy requires speak() to land within a few
+  // seconds of a user gesture; the toggle click also warms a short
+  // utterance (see CommentatorTtsToggle) to register intent ahead of
+  // the async commentary arrival.
   const spokenForRoundRef = useRef<number | null>(null);
   useEffect(() => {
     if (!tts) return;
-    if (!latest?.commentary?.done) return;
-    if (spokenForRoundRef.current === latest.number) return;
-    spokenForRoundRef.current = latest.number;
+    const content = latest?.commentary?.content;
+    if (!content) return;
+    if (spokenForRoundRef.current === latest!.number) return;
+    spokenForRoundRef.current = latest!.number;
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
     try {
-      const utter = new SpeechSynthesisUtterance(latest.commentary.content);
+      // Cancel any pending utterances so a late-arriving round
+      // doesn't queue behind a stale one.
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(content);
       utter.rate = 1.05;
       utter.pitch = 1.0;
       utter.volume = 0.9;
@@ -1114,7 +1123,7 @@ function CommentatorTicker({
     } catch {
       // SpeechSynthesis not really supported — skip.
     }
-  }, [tts, latest?.number, latest?.commentary?.done, latest?.commentary?.content]);
+  }, [tts, latest?.number, latest?.commentary?.content]);
 
   return (
     <AnimatePresence mode="wait">
@@ -1226,6 +1235,21 @@ function CommentatorTtsToggle() {
       // ignore
     }
     window.dispatchEvent(new Event("yap:tts-changed"));
+    if (next && typeof window !== "undefined" && "speechSynthesis" in window) {
+      // WARM-UP: Chrome's autoplay policy requires speechSynthesis.speak()
+      // to land within ~5s of a user gesture. Commentary arrives async via
+      // SSE seconds later, by which time the gesture window has expired
+      // → silent fail. Fire a near-silent micro-utterance attached to the
+      // toggle click to grant the gesture permission ahead of time.
+      try {
+        const warm = new SpeechSynthesisUtterance(" ");
+        warm.volume = 0.01;
+        warm.rate = 4;
+        window.speechSynthesis.speak(warm);
+      } catch {
+        // ignore
+      }
+    }
     if (!next && typeof window !== "undefined" && "speechSynthesis" in window) {
       // Cancel any in-flight utterance the moment the user turns it off.
       try {

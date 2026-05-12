@@ -33,12 +33,19 @@ export function BetBar({
   const { connected } = useWallet();
   const gate = useWalletGate();
 
+  // Betting window only open while the battle is live. Past battles
+  // (settled / verdict reached) and upcoming (pending challenge accept)
+  // both close the book on the bet escrow — the contract reverts and
+  // surfacing a disabled CTA is the kinder path than a failed tx.
+  const isBettingOpen = battle.status === "live";
+
   const odds = side === "a" ? battle.oddsA : battle.oddsB;
   const potential = (+amount * odds).toFixed(2);
   const profit = (+potential - +amount).toFixed(2);
 
   const openBetPanel = (preSide?: "a" | "b") => {
     if (preSide) setSide(preSide);
+    if (!isBettingOpen) return;
     gate(`Bet on ${battle.id}`, () => setExpanded(true));
   };
   const tryLock = () => {
@@ -133,10 +140,24 @@ export function BetBar({
               variant="primary"
               size="md"
               onClick={() => openBetPanel()}
+              disabled={!isBettingOpen}
               trailing={<Icon name="arrowRight" size={12} />}
               leading={!connected ? <Icon name="wallet" size={12} /> : undefined}
+              title={
+                !isBettingOpen
+                  ? battle.status === "past"
+                    ? "Book closed — battle settled."
+                    : "Book opens when the bell rings."
+                  : undefined
+              }
             >
-              {connected ? "Place bet" : "Connect to bet"}
+              {!isBettingOpen
+                ? battle.status === "past"
+                  ? "Book closed"
+                  : "Book opens at bell"
+                : connected
+                  ? "Place bet"
+                  : "Connect to bet"}
             </Button>
           </div>
         </div>
