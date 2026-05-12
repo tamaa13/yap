@@ -86,6 +86,12 @@ export interface BattleFailure {
 export const REACTION_KEYS = ["sharp", "cold", "weak", "wild"] as const;
 export type ReactionKey = (typeof REACTION_KEYS)[number];
 
+/** Per-round player stance hint. Owner of the about-to-speak fighter picks
+ *  one within a 5s window before inference fires. Falls back to "build"
+ *  when the window expires — the safer choice for a passive viewer. */
+export const ROUND_CHOICES = ["attack", "build"] as const;
+export type RoundChoice = (typeof ROUND_CHOICES)[number];
+
 export interface BattleState {
   battleId: number;
   topic: string;
@@ -119,6 +125,10 @@ export interface BattleState {
   /** Set when the battle ended via TKO before all rounds completed.
    *  Stores the round number at which HP hit 0. */
   tkoAtRound?: number;
+  /** Per-round, per-side player stance picks. Keyed by round number
+   *  (1-indexed) → { a, b } entries. Missing entries are read as the
+   *  default fallback at prompt-build time. */
+  roundInputs?: Record<number, { a?: RoundChoice; b?: RoundChoice }>;
 }
 
 export interface HPDamageEntry {
@@ -170,4 +180,10 @@ export type BattleEvent =
       hpA: number;
       hpB: number;
     }
-  | { type: "tko"; winnerSide: "a" | "b"; atRound: number };
+  | { type: "tko"; winnerSide: "a" | "b"; atRound: number }
+  | {
+      type: "round-input";
+      round: number;
+      side: "a" | "b";
+      choice: RoundChoice;
+    };

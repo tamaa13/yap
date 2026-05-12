@@ -276,6 +276,36 @@ async function buildInitialState(battleId: number): Promise<BattleState> {
   };
 }
 
+/** Maximum time the runner blocks before each `_thinking` → streamRound
+ *  transition, waiting for the owning user's stance pick to arrive via
+ *  POST /api/battle/[battleId]/round-input. Picked at 5s to match the FE
+ *  countdown clock — beyond that we fall through to the default. */
+const ROUND_INPUT_WINDOW_MS = 5_000;
+
+/** Poll the battle state for a stance pick on (roundNo, side). Returns
+ *  the pick if it arrives within the window, otherwise `undefined`. The
+ *  runner uses the result to skew the next streamRound's user prompt;
+ *  `undefined` falls through to baseline instruction text. */
+async function waitForRoundInput(
+  battleId: number,
+  roundNo: number,
+  side: "a" | "b",
+  windowMs = ROUND_INPUT_WINDOW_MS,
+): Promise<"attack" | "build" | undefined> {
+  const store = getBattleStore();
+  const start = Date.now();
+  // 250ms poll cadence — coarse enough that we don't hammer the KV layer,
+  // fine enough that a near-instant click registers before streamRound
+  // starts. Worst case is 20 polls per window.
+  while (Date.now() - start < windowMs) {
+    const s = await store.get(battleId);
+    const pick = s?.roundInputs?.[roundNo]?.[side];
+    if (pick === "attack" || pick === "build") return pick;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  return undefined;
+}
+
 async function runLoop(battleId: number): Promise<void> {
   const store = getBattleStore();
   try {
@@ -314,6 +344,11 @@ async function runLoop(battleId: number): Promise<void> {
         currentRound: roundNo,
       });
 
+      // Block up to ROUND_INPUT_WINDOW_MS waiting for fighter A's owner
+      // to pick a stance via /api/battle/.../round-input. The FE
+      // RoundInputPrompt countdown is sized to match this window.
+      const choiceA = await waitForRoundInput(battleId, roundNo, "a");
+
       // Fighter A argues first.
       const argA = await streamRound({
         battleId,
@@ -329,6 +364,7 @@ async function runLoop(battleId: number): Promise<void> {
           fighterOpponent: state0.fighterB,
           rounds: (await store.get(battleId))!.rounds,
           side: "a",
+          userChoice: choiceA,
         }),
       });
       // Audit-log: persona inference completed for fighter A. Fire-and-
@@ -357,6 +393,9 @@ async function runLoop(battleId: number): Promise<void> {
         currentRound: roundNo,
       });
 
+      // Same wait window for fighter B before the counter goes out.
+      const choiceB = await waitForRoundInput(battleId, roundNo, "b");
+
       const argB = await streamRound({
         battleId,
         side: "b",
@@ -371,6 +410,7 @@ async function runLoop(battleId: number): Promise<void> {
           fighterOpponent: state0.fighterA,
           rounds: (await store.get(battleId))!.rounds,
           side: "b",
+          userChoice: choiceB,
         }),
       });
       // Audit-log fighter B's round access. Same fire-and-forget pattern
@@ -923,8 +963,12 @@ function buildUserPrompt(params: {
   fighterOpponent: FighterSnapshot;
   rounds: BattleRound[];
   side: "a" | "b";
+  /** Player-picked stance hint for this round + side. `undefined` falls
+   *  through to the prior instruction text — equivalent to the
+   *  pre-stance-hint behavior for legacy / spectator-only battles. */
+  userChoice?: "attack" | "build";
 }): string {
-  const { topic, roundNo, maxRounds, fighterOpponent, rounds, side } = params;
+  const { topic, roundNo, maxRounds, fighterOpponent, rounds, side, userChoice } = params;
 
   const history = rounds
     .filter((r) => r.number < roundNo)
@@ -948,12 +992,29 @@ function buildUserPrompt(params: {
 
   const context = history.length ? `\n\nDebate so far:\n${history.join("\n\n")}` : "";
 
-  const instruction =
+  const baseInstruction =
     roundNo === 1
       ? `Open with your strongest case. Don't hedge.`
       : side === "a"
         ? `Rebut your opponent's previous argument. Attack their weakest claim, not their character.`
         : `Counter Fighter A's most recent point head-on. Don't restate your earlier position — advance it.`;
+
+  // Stance hint comes from the fighter's owner via /api/battle/.../round-input.
+  // `attack` skews the model toward offensive framing — pressing the
+  // opponent's weakest claim. `build` skews toward consolidating the
+  // current case — stacking evidence and structure. Either appends to the
+  // round-baseline instruction so the runner's tactical defaults still
+  // hold even when a stance is picked.
+  const stanceInstruction =
+    userChoice === "attack"
+      ? "Stance for this round: ATTACK. Take the offensive. Press your opponent's weakest claim head-on with a sharp, concrete counter."
+      : userChoice === "build"
+        ? "Stance for this round: BUILD. Consolidate your case. Stack one decisive piece of evidence on what you've already said and tighten the structure."
+        : null;
+
+  const instruction = stanceInstruction
+    ? `${baseInstruction}\n\n${stanceInstruction}`
+    : baseInstruction;
 
   return `TOPIC: "${topic}"
 
