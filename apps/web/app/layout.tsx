@@ -14,16 +14,22 @@ import { EntryGate } from "@/components/shell/entry-gate";
 import { YapCursor } from "@/components/shell/yap-cursor";
 import { Providers } from "./providers";
 
-// FINAL FONT LOCKDOWN v21 (Tama-approved) — TWO fonts only.
-//   - Poesing      → EVERYTHING (hero trinity, fighter names, page
-//                     titles, body, navigation, cards, numerics,
-//                     stamps, CTAs, 404 hero) via all yap-font-*
-//                     display/body aliases.
-//   - Anonymous Pro → Wallet addresses, tx hashes, token IDs, hex
-//                     chips, form input fields.
-// Riot dropped — cdnfonts source rendered too clean for Tama's
-// hero-tier expectation. Poesing's grunge character handles the
-// hero scale too. No Outfit, no Saira, no Big Shoulders.
+// FINAL FONT LOCKDOWN v22 (Tama-approved) — THREE fonts at runtime.
+//   - Riot         → hero trinity, fighter names, page titles,
+//                     YapMark plate, 404 subhead + body + CTAs
+//   - Poesing      → EVERYTHING ELSE: body, nav, cards, numerics,
+//                     stamps, .btn, .mono utility class. Also the
+//                     "404" hero NUMBER specifically (only Poesing
+//                     callsite on that page — sole exception to
+//                     the otherwise-Riot 404 surface).
+//   - Anonymous Pro → Wallet addresses, tx hashes, token IDs, hex.
+const riot = localFont({
+  variable: "--font-riot",
+  src: "./fonts/Riot.woff",
+  display: "swap",
+  weight: "400",
+});
+
 const poesing = localFont({
   variable: "--font-poesing",
   src: "./fonts/Poesing.ttf",
@@ -52,7 +58,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${poesing.variable} ${anonymousPro.variable}`}
+      className={`${riot.variable} ${poesing.variable} ${anonymousPro.variable}`}
       suppressHydrationWarning
     >
       <body>
