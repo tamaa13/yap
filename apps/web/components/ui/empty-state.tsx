@@ -62,10 +62,12 @@ export function EmptyState({
       {body && (
         <div
           style={{
-            fontSize: 13,
+            fontFamily: "var(--yap-font-display-2)",
+            fontSize: 16,
             color: "var(--yap-ink-300)",
-            lineHeight: 1.55,
-            maxWidth: 380,
+            lineHeight: 1.4,
+            maxWidth: 420,
+            letterSpacing: 0.2,
           }}
         >
           {body}
