@@ -39,7 +39,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
-    "jsdom": "^25.0.1",
+    "happy-dom": "^20.9.0",
     "msw": "^2.7.0",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",

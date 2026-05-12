@@ -9,7 +9,18 @@ import tsconfigPaths from "vite-tsconfig-paths";
 export default defineConfig({
   plugins: [tsconfigPaths(), react()],
   test: {
-    environment: "jsdom",
+    // happy-dom over jsdom: jsdom's `Request` constructor enforces an
+    // `instanceof AbortSignal` check against its own realm's class, which
+    // fails against Node's AbortSignal as used by viem's HTTP transport
+    // through msw's undici interceptor. happy-dom doesn't replace the
+    // global so viem + msw + Testing Library coexist without monkey-
+    // patching globals at setup time.
+    environment: "happy-dom",
+    environmentOptions: {
+      // The web app reads `/api/fighters/[id]` via relative fetch; happy-dom
+      // resolves relative URLs against this base, which msw then intercepts.
+      happyDOM: { url: "http://localhost:3000/" },
+    },
     setupFiles: ["./tests/setup.ts"],
     css: false,
     include: ["tests/**/*.test.{ts,tsx}", "**/*.test.{ts,tsx}"],
