@@ -168,6 +168,33 @@ export function usePendingChallenges(user: `0x${string}` | undefined) {
   const incoming: PendingChallenge[] = [];
   const outgoing: PendingChallenge[] = [];
 
+  // TEMP diagnostic — Tama caught v26 not surfacing rental challenge for
+  // wallet 0x38a1...470B on battle 6 / fighterB 20. Surface the read-wave
+  // state once per render so we can verify the rental tuple is actually
+  // landing client-side. Remove this block once the bug is confirmed
+  // fixed (next iteration).
+  if (typeof window !== "undefined" && user) {
+    const dbg = (window as unknown as { __yapPendingChallengesDebug?: unknown }).__yapPendingChallengesDebug;
+    const now = Date.now();
+    const rentalsCount = rentalReads.data?.filter((r) => r.status === "success").length ?? 0;
+    const summary = {
+      user,
+      battleIdsCount: battleIds.length,
+      battleReadsReady: !!battleReads.data,
+      ownerReadsReady: !!ownerReads.data,
+      rentalReadsReady: !!rentalReads.data,
+      rentalsCount,
+      battleIds: battleIds.map((b) => Number(b)),
+      // Surface first successful rental result for inspection
+      firstRental: rentalReads.data?.find((r) => r.status === "success")?.result,
+      timestamp: now,
+    };
+    if (JSON.stringify(dbg) !== JSON.stringify(summary)) {
+      (window as unknown as { __yapPendingChallengesDebug: unknown }).__yapPendingChallengesDebug = summary;
+      console.log("[usePendingChallenges]", summary);
+    }
+  }
+
   if (battleReads.data && user) {
     for (let i = 0; i < battleIds.length; i++) {
       const res = battleReads.data[i];
