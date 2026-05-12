@@ -357,8 +357,13 @@ export function TopNav() {
                 <Sigil seed={addr ?? "anon"} size={24} color="#B8B0A2" />
                 <span
                   style={{
-                    fontFamily: "var(--mono)",
-                    fontSize: 12,
+                    // Per v25 mono-lockdown revision: truncated wallet
+                    // addresses in nav read better as Poesing for
+                    // nav-chrome consistency. Full hex (Hash component
+                    // standalone) still renders Anonymous Pro mono.
+                    fontFamily: "var(--yap-font-display-2)",
+                    fontSize: 14,
+                    letterSpacing: 0.3,
                     color: "var(--tx-secondary)",
                   }}
                 >

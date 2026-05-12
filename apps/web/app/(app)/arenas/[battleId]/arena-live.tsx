@@ -210,15 +210,16 @@ export function ArenaLive({
           })()}
           <TokenTag>{battle.id}</TokenTag>
         </div>
-        <div style={{ fontFamily: "var(--mono)", fontSize: 12, color: "var(--tx-primary)", flexShrink: 0 }}>
+        <div style={{ fontFamily: "var(--yap-font-display-2)", fontSize: 14, letterSpacing: 0.3, color: "var(--tx-primary)", flexShrink: 0 }}>
           {liveState
             ? `Round ${Math.max(1, liveState.currentRound)} / ${liveState.maxRounds} · ${phaseLabel(liveState.phase)}`
             : "Ready — click Run battle"}
         </div>
         <div
           style={{
-            fontFamily: "var(--mono)",
-            fontSize: 12,
+            fontFamily: "var(--yap-font-display-2)",
+            fontSize: 14,
+            letterSpacing: 0.3,
             color: "var(--tx-secondary)",
             flexShrink: 0,
           }}
@@ -708,9 +709,10 @@ function ProviderStrip({ state }: { state: LiveBattleState }) {
         display: "flex",
         gap: 10,
         alignItems: "center",
-        fontSize: 11,
+        fontSize: 13,
         color: "var(--tx-tertiary)",
-        fontFamily: "var(--mono)",
+        fontFamily: "var(--yap-font-display-2)",
+        letterSpacing: 0.3,
         flexWrap: "wrap",
       }}
     >
@@ -720,7 +722,12 @@ function ProviderStrip({ state }: { state: LiveBattleState }) {
       </Badge>
       <span>{state.provider.model}</span>
       <span>·</span>
-      <span>provider {state.provider.address.slice(0, 8)}…{state.provider.address.slice(-4)}</span>
+      <span>
+        provider{" "}
+        <span style={{ fontFamily: "var(--yap-font-mono)" }}>
+          {state.provider.address.slice(0, 8)}…{state.provider.address.slice(-4)}
+        </span>
+      </span>
     </div>
   );
 }
@@ -1239,9 +1246,9 @@ function CommentatorTtsToggle() {
         alignItems: "center",
         gap: 6,
         padding: "4px 9px",
-        fontFamily: "var(--mono)",
-        fontSize: 11,
-        letterSpacing: 0.06,
+        fontFamily: "var(--yap-font-display-2)",
+        fontSize: 13,
+        letterSpacing: 0.3,
         background: on ? "var(--accent-muted)" : "transparent",
         color: on ? "var(--accent)" : "var(--tx-tertiary)",
         border: `1px solid ${on ? "var(--accent-border)" : "var(--bd-default)"}`,
