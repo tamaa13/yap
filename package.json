@@ -21,7 +21,6 @@
   "packageManager": "pnpm@9.0.0",
   "pnpm": {
     "patchedDependencies": {
-      "@0gfoundation/0g-compute-ts-sdk@0.8.1": "patches/@0gfoundation__0g-compute-ts-sdk@0.8.1.patch",
       "@0gfoundation/0g-ts-sdk@1.2.6": "patches/@0gfoundation__0g-ts-sdk@1.2.6.patch"
     }
   }

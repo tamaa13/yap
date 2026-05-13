@@ -5,9 +5,6 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  '@0gfoundation/0g-compute-ts-sdk@0.8.1':
-    hash: oap5aiupevfgjq3qjo6ujncage
-    path: patches/@0gfoundation__0g-compute-ts-sdk@0.8.1.patch
   '@0gfoundation/0g-ts-sdk@1.2.6':
     hash: u6giw4jxguj4bwzuwr2wpkxtn4
     path: patches/@0gfoundation__0g-ts-sdk@1.2.6.patch
@@ -19,8 +16,8 @@ importers:
   apps/web:
     dependencies:
       '@0gfoundation/0g-compute-ts-sdk':
-        specifier: 0.8.1
-        version: 0.8.1(patch_hash=oap5aiupevfgjq3qjo6ujncage)(@types/circomlibjs@0.1.6)(@types/crypto-js@4.2.2)(circomlibjs@0.1.7(bufferutil@4.1.0)(utf-8-validate@5.0.10))(crypto-js@4.2.0)(ethers@6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+        specifier: 0.8.3
+        version: 0.8.3(@types/circomlibjs@0.1.6)(@types/crypto-js@4.2.2)(circomlibjs@0.1.7(bufferutil@4.1.0)(utf-8-validate@5.0.10))(crypto-js@4.2.0)(ethers@6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       '@0gfoundation/0g-ts-sdk':
         specifier: 1.2.6
         version: 1.2.6(patch_hash=u6giw4jxguj4bwzuwr2wpkxtn4)(bufferutil@4.1.0)(ethers@6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(utf-8-validate@5.0.10)
@@ -118,8 +115,8 @@ importers:
 
 packages:
 
-  '@0gfoundation/0g-compute-ts-sdk@0.8.1':
-    resolution: {integrity: sha512-u0neTUjRJVGdnFKRlMqppi5VBw8nouCuQ5RLfT35dF/Ty0qorAdzs0xfOo2dlY4HPAF9xSVZ5auIlZwpQAC1Wg==}
+  '@0gfoundation/0g-compute-ts-sdk@0.8.3':
+    resolution: {integrity: sha512-d2a2/TcTwom7303EBzWWBEmTkB37wyoRM7qT0idLrgXN/rztAVdNTgQ2xFo+LRRIix5E4oRHs5CclAKavluoXg==}
     engines: {node: '>=20.0.0'}
     hasBin: true
     peerDependencies:
@@ -5707,7 +5704,7 @@ packages:
 
 snapshots:
 
-  '@0gfoundation/0g-compute-ts-sdk@0.8.1(patch_hash=oap5aiupevfgjq3qjo6ujncage)(@types/circomlibjs@0.1.6)(@types/crypto-js@4.2.2)(circomlibjs@0.1.7(bufferutil@4.1.0)(utf-8-validate@5.0.10))(crypto-js@4.2.0)(ethers@6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))':
+  '@0gfoundation/0g-compute-ts-sdk@0.8.3(@types/circomlibjs@0.1.6)(@types/crypto-js@4.2.2)(circomlibjs@0.1.7(bufferutil@4.1.0)(utf-8-validate@5.0.10))(crypto-js@4.2.0)(ethers@6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))':
     dependencies:
       '@ethersproject/bytes': 5.8.0
       '@ethersproject/keccak256': 5.8.0
