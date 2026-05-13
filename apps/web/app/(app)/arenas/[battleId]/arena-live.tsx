@@ -29,7 +29,6 @@ import { useWallet } from "@/hooks/use-wallet";
 import { ArgumentLine } from "./argument-line";
 import { BetBar, type BetLock } from "./bet-bar";
 import { FighterPanel } from "./fighter-panel";
-import { RoundInputPrompt } from "./round-input-prompt";
 
 function parseBattleIdNum(uiId: string): number | null {
   const m = uiId.match(/^b-([0-9a-fA-F]+)$/);
@@ -77,26 +76,6 @@ export function ArenaLive({
     if (ctl(fighterB)) return "b";
     return null;
   })();
-  // Show the stance prompt only when my fighter is the one about to
-  // speak. `_thinking` is the runner's pre-streamRound phase — the
-  // window the runner blocks on round-input for up to 5s.
-  const isMyTurn =
-    !!liveState &&
-    controlSide !== null &&
-    liveState.phase === `${controlSide}_thinking`;
-  const promptedFighterName =
-    controlSide === "a"
-      ? fighterA.name
-      : controlSide === "b"
-        ? fighterB.name
-        : "";
-  // Avoid double-mount thrash on round changes: react keys the prompt on
-  // (round, side) so the countdown resets cleanly between rounds.
-  const promptKey =
-    isMyTurn && liveState
-      ? `${liveState.currentRound}-${controlSide}`
-      : null;
-
   const [args, setArgs] = useState(scriptedArgs.slice(0, 5));
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingBet, setPendingBet] = useState<BetLock | null>(null);
@@ -334,17 +313,11 @@ export function ArenaLive({
           className="al-arena-center"
           style={{ background: "var(--bg-canvas)", display: "flex", flexDirection: "column", minWidth: 0 }}
         >
-          {isMyTurn && liveState && controlSide && promptKey && (
-            <div style={{ padding: "8px 8px 0 0" }}>
-              <RoundInputPrompt
-                key={promptKey}
-                battleId={battle.id}
-                side={controlSide}
-                round={liveState.currentRound}
-                fighterName={promptedFighterName}
-              />
-            </div>
-          )}
+          {/* Per-round stance picker removed 2026-05-13. Battle now
+            * runs autonomously: stance is server-computed in
+            * lib/battle-state/runner.ts:decideStance. The
+            * RoundInputPrompt component file is kept for reference
+            * pending follow-up cleanup. */}
           <div ref={logRef} style={{ flex: 1, overflowY: "auto", padding: "8px 8px 8px 0" }}>
             {liveState && liveState.rounds.length > 0 ? (
               <LiveTranscript

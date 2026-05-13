@@ -276,34 +276,67 @@ async function buildInitialState(battleId: number): Promise<BattleState> {
   };
 }
 
-/** Maximum time the runner blocks before each `_thinking` → streamRound
- *  transition, waiting for the owning user's stance pick to arrive via
- *  POST /api/battle/[battleId]/round-input. Picked at 5s to match the FE
- *  countdown clock — beyond that we fall through to the default. */
-const ROUND_INPUT_WINDOW_MS = 5_000;
+/** Server-computed per-round stance for a side. The owner doesn't pick
+ *  any more (2026-05-13 design pivot to pure spectator); the runner
+ *  derives ATTACK / BUILD deterministically from battle state. The
+ *  heuristic is intentionally simple — we want the model to see a
+ *  context-coherent instruction, not perfect game theory.
+ *
+ *  Rules:
+ *    1. Round 1 → BUILD (open foundation, lay your case).
+ *    2. If side just lost prior round AND own HP < 50% → ATTACK
+ *       (forced offense to claw back).
+ *    3. If side just won prior round AND own HP > 60% → BUILD
+ *       (consolidate the lead).
+ *    4. Mid-late rounds (>= ceil(maxRounds / 2)) → ATTACK
+ *       (push for damage as the clock runs out).
+ *    5. Default by archetype primaryTrait:
+ *         aggression  → ATTACK
+ *         rhetoric    → ATTACK
+ *         everything else (logos/range/concreteness) → BUILD
+ *
+ *  Deterministic on (battleState, side, archetype). No randomness, so
+ *  the same battle replay produces the same stances on every run. */
+/** Archetypes whose primaryTrait is aggression / rhetoric → default
+ *  to ATTACK when no contextual override fires. The other three
+ *  (debater / philosopher / scholar) prefer BUILD. */
+const ATTACK_ARCHETYPES: Set<string> = new Set([
+  "roaster",
+  "troll",
+  "provocateur",
+]);
 
-/** Poll the battle state for a stance pick on (roundNo, side). Returns
- *  the pick if it arrives within the window, otherwise `undefined`. The
- *  runner uses the result to skew the next streamRound's user prompt;
- *  `undefined` falls through to baseline instruction text. */
-async function waitForRoundInput(
-  battleId: number,
-  roundNo: number,
+interface StanceDeciderState {
+  currentRound: number;
+  maxRounds: number;
+  hpA: number;
+  hpB: number;
+  hpDamage: { round: number; toSide: "a" | "b" }[];
+}
+
+function decideStance(
+  state: StanceDeciderState,
   side: "a" | "b",
-  windowMs = ROUND_INPUT_WINDOW_MS,
-): Promise<"attack" | "build" | undefined> {
-  const store = getBattleStore();
-  const start = Date.now();
-  // 250ms poll cadence — coarse enough that we don't hammer the KV layer,
-  // fine enough that a near-instant click registers before streamRound
-  // starts. Worst case is 20 polls per window.
-  while (Date.now() - start < windowMs) {
-    const s = await store.get(battleId);
-    const pick = s?.roundInputs?.[roundNo]?.[side];
-    if (pick === "attack" || pick === "build") return pick;
-    await new Promise((r) => setTimeout(r, 250));
-  }
-  return undefined;
+  archetype: string,
+): "attack" | "build" {
+  const roundNo = state.currentRound;
+  if (roundNo <= 1) return "build";
+
+  const ownHp = side === "a" ? state.hpA : state.hpB;
+  const priorRound = roundNo - 1;
+  const priorLoser = state.hpDamage.find((d) => d.round === priorRound)?.toSide;
+  const justLost = priorLoser === side;
+  const justWon = priorLoser !== undefined && priorLoser !== side;
+
+  if (justLost && ownHp < 50) return "attack";
+  if (justWon && ownHp > 60) return "build";
+
+  const midPoint = Math.ceil(state.maxRounds / 2);
+  if (roundNo >= midPoint) return "attack";
+
+  // Archetype-default fallback. Aggressive archetypes press; structural
+  // archetypes stack.
+  return ATTACK_ARCHETYPES.has(archetype.toLowerCase()) ? "attack" : "build";
 }
 
 async function runLoop(battleId: number): Promise<void> {
@@ -344,10 +377,11 @@ async function runLoop(battleId: number): Promise<void> {
         currentRound: roundNo,
       });
 
-      // Block up to ROUND_INPUT_WINDOW_MS waiting for fighter A's owner
-      // to pick a stance via /api/battle/.../round-input. The FE
-      // RoundInputPrompt countdown is sized to match this window.
-      const choiceA = await waitForRoundInput(battleId, roundNo, "a");
+      // Per-round stance is now server-computed from battle state —
+      // owner doesn't pick any more (pure-spectator pivot, 2026-05-13).
+      // Deterministic on (state, side, archetype) so replays match.
+      const stateForStanceA = (await store.get(battleId))!;
+      const choiceA = decideStance(stateForStanceA, "a", state0.fighterA.archetype);
 
       // Fighter A argues first.
       const argA = await streamRound({
@@ -393,8 +427,9 @@ async function runLoop(battleId: number): Promise<void> {
         currentRound: roundNo,
       });
 
-      // Same wait window for fighter B before the counter goes out.
-      const choiceB = await waitForRoundInput(battleId, roundNo, "b");
+      // Same server-computed stance for fighter B — see A above.
+      const stateForStanceB = (await store.get(battleId))!;
+      const choiceB = decideStance(stateForStanceB, "b", state0.fighterB.archetype);
 
       const argB = await streamRound({
         battleId,
@@ -999,12 +1034,13 @@ function buildUserPrompt(params: {
         ? `Rebut your opponent's previous argument. Attack their weakest claim, not their character.`
         : `Counter Fighter A's most recent point head-on. Don't restate your earlier position — advance it.`;
 
-  // Stance hint comes from the fighter's owner via /api/battle/.../round-input.
+  // Stance is server-computed via `decideStance(...)` from current
+  // battle state (round number, HP, prior-round outcome, archetype).
   // `attack` skews the model toward offensive framing — pressing the
   // opponent's weakest claim. `build` skews toward consolidating the
-  // current case — stacking evidence and structure. Either appends to the
-  // round-baseline instruction so the runner's tactical defaults still
-  // hold even when a stance is picked.
+  // current case — stacking evidence and structure. Either appends to
+  // the round-baseline instruction so the runner's tactical defaults
+  // still hold.
   const stanceInstruction =
     userChoice === "attack"
       ? "Stance for this round: ATTACK. Take the offensive. Press your opponent's weakest claim head-on with a sharp, concrete counter."

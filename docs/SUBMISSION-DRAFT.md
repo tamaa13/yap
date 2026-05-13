@@ -14,13 +14,13 @@ AI debate arena where every fighter's persona is graded inside a TEE — stats e
 
 ## Short description (~80 words)
 
-Yap is a verifiable AI combat arena on 0G. Each fighter is an ERC-7857 INFT whose persona is read by a 0G Compute TEE judge at mint, scored across five dimensions, and committed on-chain through the same routing-proof attestation that settles battle verdicts. Archetypes unlock unique mechanical abilities gated by those scores. Per-round owner stance picks turn spectatorship into play. Stats are earned from writing, not seeded from RNG.
+Yap is a verifiable AI combat arena on 0G. Each fighter is an ERC-7857 INFT whose persona is read by a 0G Compute TEE judge at mint, scored across five dimensions, and committed on-chain through the same routing-proof attestation that settles battle verdicts. Archetypes unlock unique mechanical abilities gated by those scores. Once minted, battles run autonomously — the AI fighter argues end-to-end without owner intervention. Stats are earned from writing, not seeded from RNG.
 
 ## Long description (~400 words)
 
 **The problem.** Every AI-combat dApp ships the same shape: a JPEG with stats above it, and somewhere off-stack a private signer that says who won. Stats are seeded from a hash. Verdicts are vouched by a project key. Players are told to trust the brand. That's the AI Arena niche cap — you watch your NFT, you don't play it, and the numbers above its head mean nothing.
 
-**Yap's bet.** A fighter's stats should reflect the substance of what its owner wrote, not a die roll. A verdict should be signed by the same silicon that ran the inference, not a project-controlled key. And players should make decisions inside the round, not just at mint time.
+**Yap's bet.** A fighter's stats should reflect the substance of what its owner wrote, not a die roll. A verdict should be signed by the same silicon that ran the inference, not a project-controlled key. And a fighter, once minted, should fight on its own — the persona you sealed at mint is the persona that argues each round.
 
 **Architecture.** Three layers, each a real 0G primitive doing load-bearing work.
 
@@ -56,7 +56,7 @@ The TEE provider echoes that line character-for-character and signs the response
 
 Archetype + threshold both commit on-chain at mint. The mint UI surfaces which abilities your seed unlocks before you sign — so the picker isn't guesswork.
 
-**Per-round stance picks.** Each round opens a 5-second window where the owning wallet picks ATTACK or BUILD for that round's argument. The stance threads into the persona prompt for that round's inference. The fighter is the asset; you're the cornerman.
+**Autonomous battle execution.** Once the match opens, the fighter argues on its own. Each round's stance (offense vs. consolidation) is derived from battle state — HP, prior-round outcome, archetype tendency — and threaded into the persona prompt that runs through the TEE. There's no owner-in-the-loop gate. The fighter you sealed at mint is the fighter that shows up to round 5.
 
 **Why this is hard to copy.** Every layer that makes the above work sits on top of 0G's TEE infrastructure — the broker's routing-proof format, the provider's TEE-derived signing address registered in the ServingContract, the canonical-echo + signature verification primitive. Without that stack, you ship the same off-stack-signer JPEG as everyone else.
 
@@ -84,7 +84,7 @@ seed text bytes
     └─> archetype + scores committed → archetype ability gate locked
 
 battle starts
-    └─> per-round stance pick (ATTACK/BUILD) signed by owner wallet
+    └─> per-round stance (ATTACK/BUILD) server-computed from state
     └─> 0G Compute TEE inference each round, same provider chain
     └─> verdict: YAP_VERDICT|chainId|escrow|battleId|winner|verdictHash
     └─> BattleEscrow.submitVerdict — same three checks as mint score
@@ -97,7 +97,7 @@ Same trust primitive at both ends. Same provider's TEE signer registered in the 
 
 1. **Mint** — paste 10 lines of persona JSONL, see the five scores resolve from the TEE judge with the canonical line exposed. Note: "Aggression 4 — Mic Drop unlocked" preview before you pick archetype + sign.
 2. **Battle setup** — challenge another fighter; both sides stake; pool opens. Watch the archetype-ability indicator on the live arena card.
-3. **Per-round play** — 5-second stance picker opens at round start; pick ATTACK or BUILD; stance threads into that round's TEE inference.
+3. **Autonomous rounds** — fighters argue on their own. Each round's stance (ATTACK vs BUILD) is derived from current battle state and threaded into the TEE-attested inference. No owner gating, no per-round popup.
 4. **Verdict** — same routing-proof signature primitive runs again, now over the battle transcript. Three on-chain checks gate settlement.
 5. **Settle** — winners share the losing pool (5x cap), 5% routes to the winning fighter's owner as a royalty. ELO updates in BattleRegistry.
 
