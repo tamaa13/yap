@@ -172,7 +172,7 @@ export function useFighter(tokenId: bigint | number | null | undefined) {
       fighter = {
         ...fighter,
         rentedBy: rentalState.active.renter,
-        rentExpiresAt: Number(rentalState.active.expiresAt) * 1000,
+        rentExpiresAt: Number(rentalState.active.expiresAt),
       };
     }
   }
