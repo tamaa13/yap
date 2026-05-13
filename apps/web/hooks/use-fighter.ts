@@ -6,6 +6,7 @@ import { FIGHTER_INFT_ABI, FIGHTER_INFT_ADDRESS } from "@/lib/contracts";
 import { adaptFighter, type OnChainFighterCore } from "@/lib/on-chain";
 import type { Fighter, FighterArchetype } from "@/lib/types";
 import { useFighterStats } from "./use-fighter-stats";
+import { useFighterTraits } from "./use-ability";
 import { useListing } from "./use-listing";
 import { useRentalListing } from "./use-rental-listing";
 
@@ -83,6 +84,11 @@ export function useFighter(tokenId: bigint | number | null | undefined) {
   const serverMeta = useServerMeta(id == null ? null : Number(id));
   const { data: listing } = useListing(id);
   const { data: rentalState } = useRentalListing(id);
+  // 5-trait persona scores committed at mint. Null for legacy fighters
+  // (getTraits returns all zeros pre-Phase-4) — `adaptFighter` walks the
+  // sum-is-zero branch and surfaces traits: null so the FE can render an
+  // "Unscored" badge instead of five empty bars.
+  const traitsRead = useFighterTraits(id);
 
   if (!enabled || !data || data.length === 0 || id === null) {
     return {
@@ -113,7 +119,7 @@ export function useFighter(tokenId: bigint | number | null | undefined) {
     encryptedURI: uriResult.status === "success" ? (uriResult.result as string) : "",
   };
 
-  let fighter = adaptFighter(core, stats.data);
+  let fighter = adaptFighter(core, stats.data, traitsRead.data);
   // Overlay server-persisted name/archetype/avatar/listing from
   // /api/fighters/[id]. Contract only stores metadataHash; plaintext lives
   // server-side, and no marketplace contract exists yet so forSale/price
