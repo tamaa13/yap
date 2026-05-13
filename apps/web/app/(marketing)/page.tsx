@@ -74,7 +74,7 @@ export default function LandingPage() {
                 textTransform: "uppercase",
               }}
             >
-              0G CHAIN · GALILEO 16602
+              0G CHAIN · {activeChain.id === 16661 ? "ARISTOTLE 16661" : "GALILEO 16602"}
             </span>
           </div>
 
