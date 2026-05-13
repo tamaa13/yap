@@ -5,7 +5,9 @@ import {ERC721} from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 import {AccessControl} from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
+import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 import {IERC7857} from "./IERC7857.sol";
+import {TEEAttestationLib} from "./TEEAttestationLib.sol";
 
 /// @title YapFighter — ERC-7857 Intelligent NFT for Yap AI combat arena.
 /// @notice Each token represents an AI fighter whose encrypted weights live off-chain.
@@ -24,6 +26,26 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
     ///         (industry standard for short-lived ownership attestations).
     uint256 public constant PROOF_VALIDITY = 10 minutes;
     uint256 public constant MAX_EXECUTORS = 100;
+
+    /// @notice Fighter archetype, committed at mint and immutable thereafter.
+    ///         Each archetype unlocks a specific ability that AbilityEscrow
+    ///         gates on the fighter's trait score crossing a threshold.
+    ///         Stored as a uint8 so the enum surface stays cheap.
+    enum Archetype {
+        Roaster,       // 0 — gated on Aggression
+        Debater,       // 1 — gated on Logos
+        Philosopher,   // 2 — gated on Logos
+        Troll,         // 3 — gated on Aggression
+        Scholar,       // 4 — gated on Range
+        Provocateur    // 5 — gated on Rhetoric
+    }
+
+    /// @notice Minimum and maximum allowed values for each persona trait
+    ///         in {recordMintScores}. The TEE-judged rubric anchors at
+    ///         a 1-5 ordinal scale; values outside the band signal either
+    ///         a buggy judge or a tampered response.
+    uint8 public constant MIN_TRAIT_SCORE = 1;
+    uint8 public constant MAX_TRAIT_SCORE = 5;
 
     address public override verifier;
     address public treasury;
@@ -55,6 +77,27 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
     ///         without scanning logs.
     mapping(uint256 => uint256) private _accessCount;
 
+    /// @notice Per-token persona archetype, set at {mint} and never mutated.
+    ///         Drives the ability lookup in AbilityEscrow.useAbility.
+    mapping(uint256 => Archetype) private _archetypeOf;
+
+    /// @notice Commitment to the off-chain JSONL persona seed. Captured at
+    ///         {mint} so the TEE scoring path can prove the scores belong
+    ///         to this specific seed (prevents swap attacks where an
+    ///         attacker submits scores from a different fighter's seed).
+    mapping(uint256 => bytes32) private _seedHashOf;
+
+    /// @notice Packed 5-byte trait vector, set once via {recordMintScores}.
+    ///         Layout: byte[0]=Logos, [1]=Rhetoric, [2]=Aggression,
+    ///         [3]=Range, [4]=Concreteness. Each value bounded
+    ///         {MIN_TRAIT_SCORE}..{MAX_TRAIT_SCORE}. Unpack via {getTraits}.
+    mapping(uint256 => bytes5) private _traitsOf;
+
+    /// @notice One-shot guard for {recordMintScores}. A token can be
+    ///         scored exactly once; subsequent attempts revert with
+    ///         {AlreadyScored}.
+    mapping(uint256 => bool) private _scored;
+
     /// @notice Emitted once per audited persona-decryption event. The
     ///         off-chain runner calls {logAccess} after pulling a fighter's
     ///         encrypted weights for an inference round, providing a public
@@ -68,7 +111,20 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
         uint64 timestamp
     );
 
+    /// @notice Emitted when {recordMintScores} commits the 5-trait vector
+    ///         for a freshly-minted fighter. One-shot per tokenId.
+    event FighterScored(
+        uint256 indexed tokenId,
+        address indexed scorer,
+        Archetype archetype,
+        uint8[5] scores
+    );
+
     error InvalidProof();
+    error MintNotSupported();
+    error SeedMismatch();
+    error AlreadyScored();
+    error InvalidScoreRange();
     error ProofExpired();
     error ProofAlreadyConsumed();
     error ExecutorCapReached();
@@ -114,25 +170,52 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
     // ERC-7857
     // --------------------------------------------------------------------------------------------
 
-    /// @dev Public mint: anyone can mint an INFT by paying `mintFee`. The caller
-    ///      supplies `encryptedURI_` + `metadataHash_` (typically prepared
-    ///      off-chain by a backend that uploads to 0G Storage + computes
-    ///      keccak(metadata)) and the `to` recipient (usually msg.sender).
-    ///      No access-control gate — fee acts as spam protection.
+    /// @dev Disabled — use the 6-argument {mint} overload that commits an
+    ///      archetype + seedHash. Kept payable to satisfy the IERC7857
+    ///      surface; reverts unconditionally so callers see a typed error
+    ///      instead of a silent ABI mismatch.
     function mint(
-        address to,
-        string memory encryptedURI_,
-        bytes32 metadataHash_,
-        bytes memory sealedKey
+        address,
+        string memory,
+        bytes32,
+        bytes memory
     )
         external
         payable
         override
+        returns (uint256)
+    {
+        revert MintNotSupported();
+    }
+
+    /// @notice Mint a fighter INFT with persona commitments. The caller
+    ///         declares their archetype (locked from this point forward)
+    ///         and a hash of the off-chain JSONL persona seed. {recordMintScores}
+    ///         later proves a TEE-judged score against that same seedHash,
+    ///         blocking swap attacks where someone scores fighter A's seed
+    ///         and writes it onto fighter B.
+    /// @param to               recipient
+    /// @param encryptedURI_    0G Storage URI for the encrypted persona
+    /// @param metadataHash_    keccak commitment to the off-chain metadata
+    /// @param sealedKey        sealed symmetric key for `to`
+    /// @param archetype        Roaster/Debater/Philosopher/Troll/Scholar/Provocateur
+    /// @param seedHash         keccak256 of the off-chain JSONL persona
+    function mint(
+        address to,
+        string memory encryptedURI_,
+        bytes32 metadataHash_,
+        bytes memory sealedKey,
+        Archetype archetype,
+        bytes32 seedHash
+    )
+        external
+        payable
         nonReentrant
         returns (uint256 tokenId)
     {
         if (to == address(0)) revert ZeroAddress();
         if (msg.value != mintFee) revert IncorrectFee();
+        if (seedHash == bytes32(0)) revert InvalidProof();
         if (mintFee > 0) {
             Address.sendValue(payable(treasury), mintFee);
         }
@@ -142,6 +225,8 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
         metadataHash[tokenId] = metadataHash_;
         encryptedURI[tokenId] = encryptedURI_;
         sealedKeys[tokenId] = sealedKey;
+        _archetypeOf[tokenId] = archetype;
+        _seedHashOf[tokenId] = seedHash;
 
         emit Minted(tokenId, to, metadataHash_, encryptedURI_);
         emit PublishedSealedKey(tokenId, to, sealedKey);
@@ -326,6 +411,172 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
 
     function getAccessCount(uint256 tokenId) external view returns (uint256) {
         return _accessCount[tokenId];
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // Persona scoring (TEE-attested)
+    // --------------------------------------------------------------------------------------------
+
+    /// @notice Commit a TEE-judged 5-trait score vector to a fighter. The
+    ///         contract reconstructs the canonical text from on-chain
+    ///         inputs (chainid, contract address, tokenId, seedHash, scores)
+    ///         and verifies the TEE attestation envelope via
+    ///         {TEEAttestationLib}. The {canonicalText} string the runner
+    ///         instructs the LLM to echo MUST match the format below verbatim:
+    ///
+    ///           YAP_FIGHTER_SCORE|<chainid>|<lowercase-fighter-addr>|<tokenId>|<seedHashLowercaseHex>|<L>|<R>|<A>|<V>|<C>
+    ///
+    ///         One-shot per tokenId; subsequent calls revert with
+    ///         {AlreadyScored}. Gated to the token owner or any
+    ///         RUNNER_ROLE-bearing address.
+    /// @param tokenId        Target fighter.
+    /// @param scores         [Logos, Rhetoric, Aggression, Range, Concreteness],
+    ///                       each value in [{MIN_TRAIT_SCORE}, {MAX_TRAIT_SCORE}].
+    /// @param seedHash       Must match `_seedHashOf[tokenId]` set at mint.
+    /// @param responseBody   Raw TEE response body the broker hashed.
+    /// @param contentOffset  Byte offset where the canonical text begins in
+    ///                       responseBody (between JSON-quote chars).
+    /// @param signedText     Broker routing-proof signedText
+    ///                       `<reqSha>:<respSha>:<providerType>:<providerIdentity>:<tlsSha>`.
+    /// @param teeSignature   65-byte ECDSA personal_sign by the live
+    ///                       0G Compute provider's teeSignerAddress
+    ///                       (must match `oracleKey()` set on this contract).
+    function recordMintScores(
+        uint256 tokenId,
+        uint8[5] calldata scores,
+        bytes32 seedHash,
+        bytes calldata responseBody,
+        uint256 contentOffset,
+        bytes calldata signedText,
+        bytes calldata teeSignature
+    ) external {
+        // Auth: owner or RUNNER_ROLE bearer.
+        bool isOwner_ = _ownerOf(tokenId) == msg.sender;
+        bool isRunner_ = hasRole(RUNNER_ROLE, msg.sender);
+        if (!isOwner_ && !isRunner_) revert NotAuthorized();
+
+        // One-shot + seed binding.
+        if (_scored[tokenId]) revert AlreadyScored();
+        if (_seedHashOf[tokenId] != seedHash) revert SeedMismatch();
+
+        // Range gate — TEE judge is anchored 1-5; reject anything else.
+        for (uint256 i = 0; i < 5; ++i) {
+            uint8 s = scores[i];
+            if (s < MIN_TRAIT_SCORE || s > MAX_TRAIT_SCORE) revert InvalidScoreRange();
+        }
+
+        // Reconstruct the canonical the TEE was instructed to echo, then
+        // verify it appears verbatim at the claimed offset inside the
+        // signed responseBody.
+        bytes memory canonical = _scoreCanonicalText(tokenId, seedHash, scores);
+        if (oracleKey() == address(0)) revert NotAuthorized();
+        TEEAttestationLib.verifyAttestation(
+            canonical,
+            responseBody,
+            contentOffset,
+            signedText,
+            teeSignature,
+            oracleKey()
+        );
+
+        _traitsOf[tokenId] = _packTraits(scores);
+        _scored[tokenId] = true;
+        emit FighterScored(tokenId, msg.sender, _archetypeOf[tokenId], scores);
+    }
+
+    /// @notice Return the recorded 5-trait vector for a fighter.
+    ///         All-zero if the fighter hasn't been scored yet.
+    function getTraits(uint256 tokenId) external view returns (uint8[5] memory out) {
+        bytes5 packed = _traitsOf[tokenId];
+        out[0] = uint8(packed[0]);
+        out[1] = uint8(packed[1]);
+        out[2] = uint8(packed[2]);
+        out[3] = uint8(packed[3]);
+        out[4] = uint8(packed[4]);
+    }
+
+    function getArchetype(uint256 tokenId) external view returns (Archetype) {
+        return _archetypeOf[tokenId];
+    }
+
+    function getSeedHash(uint256 tokenId) external view returns (bytes32) {
+        return _seedHashOf[tokenId];
+    }
+
+    function isScored(uint256 tokenId) external view returns (bool) {
+        return _scored[tokenId];
+    }
+
+    /// @notice Oracle key whose TEE attestation {recordMintScores} accepts.
+    ///         Stored separately from the BattleEscrow oracle key — admin
+    ///         may rotate independently as the score-judging provider's
+    ///         teeSignerAddress changes (e.g. provider rotation, key
+    ///         ceremony). Default: address(0) → blocks scoring until set.
+    address public scoreOracleKey;
+
+    /// @notice Rotate the score-judging oracle key. Emits an audit event so
+    ///         off-chain watchers can detect key ceremonies.
+    function setScoreOracleKey(address newKey) external onlyRole(ADMIN_ROLE) {
+        if (newKey == address(0)) revert ZeroAddress();
+        address prev = scoreOracleKey;
+        scoreOracleKey = newKey;
+        emit ScoreOracleKeyUpdated(prev, newKey);
+    }
+
+    event ScoreOracleKeyUpdated(address indexed previousKey, address indexed newKey);
+
+    /// @dev Reads the current score-judging oracle key. Wrapped in a
+    ///      function so {recordMintScores} can resolve it lazily and tests
+    ///      can override if needed.
+    function oracleKey() public view returns (address) {
+        return scoreOracleKey;
+    }
+
+    /// @dev Returns the canonical text the TEE is instructed to echo for
+    ///      a {recordMintScores} attestation. Format:
+    ///        YAP_FIGHTER_SCORE|<chainid>|<lowercase-fighter-addr>|<tokenId>|<seedHashHex>|<L>|<R>|<A>|<V>|<C>
+    ///      Lowercase hex matches OpenZeppelin Strings.toHexString output.
+    function _scoreCanonicalText(
+        uint256 tokenId,
+        bytes32 seedHash,
+        uint8[5] calldata scores
+    ) internal view returns (bytes memory) {
+        return abi.encodePacked(
+            "YAP_FIGHTER_SCORE|",
+            Strings.toString(block.chainid),
+            "|",
+            Strings.toHexString(uint160(address(this)), 20),
+            "|",
+            Strings.toString(tokenId),
+            "|",
+            Strings.toHexString(uint256(seedHash), 32),
+            "|",
+            Strings.toString(uint256(scores[0])),
+            "|",
+            Strings.toString(uint256(scores[1])),
+            "|",
+            Strings.toString(uint256(scores[2])),
+            "|",
+            Strings.toString(uint256(scores[3])),
+            "|",
+            Strings.toString(uint256(scores[4]))
+        );
+    }
+
+    /// @dev View helper — returns the raw canonical bytes for off-chain
+    ///      clients building the LLM prompt + reproducing the digest.
+    function scoreCanonicalText(
+        uint256 tokenId,
+        bytes32 seedHash,
+        uint8[5] calldata scores
+    ) external view returns (string memory) {
+        return string(_scoreCanonicalText(tokenId, seedHash, scores));
+    }
+
+    function _packTraits(uint8[5] calldata scores) internal pure returns (bytes5) {
+        return bytes5(
+            abi.encodePacked(scores[0], scores[1], scores[2], scores[3], scores[4])
+        );
     }
 
     // --------------------------------------------------------------------------------------------

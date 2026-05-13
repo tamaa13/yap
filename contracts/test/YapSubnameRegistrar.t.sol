@@ -27,7 +27,10 @@ contract YapSubnameRegistrarTest is Test {
 
     function _mint(address to) internal returns (uint256 id) {
         vm.prank(to);
-        id = fighter.mint(to, "ipfs://x", keccak256(abi.encodePacked(to)), hex"01");
+        id = fighter.mint(
+            to, "ipfs://x", keccak256(abi.encodePacked(to)), hex"01",
+            YapFighter.Archetype.Roaster, keccak256(abi.encodePacked("seed-", to))
+        );
     }
 
     // ---------------- register ----------------

@@ -95,14 +95,16 @@ contract RunE2ECycle is Script {
         // ── Phase 1: Mint fighters ───────────────────────────────────────
         vm.startBroadcast(brokerKey);
         uint256 fighterA = fighter.mint(
-            broker, "ipfs://e2e-fighterA", keccak256("e2e-A"), hex"01"
+            broker, "ipfs://e2e-fighterA", keccak256("e2e-A"), hex"01",
+            YapFighter.Archetype.Roaster, keccak256("e2e-seed-A")
         );
         vm.stopBroadcast();
         console2.log("[P1] fighterA tokenId =", fighterA);
 
         vm.startBroadcast(defenderKey);
         uint256 fighterB = fighter.mint(
-            defender, "ipfs://e2e-fighterB", keccak256("e2e-B"), hex"02"
+            defender, "ipfs://e2e-fighterB", keccak256("e2e-B"), hex"02",
+            YapFighter.Archetype.Debater, keccak256("e2e-seed-B")
         );
         vm.stopBroadcast();
         console2.log("[P1] fighterB tokenId =", fighterB);
