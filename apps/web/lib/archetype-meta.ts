@@ -12,6 +12,38 @@ export type ScoreDimension =
   | "range"
   | "concreteness";
 
+/** Trait-index ordering matches `YapFighter.recordMintScores`' packed
+ *  bytes5 layout AND `AbilityEscrow.requiredScore(archetype)`'s
+ *  returned `traitIdx`. Two on-chain surfaces depend on this mapping,
+ *  so keep this object + TRAIT_DIMENSION_BY_INDEX in sync if either
+ *  contract changes. */
+export const TRAIT_INDEX: Record<ScoreDimension, 0 | 1 | 2 | 3 | 4> = {
+  logos: 0,
+  rhetoric: 1,
+  aggression: 2,
+  range: 3,
+  concreteness: 4,
+};
+export const TRAIT_DIMENSION_BY_INDEX: readonly ScoreDimension[] = [
+  "logos",
+  "rhetoric",
+  "aggression",
+  "range",
+  "concreteness",
+];
+
+/** Archetype → uint8 mapping used by YapFighter / AbilityEscrow. Index
+ *  is the on-chain archetype id (`useAbility`, `requiredScore` accept
+ *  this value as their `archetype` argument). */
+export const ARCHETYPE_INDEX: Record<FighterArchetype, 0 | 1 | 2 | 3 | 4 | 5> = {
+  roaster: 0,
+  debater: 1,
+  philosopher: 2,
+  troll: 3,
+  scholar: 4,
+  provocateur: 5,
+};
+
 export interface ArchetypeMeta {
   id: FighterArchetype;
   name: string;
