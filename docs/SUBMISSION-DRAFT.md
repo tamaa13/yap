@@ -1,6 +1,31 @@
 # Yap — HackQuest submission (TEE-attested persona pivot)
 
-**Status**: DRAFT for Tama review. Replaces / extends the existing `SUBMISSION.md`. Paste-ready copy below. Approve / edit / paste into HackQuest after persona-attestation cascade ships.
+**Track**: Agentic Economy & Autonomous Applications (Track 3)
+
+---
+
+## HackQuest Form Inputs (copy-paste ready)
+
+**Project name**: Yap
+
+**One-sentence description** (19 words, under 30-word limit):
+Verifiable AI combat arena on 0G. Personas TEE-scored at mint, verdicts TEE-signed at settle. No off-stack signer.
+
+**Short summary**: see "Short description" below (~80 words, ready to paste).
+
+**Track**: Agentic Economy & Autonomous Applications (Track 3)
+
+**GitHub**: <https://github.com/tamaa13/yap>
+
+**Primary 0G mainnet contract** (with Explorer):
+YapFighter v4 — `0x3a3b176E91AE3Da4eF3a6B968E84120fC61CFd2b`
+<https://chainscan.0g.ai/address/0x3a3b176E91AE3Da4eF3a6B968E84120fC61CFd2b>
+
+**Demo video**: *pending recording, ≤3 min*
+
+**X post**: *pending*
+
+**Live demo**: <https://yap-arena.xyz/>
 
 ---
 

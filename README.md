@@ -84,43 +84,92 @@ Built on [0G](https://0g.ai) for the [0G APAC Hackathon 2026](https://www.hackqu
 
 The fighter's INFT itself is unchanged — `FighterTrainer` is purely additive. The fighter's "current persona" is the most recent `FighterTrained` event for that tokenId; the original mint URI is preserved as session 0.
 
-## Local Setup
+## For Judges / Reviewers
 
-```bash
-# Prereqs: Node 20+, pnpm 9+, Foundry, Linux x86_64 with glibc ≥ 2.34
-# (the 0G compute SDK ships a Linux x86_64 binary — macOS dev needs Docker
-#  or remote deploy for the full pipeline)
+Yap is live on 0G Aristotle mainnet. The fastest review path is on-chain verification — every contract action is auditable via chainscan with zero spend.
 
-# 1. Clone + install (pnpm patches apply automatically)
-git clone https://github.com/tamaa13/yap.git
-cd yap
-pnpm install
+### Live demo
+- URL: <https://yap-arena.xyz/>
+- Network: 0G Aristotle (chainId `16661`, RPC `https://evmrpc.0g.ai`)
+- Explorer: <https://chainscan.0g.ai>
 
-# 2. Env (root) — for contracts deploy
-cp .env.example .env
-# Fill PRIVATE_KEY with your 0G testnet deployer wallet
-# Faucet: https://faucet.0g.ai (0.1 OG/day)
+### Read-only verification (no OG required)
 
-# 3. Env (web) — runtime broker + relayer keys
-cp apps/web/.env.example apps/web/.env.local
-# Fill ZG_BROKER_KEY (Compute ledger + Storage uploads),
-# ZG_RELAYER_KEY (verdict tx), and ZG_INFERENCE_PROVIDER (provider
-# whose teeSignerAddress = oracleKey).
+Verify any of these on-chain commitments via `cast call` or chainscan:
 
-# 4. Contracts — build + test
-pnpm contracts:build
-pnpm contracts:test          # forge tests, including FighterTrainer
+- **YapFighter mintFee** (returns `100000000000000000` = 0.1 OG):
+  ```
+  cast call 0x3a3b176E91AE3Da4eF3a6B968E84120fC61CFd2b "mintFee()(uint256)" --rpc-url https://evmrpc.0g.ai
+  ```
+- **Sample fighter traits + archetype + scored flag** (replace `<TOKEN_ID>` with the canonical sample below):
+  ```
+  cast call 0x3a3b176E91AE3Da4eF3a6B968E84120fC61CFd2b "getTraits(uint256)(uint8[5])" <TOKEN_ID> --rpc-url https://evmrpc.0g.ai
+  cast call 0x3a3b176E91AE3Da4eF3a6B968E84120fC61CFd2b "getArchetype(uint256)(uint8)" <TOKEN_ID> --rpc-url https://evmrpc.0g.ai
+  cast call 0x3a3b176E91AE3Da4eF3a6B968E84120fC61CFd2b "isScored(uint256)(bool)" <TOKEN_ID> --rpc-url https://evmrpc.0g.ai
+  ```
+- **TEE oracle key** (the TEE-derived signer registered for verdict + score attestation):
+  ```
+  cast call 0x3a3b176E91AE3Da4eF3a6B968E84120fC61CFd2b "scoreOracleKey()(address)" --rpc-url https://evmrpc.0g.ai
+  # → 0xd45b4301940B297F76d6e622c1CeA2AE660617d4 (qwen3.6-plus provider 0x992e6396…db5)
+  ```
 
-# 5. Deploy testnet (sequence: YapFighter → BattleEscrow/Registry/Market/Rental → FighterTrainer)
-pnpm contracts:deploy:testnet
-PRIVATE_KEY=$DEPLOYER_PK YAP_FIGHTER=$YAP_FIGHTER_ADDR \
-  forge script contracts/script/DeployFighterTrainer.s.sol --broadcast --rpc-url $ZG_TESTNET_RPC
+### Step-by-step app flow
 
-# Copy all addresses to apps/web/.env.local under NEXT_PUBLIC_*_ADDR_TESTNET
+The full user lifecycle, end-to-end:
 
-# 6. Frontend dev
-pnpm dev
-```
+**1. Mint a fighter** (~30s + 2 MetaMask prompts, total ~0.16 OG)
+- Connect wallet → switch to Aristotle (chainId `16661`)
+- Open `/mint` → paste persona seed text (free-form or JSONL)
+- Click "Score Traits" → server-side 0G Compute TEE judge runs median-of-5 LLM judgment per dimension (Logos, Rhetoric, Aggression via `qwen3.6-plus`; Range via MTLD stylometric; Concreteness via Brysbaert ratings). 15 LLM calls + 1 canonical echo, ~15–25s wall time
+- Scores resolve → archetype picker shows which abilities are unlocked given the scores
+- Pick archetype (locked picks surface a "this fighter's ability stays permanently locked" confirm modal)
+- Sign `mint()` tx — `msg.value=0.1 OG` mint fee routes to treasury, sealed key + metadataHash + seedHash + archetype commit on-chain
+- Sign `recordMintScores()` tx — TEE attestation bundle (responseBody + canonical@offset + ECDSA signature) verifies on-chain against `scoreOracleKey`, traits packed into `uint8[5]`, `FighterScored` event emitted
+- Fighter NFT appears in `/vault`. Encrypted persona pinned on 0G Storage; sealed key + commitments on 0G Chain
+- **0G modules engaged**: Compute (TEE inference + verdict signing), Storage (encrypted persona pin), Chain (mint + score commit), INFT/ERC-7857 (encrypted metadata)
+
+**2. Challenge another fighter** (1 MetaMask prompt, stake-dependent)
+- Browse `/arenas` → find a fighter to challenge, or accept a pending challenge
+- Set topic + maxRounds (1–7) + stake (any amount)
+- Sign `createBattle()` tx — stake escrows into `BattleEscrow`, `BattleCreated` event fires
+- Defender wallet gets a `challenge_incoming` bell-icon notification (via SSE stream that queries `BattleCreated` + `YapFighter.ownerOf(fighterB)` for each new event)
+- Defender has 24h `CHALLENGE_EXPIRY` window to accept or decline
+- Defender accepts → must stake ≥ 75% of challenger's stake (`MIN_DEFENDER_MATCH_BPS`). Battle transitions to `Status.Live`
+- **0G modules engaged**: Chain (escrow + event emission), Storage (no new write at challenge — encrypted persona already pinned at mint)
+
+**3. Live battle** (~3–5 min, autonomous)
+- Battle runs server-side without owner intervention (autonomous AI fighters after the v4 pivot)
+- Each round: 0G Compute TEE judge runs persona-driven inference per fighter, picks per-round winner, computes HP-morale impact
+- Stance (ATTACK/BUILD) auto-derived by `decideStance(state, side, archetype)` heuristic — round 1 BUILD, claw-back ATTACK on HP < 50, consolidate BUILD on HP > 60, mid-late ATTACK, archetype default
+- After `maxRounds` or TKO → verdict canonicalizes as `YAP_VERDICT|chainId|escrow|battleId|winner|verdictHash` + TEE provider echoes + signs the response body
+- `VerdictSubmitted` tx: `BattleEscrow` verifies the same three checks as mint score — ECDSA recovery → `oracleKey`, `sha256(responseBody)` match, canonical reconstruction at offset
+- **0G modules engaged**: Compute (per-round inference + verdict signing — same trust primitive as mint scoring), Chain (verdict commit), Storage (battle transcripts archived)
+
+**4. Settle + payout** (1 MetaMask prompt, post-dispute-window)
+- Result page opens dispute window countdown (5 minutes; lowered from 24h default for demo via `setDisputeWindow(300)`)
+- During window, anyone can audit the verdict signature (recover ECDSA → registered oracleKey, confirm response body `sha256`, reconstruct canonical)
+- After window expires, settle button enables
+- Sign `settle()` tx — pari-mutuel pool distributes to winning side, 5% royalty (`FIGHTER_ROYALTY_BPS`) routes to winning fighter's owner, 2.5% platform fee (`PLATFORM_FEE_BPS`) routes to treasury
+- Winning bettors call `claimPayout()` to pull individual share (capped at `MAX_PAYOUT_MULTIPLIER` = 5× own stake; surplus refunds losing side pro-rata)
+- ELO updates in `BattleRegistry`
+- **0G modules engaged**: Chain (settle + payout + ELO)
+
+**5. Marketplace + rental + moments** (optional, ongoing)
+- Sell fighter on `YapMarketplace` — list price, signature-based offer/accept flow
+- Rent fighter via `RentalEscrow` — `authorizeUsage(executor, permissions)` grants temporary control, 24h dispute window post-expiry
+- Mint Battle Moments (`MomentINFT`) — highlight-reel NFT of a specific battle round, sellable on `MomentMarketplace` with 5% royalty to fighter owner
+- Claim a YapSubname — register a human-readable name for the fighter via `YapSubnameRegistrar`
+- **0G modules engaged**: Chain (marketplace contracts), Storage (moment metadata)
+
+Each step's contracts are listed in the address table below — every action is verifiable by following the linked chainscan.0g.ai entry.
+
+### Live testing (requires 0G mainnet OG)
+
+0G mainnet OG must be acquired via DEX (no mainnet faucet exists). Minimum spend for a full mint + battle + settle flow ≈ 0.3 OG. Reach out via X DM ([@tamaa13](https://x.com/tamaa13)) if a small bonus to a review wallet would help your evaluation.
+
+### Sample mainnet fighter (canonical demo)
+
+*TBD — populating after retroactive scoring of mainnet fighters #3 + #4 (recovery path lives at `/fighters/[tokenId]` Overview tab for owner-side commit).*
 
 ## Deployed Addresses
 
@@ -164,10 +213,37 @@ During the integration we surfaced 8 SDK + provider bugs in `@0gfoundation/0g-co
 
 ## Demo
 
-- Demo URL: https://yap-arena.xyz/ (Aristotle mainnet, chainId 16661)
+- Demo URL: <https://yap-arena.xyz/> (Aristotle mainnet, chainId `16661`)
 - Video: *pending*
 - X post: *pending*
-- Sample fighter (full UI E2E with real MetaMask): [Fighter #26](https://yap-arena.xyz/fighters/26) — mint tx [`0xfcf99...`](https://chainscan-galileo.0g.ai/tx/0xfcf9960f0583ab3eec7a156fb2e7be663f799cbf6c40d863b00dc870063d0ed7), train session 1 tx [`0x94bd3...`](https://chainscan-galileo.0g.ai/tx/0x94bd3c0276c9af2c393a91eb37423515027bbcd5d58862e0d645d282201681c8)
+- Sample fighter: *TBD after retroactive scoring of mainnet fighters #3 + #4*
+
+## Source code reproduction
+
+The live demo + on-chain verification commands above cover the product surface judges need. Cloning is **only** required if you want to read the Solidity sources, re-run the unit suite, or hack on the FE locally.
+
+```bash
+# Prereqs: Node 20+, pnpm 9+, Foundry, Linux x86_64 with glibc ≥ 2.34
+# (the 0G compute SDK ships a Linux x86_64 binary — macOS dev needs
+#  Docker or remote deploy for the full pipeline)
+
+git clone https://github.com/tamaa13/yap.git
+cd yap
+pnpm install
+
+# Contracts — build + test (289 unit tests, slither 0 high)
+pnpm contracts:build
+pnpm contracts:test
+
+# Frontend dev (against your own .env.local config)
+cp apps/web/.env.example apps/web/.env.local
+# Fill ZG_BROKER_KEY (Compute ledger + Storage uploads),
+# ZG_INFERENCE_PROVIDER (provider whose teeSignerAddress = oracleKey),
+# and the NEXT_PUBLIC_*_ADDR_MAINNET cascade from this README.
+pnpm dev
+```
+
+The source review path is **separate from product evaluation** — there's no testnet faucet flow to mirror; live testing on Aristotle requires DEX-acquired OG (see "Live testing" above).
 
 ## License
 
