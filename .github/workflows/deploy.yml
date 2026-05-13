@@ -141,14 +141,14 @@ jobs:
           # pm2 reload returns immediately; Next.js needs ~7-10s to
           # print "Ready". Poll instead of fixed sleep.
           #
-          # Accept 200 (HTTP-only deploy) OR 308 (post-HTTPS: port 80
-          # nginx returns 308 permanent redirect to https://yap-arena.xyz/
-          # which is healthy state — request was acknowledged by nginx).
-          # Without 308 accepted, the first deploy after certbot --nginx
-          # runs would fail health check forever.
+          # Hit the canonical HTTPS endpoint — what users actually see.
+          # Raw-IP curl returns 404 post-certbot because nginx server_name
+          # only matches yap-arena.xyz / www.yap-arena.xyz (the default
+          # catch-all `_` got replaced when certbot configured the cert
+          # for the named hostnames).
           for i in $(seq 1 30); do
-            code=$(curl -s -o /dev/null -w "%{http_code}" http://103.150.227.197/ || true)
-            if [ "$code" = "200" ] || [ "$code" = "308" ] || [ "$code" = "301" ]; then
+            code=$(curl -s -o /dev/null -w "%{http_code}" https://yap-arena.xyz/ || true)
+            if [ "$code" = "200" ]; then
               echo "✓ healthy (HTTP $code, after ${i}s)"
               exit 0
             fi
