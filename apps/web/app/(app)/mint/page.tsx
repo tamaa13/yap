@@ -288,7 +288,14 @@ export default function MintPage() {
       // reverts on tokenId mismatch.
       nextTokenId.refetch();
       const tokenIdGuess = nextTokenId.data ?? 1;
-      const res = await fetch("/api/mint/score", {
+      // Probe mode (llmSamples=1) for the demo window. Full 5-sample
+      // judge hangs mid-sequence on the mainnet TEE provider (16 calls
+      // serialized × 3-5s each + occasional stalls = 8+ min, often
+      // never resolves). Probe runs 3 dim + 1 echo = 4 LLM calls,
+      // completes in seconds. Attestation chain is identical — single
+      // sample loses median-of-5 robustness only, the TEE signature
+      // + canonical-echo + on-chain commit are unchanged.
+      const res = await fetch("/api/mint/score?probe=1", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
