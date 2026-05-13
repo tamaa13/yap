@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, Vm} from "forge-std/Test.sol";
 import {YapFighter} from "../src/YapFighter.sol";
 import {IERC7857} from "../src/IERC7857.sol";
 import {IAccessControl} from "openzeppelin-contracts/contracts/access/IAccessControl.sol";
@@ -123,6 +123,40 @@ contract YapFighterTest is Test {
         assertEq(uint8(fighter.getArchetype(id)), uint8(YapFighter.Archetype.Debater));
         assertEq(fighter.getSeedHash(id), keccak256("alice-seed"));
         assertFalse(fighter.isScored(id));
+    }
+
+    /// Successful mint that pays a non-zero fee emits MintFeePaid with
+    /// the fee amount + tokenId so analytics can audit mint economics
+    /// without parsing tx value.
+    function test_Mint_EmitsMintFeePaid_WhenFeeIsNonZero() public {
+        vm.deal(alice, MINT_FEE);
+        vm.expectEmit(true, true, false, true, address(fighter));
+        emit YapFighter.MintFeePaid(alice, MINT_FEE, 1);
+        vm.prank(alice);
+        fighter.mint{value: MINT_FEE}(
+            alice, "ipfs://x", keccak256("a"), hex"01",
+            YapFighter.Archetype.Debater, keccak256("alice-seed-fee")
+        );
+    }
+
+    /// Zero-fee mints skip the MintFeePaid emission — keeps the event
+    /// stream lean when admin temporarily sets mintFee=0 (e.g. promo).
+    function test_Mint_NoMintFeePaidEvent_WhenFeeIsZero() public {
+        vm.prank(admin);
+        fighter.setMintFee(0);
+
+        vm.recordLogs();
+        vm.prank(alice);
+        fighter.mint{value: 0}(
+            alice, "ipfs://x", keccak256("a"), hex"01",
+            YapFighter.Archetype.Roaster, keccak256("alice-seed-free")
+        );
+
+        bytes32 sig = keccak256("MintFeePaid(address,uint256,uint256)");
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        for (uint256 i = 0; i < logs.length; ++i) {
+            assertTrue(logs[i].topics[0] != sig, "MintFeePaid should not fire when fee=0");
+        }
     }
 
     /// IERC7857.mint (4-arg) reverts unconditionally — clients must use

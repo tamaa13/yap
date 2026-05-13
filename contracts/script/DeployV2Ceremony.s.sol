@@ -66,15 +66,15 @@ contract DeployV2Ceremony is Script {
     // (CREATE2 hashes both salt and initcode), but the explicit version
     // bump keeps the on-chain history readable and avoids accidental
     // collision if anyone replays an old script.
-    bytes32 public constant SALT_YAP_FIGHTER = keccak256("yap:YapFighter:v3");
-    bytes32 public constant SALT_BATTLE_ESCROW = keccak256("yap:BattleEscrow:v3");
-    bytes32 public constant SALT_BATTLE_REGISTRY = keccak256("yap:BattleRegistry:v3");
-    bytes32 public constant SALT_MARKETPLACE_FIGHTER = keccak256("yap:YapMarketplace:v3");
-    bytes32 public constant SALT_MARKETPLACE_MOMENT = keccak256("yap:MomentMarketplace:v3");
-    bytes32 public constant SALT_RENTAL_ESCROW = keccak256("yap:RentalEscrow:v3");
-    bytes32 public constant SALT_SUBNAME_REGISTRAR = keccak256("yap:YapSubnameRegistrar:v3");
-    bytes32 public constant SALT_MOMENT_INFT = keccak256("yap:MomentINFT:v3");
-    bytes32 public constant SALT_ABILITY_ESCROW = keccak256("yap:AbilityEscrow:v3");
+    bytes32 public constant SALT_YAP_FIGHTER = keccak256("yap:YapFighter:v4");
+    bytes32 public constant SALT_BATTLE_ESCROW = keccak256("yap:BattleEscrow:v4");
+    bytes32 public constant SALT_BATTLE_REGISTRY = keccak256("yap:BattleRegistry:v4");
+    bytes32 public constant SALT_MARKETPLACE_FIGHTER = keccak256("yap:YapMarketplace:v4");
+    bytes32 public constant SALT_MARKETPLACE_MOMENT = keccak256("yap:MomentMarketplace:v4");
+    bytes32 public constant SALT_RENTAL_ESCROW = keccak256("yap:RentalEscrow:v4");
+    bytes32 public constant SALT_SUBNAME_REGISTRAR = keccak256("yap:YapSubnameRegistrar:v4");
+    bytes32 public constant SALT_MOMENT_INFT = keccak256("yap:MomentINFT:v4");
+    bytes32 public constant SALT_ABILITY_ESCROW = keccak256("yap:AbilityEscrow:v4");
 
     struct Deployments {
         YapFighter fighter;
@@ -115,13 +115,13 @@ contract DeployV2Ceremony is Script {
         d.fighter = new YapFighter{salt: SALT_YAP_FIGHTER}(
             admin, verifier, treasury, mintFee
         );
-        console2.log("[1/10] YapFighter v3:         ", address(d.fighter));
+        console2.log("[1/10] YapFighter v4:         ", address(d.fighter));
 
         // ── 2. BattleEscrow v2 ───────────────────────────────────────────
         d.escrow = new BattleEscrow{salt: SALT_BATTLE_ESCROW}(
             admin, treasury, teeOracle, address(d.fighter)
         );
-        console2.log("[2/10] BattleEscrow v3:       ", address(d.escrow));
+        console2.log("[2/10] BattleEscrow v4:       ", address(d.escrow));
 
         // ── 3. BattleRegistry v2 (fresh deploy — code changed for v3) ───
         // Constructor grants ESCROW_ROLE to the escrow address inline,
@@ -129,25 +129,25 @@ contract DeployV2Ceremony is Script {
         d.registry = new BattleRegistry{salt: SALT_BATTLE_REGISTRY}(
             admin, address(d.escrow)
         );
-        console2.log("[3/10] BattleRegistry v3:     ", address(d.registry));
+        console2.log("[3/10] BattleRegistry v4:     ", address(d.registry));
 
         // ── 4. YapMarketplace v2 (fighter instance) ─────────────────────
         d.fighterMarket = new YapMarketplace{salt: SALT_MARKETPLACE_FIGHTER}(
             address(d.fighter), admin, treasury
         );
-        console2.log("[4/10] YapMarketplace v3:     ", address(d.fighterMarket));
+        console2.log("[4/10] YapMarketplace v4:     ", address(d.fighterMarket));
 
         // ── 5. RentalEscrow v2 ──────────────────────────────────────────
         d.rental = new RentalEscrow{salt: SALT_RENTAL_ESCROW}(
             address(d.fighter), admin, treasury
         );
-        console2.log("[5/10] RentalEscrow v3:       ", address(d.rental));
+        console2.log("[5/10] RentalEscrow v4:       ", address(d.rental));
 
         // ── 6. YapSubnameRegistrar v2 ───────────────────────────────────
         d.subname = new YapSubnameRegistrar{salt: SALT_SUBNAME_REGISTRAR}(
             address(d.fighter), admin, treasury
         );
-        console2.log("[6/10] YapSubnameRegistrar v3:", address(d.subname));
+        console2.log("[6/10] YapSubnameRegistrar v4:", address(d.subname));
 
         // ── 7. MomentINFT v2 ────────────────────────────────────────────
         d.moment = new MomentINFT{salt: SALT_MOMENT_INFT}(
@@ -158,20 +158,20 @@ contract DeployV2Ceremony is Script {
             address(d.fighter),
             momentMintFee
         );
-        console2.log("[7/10] MomentINFT v3:         ", address(d.moment));
+        console2.log("[7/10] MomentINFT v4:         ", address(d.moment));
 
         // ── 8. YapMarketplace v3 (moment instance) ──────────────────────
         d.momentMarket = new YapMarketplace{salt: SALT_MARKETPLACE_MOMENT}(
             address(d.moment), admin, treasury
         );
-        console2.log("[8/10] MomentMarketplace v3: ", address(d.momentMarket));
+        console2.log("[8/10] MomentMarketplace v4: ", address(d.momentMarket));
 
         // ── 9. AbilityEscrow v3 — sidecar gating archetype abilities ────
         //      Reads BattleEscrow + YapFighter at use-time; no value flow.
         d.ability = new AbilityEscrow{salt: SALT_ABILITY_ESCROW}(
             address(d.escrow), address(d.fighter), admin
         );
-        console2.log("[9/10] AbilityEscrow v3:     ", address(d.ability));
+        console2.log("[9/10] AbilityEscrow v4:     ", address(d.ability));
 
         // ── 10. Wire + role grants ──────────────────────────────────────
         // Wire BattleEscrow v3 → BattleRegistry v3 so settle() routes
@@ -201,7 +201,7 @@ contract DeployV2Ceremony is Script {
         vm.stopBroadcast();
 
         console2.log("");
-        console2.log("=== v3 cascade complete ===");
+        console2.log("=== v4 cascade complete ===");
         console2.log("Copy these into apps/web/.env.local (NEXT_PUBLIC_*_ADDR_TESTNET):");
         console2.log("YAP_FIGHTER          ", address(d.fighter));
         console2.log("BATTLE_ESCROW        ", address(d.escrow));

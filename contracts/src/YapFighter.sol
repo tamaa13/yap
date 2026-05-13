@@ -120,6 +120,16 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
         uint8[5] scores
     );
 
+    /// @notice Emitted on every successful mint that paid a non-zero
+    ///         {mintFee}. Makes the per-mint economic flow auditable
+    ///         independently of tx value parsing — analytics dashboards
+    ///         can count mints + sum fees from this event alone.
+    event MintFeePaid(
+        address indexed minter,
+        uint256 fee,
+        uint256 indexed tokenId
+    );
+
     error InvalidProof();
     error MintNotSupported();
     error SeedMismatch();
@@ -230,6 +240,9 @@ contract YapFighter is ERC721, AccessControl, ReentrancyGuard, IERC7857 {
 
         emit Minted(tokenId, to, metadataHash_, encryptedURI_);
         emit PublishedSealedKey(tokenId, to, sealedKey);
+        if (mintFee > 0) {
+            emit MintFeePaid(msg.sender, mintFee, tokenId);
+        }
     }
 
     function iTransferFrom(

@@ -75,15 +75,17 @@ NETWORKS = {
         # mainnet oracleKey is qwen3.6-plus's TEE signer, not the testnet one.
         "contracts": [
             ("YapInbox",            "0xe92dB21A770c32a19795556C46D5c6a274955DBD", "src/YapInbox.sol:YapInbox",                 "verify/YapInbox/standard-json-input.json"),
-            ("YapFighter",          "0x066259CCB37C0AF962c112a70C6338e52e1D16ee", "src/YapFighter.sol:YapFighter",             "verify/YapFighter/standard-json-input.json"),
-            ("BattleEscrow",        "0x242d1cd3100706b26a3067dd64cecb415a20f398", "src/BattleEscrow.sol:BattleEscrow",         "verify/BattleEscrow/standard-json-input.json"),
-            ("BattleRegistry",      "0x4ec3eb96161fbef86849d40a5d331d3c1209d5de", "src/BattleRegistry.sol:BattleRegistry",     "verify/BattleRegistry/standard-json-input.json"),
-            ("YapMarketplace",      "0x9569cE03CD9934Fd206A40b3721f7Ae3DC2a1f36", "src/YapMarketplace.sol:YapMarketplace",     "verify/YapMarketplace/standard-json-input.json"),
-            ("RentalEscrow",        "0xE986a6C47dA1fD3c0b01EC6695Ccf020EC16bC96", "src/RentalEscrow.sol:RentalEscrow",         "verify/RentalEscrow/standard-json-input.json"),
-            ("MomentINFT",          "0x059adf223c3281302d25ac36a4f861ef4b5df169", "src/MomentINFT.sol:MomentINFT",             "verify/MomentINFT/standard-json-input.json"),
-            ("MomentMarketplace",   "0x35125df161d64a8ac59936c0dbfcfe30c9f4220d", "src/YapMarketplace.sol:YapMarketplace",     "verify/YapMarketplace/standard-json-input.json"),
-            ("YapSubnameRegistrar", "0xF5F99bd86b00ad32D16E1Ae97Dd4aaa7AdeD5c8C", "src/YapSubnameRegistrar.sol:YapSubnameRegistrar", "verify/YapSubnameRegistrar/standard-json-input.json"),
-            ("AbilityEscrow",       "0x2cc877baa12be163973a43cac998b8d82b3a58a4", "src/AbilityEscrow.sol:AbilityEscrow",       "verify/AbilityEscrow/standard-json-input.json"),
+            # v4 cascade — deployed 2026-05-13. MintFeePaid event added to
+            # YapFighter; cascade re-fired across all 6 immutable consumers.
+            ("YapFighter",          "0x3a3b176E91AE3Da4eF3a6B968E84120fC61CFd2b", "src/YapFighter.sol:YapFighter",             "verify/YapFighter/standard-json-input.json"),
+            ("BattleEscrow",        "0x311ecf5B66Ab569Bcb4cB96e7b4085CA2b59b037", "src/BattleEscrow.sol:BattleEscrow",         "verify/BattleEscrow/standard-json-input.json"),
+            ("BattleRegistry",      "0xda4f5279e677576831Fb5d99f2C754D5407030ee", "src/BattleRegistry.sol:BattleRegistry",     "verify/BattleRegistry/standard-json-input.json"),
+            ("YapMarketplace",      "0xb20769dD18F1438CA0aDa66Adf9ba670Cab6b9B0", "src/YapMarketplace.sol:YapMarketplace",     "verify/YapMarketplace/standard-json-input.json"),
+            ("RentalEscrow",        "0x6b89A8E306E3E567598A6233F10D6c410da07eB8", "src/RentalEscrow.sol:RentalEscrow",         "verify/RentalEscrow/standard-json-input.json"),
+            ("MomentINFT",          "0x42C85f0EAa8Aef98c0ec1057e6c241769861A1aF", "src/MomentINFT.sol:MomentINFT",             "verify/MomentINFT/standard-json-input.json"),
+            ("MomentMarketplace",   "0x0514c5F6a9b7a57d329f41125C9E84C805F3Be7c", "src/YapMarketplace.sol:YapMarketplace",     "verify/YapMarketplace/standard-json-input.json"),
+            ("YapSubnameRegistrar", "0x4aC6E562b1b3CF9B2c0B6A3789200E889eD7576d", "src/YapSubnameRegistrar.sol:YapSubnameRegistrar", "verify/YapSubnameRegistrar/standard-json-input.json"),
+            ("AbilityEscrow",       "0x07E47975Aac222B0D82DB8b5f5A6a24Fd87C7148", "src/AbilityEscrow.sol:AbilityEscrow",       "verify/AbilityEscrow/standard-json-input.json"),
         ],
     },
 }
