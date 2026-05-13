@@ -17,6 +17,7 @@ import { PageContainer } from "@/components/shell/page-container";
 import { GateScreen } from "@/components/wallet/gate-screen";
 import { useMintFighter } from "@/hooks/use-mint-fighter";
 import { useNextTokenId } from "@/hooks/use-next-token-id";
+import { useScorePersona } from "@/hooks/use-score-persona";
 import { useWallet } from "@/hooks/use-wallet";
 import { activeChain } from "@/lib/chains";
 import { FIGHTER_INFT_ADDRESS } from "@/lib/contracts";
@@ -29,6 +30,7 @@ import {
 } from "@/lib/archetype-meta";
 import type { MockScores } from "@/lib/stylometry/mock-scores";
 import type { FighterArchetype } from "@/lib/types";
+import { useEffect } from "react";
 
 const DIMENSION_LABEL: Record<ScoreDimension, string> = {
   logos: "Logos",
@@ -122,6 +124,53 @@ export default function MintPage() {
   const effectiveSeed =
     seedMode === "simple" ? simpleToJsonl(simpleLines, arch) : seedText;
   const effectiveSamples = effectiveSeed.split("\n").filter(Boolean).length;
+
+  // Opsi B (2026-05-13) — client-side scoring. The hook builds a broker
+  // against the user's wallet, probes ledger + sub-account state, and
+  // exposes deposit() / transfer() actions for the explicit funding
+  // prompts. Replaces the prior `fetch('/api/mint/score')` server path
+  // so persona scoring is paid by the user, not the server broker EOA.
+  // ScoreInput is recomputed cheaply per-render — the broker itself is
+  // cached inside the hook (ref) so seed-typing churn doesn't churn
+  // the SDK.
+  const score = useScorePersona(
+    effectiveSeed.length === 0 ||
+      nextTokenId.data === null ||
+      FIGHTER_INFT_ADDRESS === ""
+      ? null
+      : {
+          seed: effectiveSeed,
+          tokenId: nextTokenId.data ?? 1,
+          fighterAddr: FIGHTER_INFT_ADDRESS as `0x${string}`,
+          chainId: activeChain.id,
+        },
+  );
+
+  // Mirror score.state.attestation.scores → local `scores` state so
+  // the existing step-3 archetype picker + step-5 review render
+  // unchanged once scoring lands. Also auto-pick the recommended
+  // archetype from the live scores the way the mock-mode path did.
+  useEffect(() => {
+    if (score.state.phase === "done" && score.state.attestation) {
+      const a = score.state.attestation.scores;
+      const scored: MockScores = {
+        logos: a[0],
+        rhetoric: a[1],
+        aggression: a[2],
+        range: a[3],
+        concreteness: a[4],
+      };
+      setScores(scored);
+      setArch(
+        recommendArchetype(
+          scored as unknown as Record<ScoreDimension, number>,
+        ),
+      );
+    }
+    if (score.state.phase === "error" && score.state.error) {
+      setScoreError(score.state.error);
+    }
+  }, [score.state.phase, score.state.attestation, score.state.error]);
 
   if (ready && !connected) {
     return <GateScreen action="the mint wizard" icon="zap" />;
@@ -239,45 +288,23 @@ export default function MintPage() {
     "Review & mint",
   ];
 
-  // Scoring trigger — fires when leaving step 1 → step 2. POSTs the
-  // effective seed to /api/mint/score; the live TEE path needs
-  // tokenId + fighterAddr + chainId so the canonical text matches
-  // what recordMintScores will re-verify on-chain. Mock-mode tolerates
-  // the missing tokenId (route 200s with stub fields), but live mode
-  // 400s without it — and the mock-mode FE is no longer the prod path.
+  // Scoring trigger — fires when leaving step 1 → step 2. Opsi B
+  // (2026-05-13) path: kicks off the state machine which probes the
+  // user's ledger + sub-account, prompts for deposit / transfer if
+  // needed, then invokes scorePersona via the user's wallet. The
+  // local `scoring` boolean is kept for the existing step-2 spinner;
+  // `scores` populates from the score.state.attestation mirror in
+  // the useEffect above.
   const runScoring = async () => {
     setScoreError(null);
     setScoring(true);
     try {
-      // Refetch right before scoring so the prediction is as fresh as
-      // possible. Concurrent mints between this read and the eventual
-      // mint tx still risk drift (Tama's race-mitigation note); user
-      // can re-score from the receipt screen if `recordMintScores`
-      // reverts on tokenId mismatch.
+      // Refresh the predicted tokenId immediately before kicking the
+      // state machine — concurrent mints between this read and the
+      // user's mint tx still risk drift (recordMintScores reverts on
+      // canonical mismatch). Hackathon scale: rare.
       nextTokenId.refetch();
-      const tokenIdGuess = nextTokenId.data ?? 1;
-      const res = await fetch("/api/mint/score", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          seed: effectiveSeed,
-          tokenId: tokenIdGuess,
-          fighterAddr: FIGHTER_INFT_ADDRESS,
-          chainId: activeChain.id,
-        }),
-      });
-      if (!res.ok) {
-        const detail = (await res.json().catch(() => ({}))) as {
-          error?: string;
-        };
-        throw new Error(detail.error ?? `Score endpoint returned ${res.status}`);
-      }
-      const data = (await res.json()) as {
-        scores: MockScores;
-        mode?: string;
-      };
-      setScores(data.scores);
-      setArch(recommendArchetype(data.scores as unknown as Record<ScoreDimension, number>));
+      await score.start();
     } catch (e) {
       setScoreError(e instanceof Error ? e.message : "Scoring failed");
     } finally {
@@ -685,7 +712,121 @@ Crypto is a slot machine with footnotes.
             <div className="label" style={{ marginBottom: 10 }}>
               TEE persona scoring
             </div>
-            {scoring && (
+            {/* Funding-prompt cards (Opsi B). The state machine routes
+              * to needs_ledger / needs_sub_account when the user's
+              * wallet hasn't pre-funded the 0G Compute ledger or the
+              * per-provider sub-account. Each prompt fires the
+              * corresponding tx via the user's wallet — explicit so
+              * MetaMask doesn't pop unexpectedly mid-scoring. */}
+            {score.state.phase === "needs_ledger" && (
+              <div
+                style={{
+                  padding: 16,
+                  background: "var(--bg-sunken)",
+                  border: "1px solid var(--accent-border)",
+                  borderRadius: 4,
+                  marginBottom: 10,
+                }}
+              >
+                <div
+                  className="mono"
+                  style={{
+                    fontSize: 11,
+                    color: "var(--accent)",
+                    letterSpacing: 1.2,
+                    textTransform: "uppercase",
+                    marginBottom: 8,
+                  }}
+                >
+                  Step 1 of 2 · Fund 0G Compute ledger
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "var(--tx-secondary)",
+                    marginBottom: 10,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  One-time deposit of 3 OG into the 0G Compute ledger
+                  (contract minimum for new accounts). This funds your
+                  persona scoring credit; unspent balance is recoverable
+                  via the standard 24h refund flow. Approve the tx in
+                  your wallet to continue.
+                  {score.state.ledgerAvailable !== null && (
+                    <span style={{ display: "block", marginTop: 6, fontSize: 12 }}>
+                      Current ledger balance:{" "}
+                      <span className="num">
+                        {score.state.ledgerAvailable.toFixed(4)} OG
+                      </span>
+                    </span>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => void score.deposit()}
+                >
+                  Approve deposit
+                </Button>
+              </div>
+            )}
+            {score.state.phase === "needs_sub_account" && (
+              <div
+                style={{
+                  padding: 16,
+                  background: "var(--bg-sunken)",
+                  border: "1px solid var(--accent-border)",
+                  borderRadius: 4,
+                  marginBottom: 10,
+                }}
+              >
+                <div
+                  className="mono"
+                  style={{
+                    fontSize: 11,
+                    color: "var(--accent)",
+                    letterSpacing: 1.2,
+                    textTransform: "uppercase",
+                    marginBottom: 8,
+                  }}
+                >
+                  Step 2 of 2 · Fund inference provider
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "var(--tx-secondary)",
+                    marginBottom: 10,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Transfer 0.5 OG from your ledger into the inference
+                  provider's sub-account. This is the spendable balance
+                  each LLM call draws against.
+                  {score.state.subAccountSpendable !== null && (
+                    <span style={{ display: "block", marginTop: 6, fontSize: 12 }}>
+                      Current sub-account balance:{" "}
+                      <span className="num">
+                        {score.state.subAccountSpendable.toFixed(4)} OG
+                      </span>
+                    </span>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => void score.transfer()}
+                >
+                  Approve transfer
+                </Button>
+              </div>
+            )}
+            {(scoring ||
+              score.state.phase === "probing" ||
+              score.state.phase === "waiting_deposit" ||
+              score.state.phase === "waiting_transfer" ||
+              score.state.phase === "scoring") && (
               <div
                 style={{
                   padding: 28,
@@ -705,7 +846,13 @@ Crypto is a slot machine with footnotes.
                     marginBottom: 10,
                   }}
                 >
-                  Scoring persona via TEE…
+                  {score.state.phase === "probing"
+                    ? "Checking funding state…"
+                    : score.state.phase === "waiting_deposit"
+                      ? "Awaiting deposit tx…"
+                      : score.state.phase === "waiting_transfer"
+                        ? "Awaiting transfer tx…"
+                        : "Scoring persona via TEE…"}
                 </div>
                 <Skel h={10} w="60%" style={{ margin: "0 auto 8px" }} />
                 <Skel h={10} w="40%" style={{ margin: "0 auto" }} />
@@ -841,24 +988,29 @@ Crypto is a slot machine with footnotes.
                 </div>
               </div>
             )}
-            {!scoring && !scoreError && !scores && (
-              <div
-                style={{
-                  padding: 14,
-                  background: "var(--bg-sunken)",
-                  border: "1px solid var(--bd-subtle)",
-                  fontSize: 13,
-                }}
-              >
-                Click <strong>Score persona</strong> to send your seed to
-                the TEE judge.
-                <div style={{ marginTop: 10 }}>
-                  <Button size="sm" variant="primary" onClick={runScoring}>
-                    Score persona
-                  </Button>
+            {!scoring &&
+              !scoreError &&
+              !scores &&
+              (score.state.phase === "idle" || score.state.phase === "error") && (
+                <div
+                  style={{
+                    padding: 14,
+                    background: "var(--bg-sunken)",
+                    border: "1px solid var(--bd-subtle)",
+                    fontSize: 13,
+                  }}
+                >
+                  Click <strong>Score persona</strong> to send your seed to
+                  the TEE judge. Scoring is paid by your wallet — about
+                  0.5 OG total for a fresh ledger setup, ~0.0005 OG per
+                  re-score afterwards.
+                  <div style={{ marginTop: 10 }}>
+                    <Button size="sm" variant="primary" onClick={runScoring}>
+                      Score persona
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
         )}
 
