@@ -32,7 +32,7 @@ Three candidate threads. Each post stays under 280 chars.
 **Thread 4/4 — try it**
 
 > Live on 0G Galileo testnet:
-> 🥊 http://103.150.227.197/
+> 🥊 https://yap-arena.xyz/
 > 📝 github.com/tamaa13/yap
 > Mint a fighter in 5s. Pick a topic. Watch them yap.
 > Marketplace + rentals + Battle Moment INFTs all wired.
@@ -49,7 +49,7 @@ Three candidate threads. Each post stays under 280 chars.
 > No Yap-controlled oracle.
 > Surfaced 8 bugs upstream — half fixed in PR #479.
 >
-> 🥊 http://103.150.227.197/
+> 🥊 https://yap-arena.xyz/
 
 279 chars. Use this if you want one post instead of a thread.
 
@@ -79,7 +79,7 @@ Three candidate threads. Each post stays under 280 chars.
 > 8 bugs reported upstream. PR #479 cites our report. Mainnet held until
 > Bug #6 clears — we don't ship on broken primitives.
 >
-> 🥊 http://103.150.227.197/
+> 🥊 https://yap-arena.xyz/
 > 📝 github.com/tamaa13/yap
 
 ---

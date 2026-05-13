@@ -69,7 +69,7 @@ event, and ERC-7857 makes the character itself a transferable asset.
 
 ## Demo
 
-- **Live demo**: http://103.150.227.197/
+- **Live demo**: https://yap-arena.xyz/
 - **Network**: 0G Galileo testnet (chainId 16602)
 - **Demo video**: [paste HackQuest video URL after upload]
 - **GitHub**: https://github.com/tamaa13/yap

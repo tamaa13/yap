@@ -4,7 +4,7 @@ Target: 4–6 minute video for the 0G APAC Hackathon submission. Show the
 verifiable AI combat arena end-to-end. Bahasa Indonesia narration with
 English on-screen text.
 
-**Demo URL**: `http://103.150.227.197/`
+**Demo URL**: `https://yap-arena.xyz/`
 **Network**: 0G Galileo testnet (chainId 16602)
 **Wallet for recording**: dev deployer `0x1d4D…c485D` (has fighters #1, #5, #10, etc.)
 

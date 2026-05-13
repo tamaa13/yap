@@ -165,10 +165,10 @@ During the integration we surfaced 8 SDK + provider bugs in `@0gfoundation/0g-co
 
 ## Demo
 
-- Demo URL: http://103.150.227.197/ (Galileo testnet)
+- Demo URL: https://yap-arena.xyz/ (Galileo testnet)
 - Video: *pending*
 - X post: *pending*
-- Sample fighter (full UI E2E with real MetaMask): [Fighter #26](http://103.150.227.197/fighters/26) — mint tx [`0xfcf99...`](https://chainscan-galileo.0g.ai/tx/0xfcf9960f0583ab3eec7a156fb2e7be663f799cbf6c40d863b00dc870063d0ed7), train session 1 tx [`0x94bd3...`](https://chainscan-galileo.0g.ai/tx/0x94bd3c0276c9af2c393a91eb37423515027bbcd5d58862e0d645d282201681c8)
+- Sample fighter (full UI E2E with real MetaMask): [Fighter #26](https://yap-arena.xyz/fighters/26) — mint tx [`0xfcf99...`](https://chainscan-galileo.0g.ai/tx/0xfcf9960f0583ab3eec7a156fb2e7be663f799cbf6c40d863b00dc870063d0ed7), train session 1 tx [`0x94bd3...`](https://chainscan-galileo.0g.ai/tx/0x94bd3c0276c9af2c393a91eb37423515027bbcd5d58862e0d645d282201681c8)
 
 ## License
 
