@@ -891,11 +891,8 @@ function MatchTranscript({
                   Round {round.number}
                 </span>
                 <span
-                  style={{
-                    fontSize: 11,
-                    color: "var(--tx-tertiary)",
-                    fontFamily: "var(--mono)",
-                  }}
+                  className="mono"
+                  style={{ fontSize: 11, color: "var(--tx-tertiary)" }}
                 >
                   {tokA + tokB} tokens
                 </span>
