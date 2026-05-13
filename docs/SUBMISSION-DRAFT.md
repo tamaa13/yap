@@ -105,16 +105,18 @@ Same trust primitive at both ends. Same provider's TEE signer registered in the 
 
 | Contract | Address |
 |---|---|
-| YapFighter (ERC-7857) | `0x066259CCB37C0AF962c112a70C6338e52e1D16ee` |
-| BattleEscrow | `0x242d1cd3100706b26a3067dd64cecb415a20f398` |
-| BattleRegistry | `0x4ec3eb96161fbef86849d40a5d331d3c1209d5de` |
-| YapMarketplace | `0x9569cE03CD9934Fd206A40b3721f7Ae3DC2a1f36` |
-| RentalEscrow | `0xE986a6C47dA1fD3c0b01EC6695Ccf020EC16bC96` |
-| YapSubnameRegistrar | `0xF5F99bd86b00ad32D16E1Ae97Dd4aaa7AdeD5c8C` |
-| MomentINFT | `0x059adf223c3281302d25ac36a4f861ef4b5df169` |
-| MomentMarketplace | `0x35125df161d64a8ac59936c0dbfcfe30c9f4220d` |
-| AbilityEscrow | `0x2cc877baa12be163973a43cac998b8d82b3a58a4` |
+| YapFighter (ERC-7857 + 0.1 OG mint fee) | `0x3a3b176E91AE3Da4eF3a6B968E84120fC61CFd2b` |
+| BattleEscrow | `0x311ecf5B66Ab569Bcb4cB96e7b4085CA2b59b037` |
+| BattleRegistry | `0xda4f5279e677576831Fb5d99f2C754D5407030ee` |
+| YapMarketplace | `0xb20769dD18F1438CA0aDa66Adf9ba670Cab6b9B0` |
+| RentalEscrow | `0x6b89A8E306E3E567598A6233F10D6c410da07eB8` |
+| YapSubnameRegistrar | `0x4aC6E562b1b3CF9B2c0B6A3789200E889eD7576d` |
+| MomentINFT | `0x42C85f0EAa8Aef98c0ec1057e6c241769861A1aF` |
+| MomentMarketplace | `0x0514c5F6a9b7a57d329f41125C9E84C805F3Be7c` |
+| AbilityEscrow | `0x07E47975Aac222B0D82DB8b5f5A6a24Fd87C7148` |
 | YapInbox | `0xe92dB21A770c32a19795556C46D5c6a274955DBD` |
+
+(v4 cascade, 2026-05-13. Previous v3 addresses preserved in `docs/contracts.md`.)
 
 **TEE signer** (Aristotle): `0xd45b4301940B297F76d6e622c1CeA2AE660617d4` for provider `0x992e6396157Dc4f22E74F2231235D7DE62696db5` running `qwen3.6-plus` (1M context, roleplay-tuned, separated-centralized TeeTLS routing-proof architecture). Same signer verifies both mint-time persona scores AND settle-time verdicts — single TEE attestation primitive used at two callsites.
 

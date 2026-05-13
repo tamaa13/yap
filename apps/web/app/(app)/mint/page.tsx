@@ -1,8 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, type DragEvent } from "react";
+import { useMemo, useRef, useState, type DragEvent } from "react";
 import { motion, useReducedMotion } from "motion/react";
+import { useBalance, useGasPrice } from "wagmi";
+import { formatEther } from "viem";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Hash } from "@/components/ui/hash";
@@ -76,6 +78,36 @@ export default function MintPage() {
   // is reliable. `refetch` is called right before the mint tx fires
   // to catch any drift since the score request landed.
   const nextTokenId = useNextTokenId();
+
+  // Balance gate (v4 cascade — YapFighter.mint() now charges a fee).
+  // We block the final "Sign the mint" button when the wallet can't
+  // cover `mintFee + gas`. The mintFee comes from the contract; gas
+  // is estimated as `gasPrice × 300_000n` — a conservative gas-limit
+  // heuristic because the real mint calldata isn't known until the
+  // `/api/mint/start` job runs (which would itself cost the user
+  // attention + a server round-trip). 300k covers an ERC-7857 mint
+  // with INFT metadata + sealed-key write with headroom; both viem
+  // and wagmi re-poll gasPrice on block events so the gate stays
+  // live across price moves.
+  const { data: balance } = useBalance({
+    address: addr,
+    query: { enabled: !!addr, refetchInterval: 12_000 },
+  });
+  const { data: gasPrice } = useGasPrice({
+    query: { enabled: !!addr, refetchInterval: 12_000 },
+  });
+  const mintFee = (mint.mintFee as bigint | undefined) ?? 0n;
+  const gasEstimate =
+    gasPrice !== undefined ? gasPrice * 300_000n : 0n;
+  const requiredOg = mintFee + gasEstimate;
+  const insufficientBalance = useMemo(() => {
+    if (!balance || mintFee === 0n) return false;
+    return balance.value < requiredOg;
+  }, [balance, mintFee, requiredOg]);
+  const insufficientTooltip = useMemo(() => {
+    if (gasEstimate === 0n) return undefined;
+    return `Need ${formatEther(mintFee)} OG mint fee + ~${formatEther(gasEstimate)} OG gas. Wallet has ${balance ? formatEther(balance.value) : "?"} OG.`;
+  }, [mintFee, gasEstimate, balance]);
 
   const [step, setStep] = useState(1);
   const [seedText, setSeedText] = useState("");
@@ -341,6 +373,41 @@ export default function MintPage() {
           </div>
         ))}
       </div>
+
+      {/* Mint fee callout. Visible across all 5 steps so the user sees
+        * the cost commitment from the moment they land on /mint, not
+        * just at the final review step. Tints amber/red when the
+        * wallet balance can't cover fee + estimated gas. */}
+      {mint.mintFee !== undefined && (
+        <div
+          style={{
+            padding: "10px 14px",
+            background: insufficientBalance
+              ? "rgba(232,107,107,0.08)"
+              : "var(--bg-sunken)",
+            border: `1px solid ${insufficientBalance ? "rgba(232,107,107,0.30)" : "var(--accent-border)"}`,
+            borderRadius: 4,
+            marginBottom: 20,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            fontSize: 12,
+          }}
+        >
+          <div className="mono" style={{ color: insufficientBalance ? "var(--danger)" : "var(--accent)", letterSpacing: 1.2, textTransform: "uppercase" }}>
+            Mint fee · <span className="num">{formatEther(mintFee)}</span> OG
+          </div>
+          {balance && gasPrice !== undefined && (
+            <div style={{ color: "var(--tx-secondary)" }}>
+              Wallet <span className="num">{Number(formatEther(balance.value)).toFixed(4)}</span> OG
+              <span style={{ color: "var(--tx-tertiary)" }}>
+                {" "}· est. gas ~<span className="num">{Number(formatEther(gasEstimate)).toFixed(4)}</span> OG
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       <Card style={{ padding: 24 }}>
         {step === 1 && (
@@ -1267,8 +1334,17 @@ Crypto is a slot machine with footnotes.
               Continue
             </Button>
           ) : (
-            <Button variant="primary" onClick={runMint}>
-              {mint.phase === "error" ? "Try again" : "Sign the mint"}
+            <Button
+              variant="primary"
+              onClick={runMint}
+              disabled={insufficientBalance}
+              title={insufficientBalance ? insufficientTooltip : undefined}
+            >
+              {insufficientBalance
+                ? "Insufficient balance"
+                : mint.phase === "error"
+                ? "Try again"
+                : "Sign the mint"}
             </Button>
           )}
         </div>
