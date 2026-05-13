@@ -9,46 +9,83 @@ import {
 } from "@/lib/0g/inference";
 import { mtldToRangeScore } from "@/lib/stylometry/mtld";
 import { concretenessToScore } from "@/lib/stylometry/brysbaert";
+import {
+  aggregate as aggregateAttempts,
+  parseLine,
+  type DimensionResult,
+  type JudgeAttempt,
+  type LLMDimension,
+} from "./score-persona-aggregate";
+export type {
+  DimensionResult,
+  JudgeAttempt,
+  LLMDimension,
+} from "./score-persona-aggregate";
 
 /**
- * TEE-attested persona scoring. Five-dimension rubric:
+ * TEE-attested persona scoring (Phase 4 live path).
  *
- *   - Logos      — LLM-judged, structural cogency (premise→conclusion)
+ * Five-dimension rubric:
+ *   - Logos      — LLM-judged, structural cogency
  *   - Rhetoric   — LLM-judged, vividness + figurative effectiveness
- *   - Aggression — LLM-judged, hedging-ratio + stance strength
+ *   - Aggression — LLM-judged, stance strength (low hedging)
  *   - Range      — stylometric MTLD (deterministic)
- *   - Concreteness — stylometric Brysbaert mean (deterministic)
+ *   - Concreteness — Brysbaert mean (deterministic)
  *
- * The three LLM-judged dimensions run via median-of-five separate calls to
- * suppress per-call noise; the stylometric pair are pure functions of the
- * seed text. The final attestation packs all five scores into a canonical
- * line that the TEE provider re-echoes character-for-character — same
- * canonicalSignAndPack pattern as runner.ts settle-time bundles. The
- * 0G Compute provider's signature over that echo is what BattleEscrow /
- * YapFighter verifies on-chain, so a leak of any server key here cannot
- * forge scores.
+ * The three LLM-judged dimensions each run 5 independent calls at
+ * temp=0.3 with the canonical anchored rubric from
+ * docs/persona-rubrics.md. The judge model is asked for a strict
+ * `<DIMENSION>|<score>|<evidence>` line — anti-bias instructions in
+ * the system prompt fight the model's verbosity / authority /
+ * RLHF-balance biases.
+ *
+ * Aggregation:
+ *   - Primary score = median of the 5 parsed integers (resists single-
+ *     call outliers, stays in the 1–5 ordinal anchors).
+ *   - Confidence flag = max-min across calls. ≥ 2 → low_confidence,
+ *     surfaced on the attestation envelope so the mint UI can let the
+ *     user re-roll once before final commit.
+ *   - Evidence = the evidence sentence from the median-scoring call
+ *     (ties broken by call order, lowest index first).
+ *   - All 5 raw scores + evidences are retained on the attestation so
+ *     anyone can re-verify the aggregation off-chain.
+ *
+ * Failure mode:
+ *   - Per-call malformed output (regex miss) → that call is discarded.
+ *     If ≥2 calls per dimension malform, the whole call aborts with
+ *     `judge_unstable_<dim>` — silently scoring on a 3-sample median
+ *     would compromise the attestation.
+ *
+ * The final canonical text echoes through the TEE provider the same
+ * way `runner.ts:canonicalSignAndPack` does for verdicts. BattleEscrow
+ * / YapFighter verify the contentOffset + sha256(responseBody) +
+ * provider signature on-chain. A leak of any server key here cannot
+ * forge scores; the TEE-derived signature is required.
  */
 
 export interface ScoreInput {
-  /** 0G Compute provider address. Caller usually inherits from the runner
-   *  pool; if omitted, the first available chatbot provider is picked. */
+  /** 0G Compute provider address. Caller usually inherits from the
+   *  runner pool; if omitted, the first available chatbot provider is
+   *  picked by the broker. */
   providerAddress?: string;
   /** User-authored persona seed text. */
   seed: string;
-  /** Token id this attestation will commit against. Assigned by the mint
-   *  flow before scoring fires (typically `nextTokenId()` read). */
+  /** Token id this attestation will commit against. Assigned by the
+   *  mint flow before scoring fires (typically a `nextTokenId()` read). */
   tokenId: number | bigint;
-  /** YapFighter contract address — lowercased into the canonical line so
-   *  the on-chain verifier can confirm the attestation isn't replayable
-   *  against a sibling contract instance. */
+  /** YapFighter contract address — lowercased into the canonical line
+   *  so the on-chain verifier can confirm the attestation isn't
+   *  replayable against a sibling contract instance. */
   fighterAddr: `0x${string}`;
   /** Chain id for canonical-text replay defense across testnet / mainnet. */
   chainId: number;
 }
 
+
 export interface ScoredAttestation {
-  /** Five scores, in canonical order: Logos, Rhetoric, Aggression, Range,
-   *  Concreteness. Each is 1–5. */
+  /** Five scores, in canonical order: Logos, Rhetoric, Aggression,
+   *  Range, Concreteness. Each is 1–5. Matches the on-chain
+   *  YapFighter packed-bytes5 layout via TRAIT_INDEX in archetype-meta. */
   scores: [
     logos: 1 | 2 | 3 | 4 | 5,
     rhetoric: 1 | 2 | 3 | 4 | 5,
@@ -56,10 +93,10 @@ export interface ScoredAttestation {
     range: 1 | 2 | 3 | 4 | 5,
     concreteness: 1 | 2 | 3 | 4 | 5,
   ];
-  /** keccak-style sha256 of the seed text bytes — commits the input
-   *  without leaking the plaintext. */
+  /** sha256 of the seed text bytes — commits the input without leaking
+   *  plaintext. */
   seedHash: `0x${string}`;
-  /** The full canonical line the TEE echoed. Verifiable on-chain. */
+  /** Full canonical line the TEE echoed. Verifiable on-chain. */
   canonicalText: string;
   /** Raw response body bytes from the canonical echo call. */
   responseBody: Uint8Array;
@@ -71,112 +108,77 @@ export interface ScoredAttestation {
   teeSignature: `0x${string}`;
   /** Provider that issued the echo + signature. */
   providerAddress: string;
-  /** Per-dimension judge call audit trail — every LLM raw output we
-   *  aggregated. Useful for surfacing in the FE so users can see the
-   *  rationale behind a 4/5 vs a 3/5. */
-  judgeTrail: {
-    logos: number[];
-    rhetoric: number[];
-    aggression: number[];
+  /** True iff ANY of the three LLM dimensions tripped its
+   *  low-confidence flag. The mint UI should surface this on the
+   *  receipt so the user can re-roll once before final commit. */
+  lowConfidence: boolean;
+  /** Per-dimension audit trail with all 5 raw scores + evidence. */
+  judge: {
+    logos: DimensionResult;
+    rhetoric: DimensionResult;
+    aggression: DimensionResult;
   };
 }
 
-const SYSTEM_JUDGE =
-  "You are a deterministic scoring tool for AI debate fighter persona seeds. " +
-  "For each dimension you are asked about, output exactly one line in the form " +
-  "`<Dimension>|<score>` where <score> is an integer 1–5. No prose, no preamble, " +
-  "no postscript, no markdown, no quotes, no extra whitespace.";
+// ─── Anchored rubrics (canonical source: docs/persona-rubrics.md) ────────
 
-const RUBRIC: Record<"logos" | "rhetoric" | "aggression", string> = {
+const SYSTEM_PROMPTS: Record<LLMDimension, string> = {
   logos:
-    "Score this persona seed on Logos (1–5).\n" +
-    "1 = Disconnected statements, no premise→conclusion linkage. Example: \"I just like coffee man. It's good. Drink it.\"\n" +
-    "3 = Some structure but logical gaps. Example: \"Coffee is better than tea because more people drink it, also it tastes good.\"\n" +
-    "5 = Clear premise-conclusion structure throughout. Example: \"Coffee outranks tea on adoption (90% global share) and cultural durability, both of which compound — therefore coffee.\"\n" +
-    "Output exactly: Logos|<score>",
+    "You are a strict argumentation analyst scoring debate-fighter persona seeds on LOGOS (argument structure/cogency). You ignore length, citations, and stylistic polish. You score only the inferential scaffolding present in the seed. Output exactly one line: \"LOGOS|<1-5>|<one-sentence-evidence>\". No other text.",
   rhetoric:
-    "Score this persona seed on Rhetoric (1–5) — vividness, figurative language effectiveness, audience pull.\n" +
-    "1 = Flat, generic, no imagery. Example: \"My fighter is good at debating.\"\n" +
-    "3 = Some figurative reach but uneven. Example: \"My fighter argues like a thunderstorm rolling in.\"\n" +
-    "5 = Vivid throughout, controlled imagery. Example: \"He doesn't argue — he slices: each clause a thin blade between joints of your premise.\"\n" +
-    "Output exactly: Rhetoric|<score>",
+    "You are a literary critic scoring debate-fighter persona seeds on RHETORIC (effectiveness/vividness of expression). You ignore factual accuracy, argument validity, and length. You score only voice, imagery, framing, and cadence. Output exactly one line: \"RHETORIC|<1-5>|<one-sentence-evidence>\". No other text.",
   aggression:
-    "Score this persona seed on Aggression (1–5) — stance strength + low hedging ratio. Score 5 = bold claims with no qualifiers; 1 = heavy hedging (\"perhaps\", \"some might say\", \"in a sense\").\n" +
-    "1 = Heavily hedged. Example: \"My fighter might possibly sometimes try to argue politely if conditions allow.\"\n" +
-    "3 = Mixed stance + hedges. Example: \"My fighter usually wins but it depends on the topic.\"\n" +
-    "5 = Bold, no hedges. Example: \"My fighter wins. Topic doesn't matter. Pick your ground and lose it.\"\n" +
-    "Output exactly: Aggression|<score>",
+    "You are a stance analyst scoring debate-fighter persona seeds on AGGRESSION (stance strength and low hedging). You score commitment to claims, NOT rudeness or cruelty. A calm seed with a hard stance scores HIGH; a loud seed full of hedges scores LOW. You explicitly penalize RLHF-style both-sidesing. Output exactly one line: \"AGGRESSION|<1-5>|<one-sentence-evidence>\". No other text.",
 };
 
-interface JudgeAttempt {
-  raw: string;
-  score: number | null;
-}
+const USER_PROMPT_PREFIX: Record<LLMDimension, string> = {
+  logos:
+    "Score the following persona seed for LOGOS using the 1-5 anchored rubric. Resist verbosity bias, authority bias, and preference for fluent LLM-style prose without claim commitment.\n\nAnchors:\n1 = pure assertion, no scaffolding.\n2 = single-step claims, weak support.\n3 = coherent but shallow (one premise→conclusion, no objection handling).\n4 = multi-step chain with anticipated rebuttals.\n5 = disciplined argumentation, explicit premises, edge cases handled.",
+  rhetoric:
+    "Score the following persona seed for RHETORIC using the 1-5 anchored rubric. Resist verbosity bias, authority bias, and preference for register-flat LLM polish.\n\nAnchors:\n1 = flat, no imagery.\n2 = occasional adjective, otherwise plain.\n3 = workable imagery, intermittent punch.\n4 = consistent voice, compounding imagery.\n5 = sustained rhetorical signature — every line earns its place.",
+  aggression:
+    "Score the following persona seed for AGGRESSION using the 1-5 anchored rubric. Resist verbosity bias, authority bias, and the trained preference for balanced/hedged framing.\n\nAnchors:\n1 = maximum hedging, symmetric both-sidesing.\n2 = soft lean, heavy qualifiers.\n3 = clear position, polite framing.\n4 = committed, unhedged, willing to offend.\n5 = maximum stance, refuses any escape hatch.",
+};
 
-function parseScore(raw: string, label: string): number | null {
-  // Expect "<Label>|<score>" — accept whitespace; reject if score is out
-  // of band. The judge system prompt is strict but real LLMs leak occasional
-  // punctuation; tolerate a leading/trailing wrap.
-  const m = raw.trim().match(new RegExp(`${label}\\s*\\|\\s*([1-5])\\b`, "i"));
-  if (!m) return null;
-  const n = parseInt(m[1], 10);
-  return n >= 1 && n <= 5 ? n : null;
-}
-
-function median5(scores: number[]): 1 | 2 | 3 | 4 | 5 {
-  const sorted = [...scores].sort((a, b) => a - b);
-  const mid = sorted[Math.floor(sorted.length / 2)];
-  // Clamp into the rubric band — paranoia, since parseScore already gates.
-  const clamped = Math.max(1, Math.min(5, mid));
-  return clamped as 1 | 2 | 3 | 4 | 5;
-}
+// ─── One dimension, 5 calls ─────────────────────────────────────────────
 
 async function judgeDimension(
   providerAddress: string | undefined,
   seed: string,
-  dimension: "logos" | "rhetoric" | "aggression",
+  dimension: LLMDimension,
   samples: number,
-): Promise<{ score: 1 | 2 | 3 | 4 | 5; raw: number[] }> {
-  const label =
-    dimension === "logos"
-      ? "Logos"
-      : dimension === "rhetoric"
-        ? "Rhetoric"
-        : "Aggression";
-  const user = `${RUBRIC[dimension]}\n\nSeed:\n${seed}`;
+): Promise<DimensionResult> {
+  const system = SYSTEM_PROMPTS[dimension];
+  const user = `${USER_PROMPT_PREFIX[dimension]}\n\nSEED:\n${seed}\n\nRespond now with the single-line verdict.`;
   const attempts: JudgeAttempt[] = [];
-  // Fire judge calls sequentially — the broker rate-limits per provider, and
-  // a Promise.all volley triggers "concurrent request" rejects on the 0G
-  // Compute side. Five sequential ~1.5s calls is ~7.5s total, acceptable
-  // for a one-shot mint-time scoring path.
+  // Sequential within dimension — broker rate-limits per-provider, and
+  // a Promise.all of 5 fires "concurrent request" rejects on the 0G
+  // Compute SDK. The three *dimensions* still run in parallel from
+  // the caller (Promise.all over the 3 outer judgeDimension calls) so
+  // total wall-clock stays at ~5 × per-call latency, not 15×.
   for (let i = 0; i < samples; i++) {
     try {
       const r = await runChat({
         providerAddress,
-        system: SYSTEM_JUDGE,
+        system,
         user,
-        temperature: 0.1, // small jitter so identical calls don't fully co-vary
-        maxTokens: 16,
+        temperature: 0.3,
+        maxTokens: 96, // headroom for the evidence sentence
       });
-      attempts.push({ raw: r.content, score: parseScore(r.content, label) });
+      const { score, evidence } = parseLine(r.content, dimension);
+      attempts.push({ raw: r.content, score, evidence });
     } catch (e) {
       attempts.push({
         raw: e instanceof Error ? e.message : String(e),
         score: null,
+        evidence: "",
       });
     }
   }
-  const parsed = attempts
-    .map((a) => a.score)
-    .filter((s): s is number => s !== null);
-  // Brief spec: abort if >2 calls fail to parse (i.e. less than 3 valid).
-  if (parsed.length < 3) {
-    throw new Error(
-      `score-persona: ${dimension} judge produced ${parsed.length}/${samples} valid scores; aborting`,
-    );
-  }
-  return { score: median5(parsed), raw: parsed };
+  return aggregateAttempts(attempts, dimension);
 }
+
+// ─── Public entry ───────────────────────────────────────────────────────
 
 export async function scorePersona(
   input: ScoreInput,
@@ -192,7 +194,7 @@ export async function scorePersona(
   const rangeScore = mtldToRangeScore(seed);
   const concretenessScore = concretenessToScore(seed);
 
-  // LLM-judged scores, median over `samples` independent calls.
+  // LLM-judged scores. Parallel across dimensions; sequential within.
   const [logos, rhetoric, aggression] = await Promise.all(
     (["logos", "rhetoric", "aggression"] as const).map((d) =>
       judgeDimension(input.providerAddress, seed, d, samples),
@@ -201,9 +203,10 @@ export async function scorePersona(
 
   const seedHash = sha256(stringToBytes(seed));
 
-  // Canonical attestation line — same shape as runner.ts:canonicalSignAndPack
-  // (`<TAG>|chainId|contract|...payload>`). The TAG namespaces the line so a
-  // verdict echo can't be replayed against a YapFighter score verifier.
+  // Canonical attestation line — mirrors runner.ts:canonicalSignAndPack
+  // (`<TAG>|chainId|contract|...payload>`). The TAG namespaces the
+  // line so a verdict echo can't be replayed against a YapFighter
+  // score verifier.
   const canonicalText = [
     "YAP_FIGHTER_SCORE",
     input.chainId,
@@ -217,10 +220,6 @@ export async function scorePersona(
     concretenessScore,
   ].join("|");
 
-  // Echo the canonical line through the TEE provider. `temperature: 0` and
-  // the deterministic-transcription system prompt keep the LLM output a
-  // byte-perfect copy — required for the on-chain verifier to walk the
-  // contentOffset and re-check sha256(responseBody).
   const echo = await runCanonicalChat({
     providerAddress: input.providerAddress,
     system:
@@ -260,10 +259,14 @@ export async function scorePersona(
     signedText: providerSig.text,
     teeSignature: providerSig.signature,
     providerAddress: echo.providerAddress,
-    judgeTrail: {
-      logos: logos.raw,
-      rhetoric: rhetoric.raw,
-      aggression: aggression.raw,
-    },
+    lowConfidence:
+      logos.lowConfidence || rhetoric.lowConfidence || aggression.lowConfidence,
+    judge: { logos, rhetoric, aggression },
   };
 }
+
+// Re-export pure aggregation primitives for callers that previously
+// imported through the `_internal` namespace before the move into
+// score-persona-aggregate. Tests should import from
+// `./score-persona-aggregate` directly to avoid the server-only barrel.
+export { aggregateAttempts as aggregate, parseLine };
