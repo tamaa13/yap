@@ -517,6 +517,7 @@ export function TopNav() {
 }
 
 const NOTIF_ICON: Record<Notification["kind"], IconName> = {
+  challenge_incoming: "bell",
   challenge_accepted: "sword",
   challenge_declined: "x",
   challenge_cancelled: "alert",

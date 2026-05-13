@@ -19,6 +19,7 @@
 
 import "server-only";
 import { Contract, type Provider } from "ethers";
+import { FIGHTER_INFT_ABI, FIGHTER_INFT_ADDRESS } from "@/lib/contracts";
 import type { Notification } from "./types";
 
 const PADDED = (n: number): string => n.toString(16).padStart(4, "0");
@@ -83,14 +84,68 @@ export async function scanRange(
     toBlock,
   )) as unknown as AnyLog[];
   const createdRelevant: AnyLog[] = [];
+
+  // Defender-side resolution: BattleCreated.fighterB carries the
+  // defender's tokenId, not their address, and `creator` is only
+  // indexed on side A. To notify the defender we lazily build a
+  // YapFighter contract handle and call ownerOf(fighterB) for each
+  // created event in the window. Address mismatches are silently
+  // skipped — the defender just won't see a notif for someone
+  // else's battle, which is the correct outcome.
+  const fighter =
+    FIGHTER_INFT_ADDRESS !== ""
+      ? new Contract(
+          FIGHTER_INFT_ADDRESS,
+          FIGHTER_INFT_ABI as unknown as string[],
+          provider,
+        )
+      : null;
+
   for (const log of createdLogs) {
     const args = log.args;
     if (!args) continue;
     const battleId = Number(args.battleId ?? 0);
+    if (!battleId) continue;
     const creator = String(args.creator ?? "").toLowerCase();
-    if (battleId && creator === lower) {
+    const fighterB = args.fighterB as bigint | number | undefined;
+
+    // Challenger side — same as before.
+    if (creator === lower) {
       state.caredBattleIds.add(battleId);
       createdRelevant.push(log);
+    }
+
+    // Defender side — emit "you've been challenged" notif if the
+    // user owns fighterB at the time we read the chain. ownerOf
+    // failures (token doesn't exist, RPC blip) are non-fatal —
+    // skip the log rather than fail the whole scan.
+    if (fighter && fighterB !== undefined && creator !== lower) {
+      let defender: string | null = null;
+      try {
+        defender = String(await fighter.ownerOf(fighterB)).toLowerCase();
+      } catch {
+        defender = null;
+      }
+      if (defender === lower) {
+        state.caredBattleIds.add(battleId);
+        const ts = await blockTimeMs(
+          provider,
+          state.blockTimestampCache,
+          log.blockNumber,
+        );
+        const creatorShort = creator
+          ? `${creator.slice(0, 6)}…${creator.slice(-4)}`
+          : "challenger";
+        out.push({
+          id: `challenge_incoming:${battleId}:${log.transactionHash}`,
+          kind: "challenge_incoming",
+          battleId,
+          message: `Battle #${battleId} — you've been challenged`,
+          detail: `${creatorShort} wants to fight your fighter. Accept within 24h or the challenge auto-cancels.`,
+          href: `/arenas/b-${PADDED(battleId)}`,
+          ts,
+        });
+      }
     }
   }
 

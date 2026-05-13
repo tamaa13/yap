@@ -1,6 +1,7 @@
 // Shared notification types between server SSE producer and client consumer.
 
 export type NotifKind =
+  | "challenge_incoming"
   | "challenge_accepted"
   | "challenge_declined"
   | "challenge_cancelled"
