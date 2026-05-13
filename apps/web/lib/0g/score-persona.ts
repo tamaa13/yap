@@ -175,24 +175,12 @@ async function judgeDimension(
       });
       const { score, evidence } = parseLine(r.content, dimension);
       attempts.push({ raw: r.content, score, evidence });
-      // Diagnostic: when a call fails to parse, log the first 200 chars
-      // of the raw content. Lets us tell apart safety refusal ("I
-      // cannot…") vs. format drift ("{\"score\": 4, …}") vs. truncated
-      // output (verdict line never started). Behaviour-neutral —
-      // aggregator still runs the same median + judge_unstable gate.
-      if (score === null) {
-        console.warn(
-          `[score-persona] ${dimension} call ${i + 1}/${samples} unparseable; ` +
-            `raw[:200]=${JSON.stringify((r.content ?? "").slice(0, 200))}`,
-        );
-      }
     } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      console.warn(
-        `[score-persona] ${dimension} call ${i + 1}/${samples} threw; ` +
-          `error=${JSON.stringify(message.slice(0, 200))}`,
-      );
-      attempts.push({ raw: message, score: null, evidence: "" });
+      attempts.push({
+        raw: e instanceof Error ? e.message : String(e),
+        score: null,
+        evidence: "",
+      });
     }
   }
   return aggregateAttempts(attempts, dimension);
