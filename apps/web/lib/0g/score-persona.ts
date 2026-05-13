@@ -163,16 +163,36 @@ async function judgeDimension(
         system,
         user,
         temperature: 0.3,
-        maxTokens: 96, // headroom for the evidence sentence
+        // Aggression bump: mainnet provider's safety harness occasionally
+        // adds a refusal preamble before answering ("I cannot generate
+        // strong stances against …"). 96 tokens left no room for the
+        // verdict line after that preamble; doubled to 192 so the
+        // verdict survives even when the model editorializes. Logos +
+        // Rhetoric never see the refusal path on observed prompts but
+        // share the bump for symmetry — extra cost per call ≈ 50 tokens
+        // (~$0.0001), trivial vs. burning the whole 5-call median.
+        maxTokens: 192,
       });
       const { score, evidence } = parseLine(r.content, dimension);
       attempts.push({ raw: r.content, score, evidence });
+      // Diagnostic: when a call fails to parse, log the first 200 chars
+      // of the raw content. Lets us tell apart safety refusal ("I
+      // cannot…") vs. format drift ("{\"score\": 4, …}") vs. truncated
+      // output (verdict line never started). Behaviour-neutral —
+      // aggregator still runs the same median + judge_unstable gate.
+      if (score === null) {
+        console.warn(
+          `[score-persona] ${dimension} call ${i + 1}/${samples} unparseable; ` +
+            `raw[:200]=${JSON.stringify((r.content ?? "").slice(0, 200))}`,
+        );
+      }
     } catch (e) {
-      attempts.push({
-        raw: e instanceof Error ? e.message : String(e),
-        score: null,
-        evidence: "",
-      });
+      const message = e instanceof Error ? e.message : String(e);
+      console.warn(
+        `[score-persona] ${dimension} call ${i + 1}/${samples} threw; ` +
+          `error=${JSON.stringify(message.slice(0, 200))}`,
+      );
+      attempts.push({ raw: message, score: null, evidence: "" });
     }
   }
   return aggregateAttempts(attempts, dimension);
