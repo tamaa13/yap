@@ -41,6 +41,18 @@ export interface Fighter {
   rentedBy?: string;
   /** ms epoch when the active rental expires. 0 when not rented. */
   rentExpiresAt?: number;
+  /** TEE-attested persona traits committed at mint via
+   *  `YapFighter.recordMintScores`. Each value is 1–5.
+   *  `null` for legacy fighters minted before Phase 4 — their
+   *  `getTraits` view returns all zeros, which we surface to the UI
+   *  as an "Unscored" badge rather than five 0/5 bars. */
+  traits: {
+    logos: number;
+    rhetoric: number;
+    aggression: number;
+    range: number;
+    concreteness: number;
+  } | null;
 }
 
 export type BattleStatus = "live" | "upcoming" | "past";

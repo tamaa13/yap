@@ -60,6 +60,7 @@ function fighter(id: number): Fighter {
     tags: [],
     battles: 0,
     attest: "0x",
+    traits: null,
   };
 }
 
