@@ -145,13 +145,17 @@ async function run(): Promise<void> {
   const userBalanceBefore = await rpcProvider.getBalance(testWallet.address);
   console.log(`  server broker: ${fmt(serverBalanceBefore)}`);
   console.log(`  test wallet:   ${fmt(userBalanceBefore)}`);
-  if (userBalanceBefore < parseEther("1.01")) {
+  // Funding floor: 0.501 OG = 0.5 (depositFund msg.value) + ~0.001 (gas
+  // for 2 txs). transferFund moves balance INSIDE the ledger contract
+  // (ledger.availableBalance → sub-account) with no msg.value, so the
+  // EOA only pays gas there. SDK ref: lib/ledger/contract/ledger.js:157.
+  if (userBalanceBefore < parseEther("0.501")) {
     fail(
-      `Test wallet balance ${fmt(userBalanceBefore)} below floor 1.01 OG. ` +
+      `Test wallet balance ${fmt(userBalanceBefore)} below floor 0.501 OG. ` +
         `Send more OG to ${testWallet.address} before running.`,
     );
   }
-  pass(`test wallet above 1.01 OG floor`);
+  pass(`test wallet above 0.501 OG floor`);
 
   const broker = await createZGComputeNetworkBroker(testWallet);
   pass(`broker initialized with test wallet`);
@@ -274,12 +278,13 @@ async function run(): Promise<void> {
   }
   pass(`server broker EOA balance UNCHANGED — Opsi B invariant holds`);
 
-  const userSpent = userBalanceBefore - userBalanceAfter - parseEther("1.0");
-  // 1.0 = 0.5 deposited + 0.5 transferred (still in custody, recoverable)
+  // Only depositFund moved OG out of the EOA (msg.value=0.5). transferFund
+  // shifted balance ledger→sub-account inside the contract — no EOA outflow.
+  const userSpent = userBalanceBefore - userBalanceAfter - parseEther("0.5");
   console.log(`\n  test wallet before:   ${fmt(userBalanceBefore)}`);
   console.log(`  test wallet after:    ${fmt(userBalanceAfter)}`);
-  console.log(`  custody locked:       1.0 OG (recoverable via refund flow)`);
-  console.log(`  actually spent:       ${fmt(userSpent)}  (gas + LLM)`);
+  console.log(`  custody locked:       0.5 OG (recoverable via refund flow)`);
+  console.log(`  actually spent:       ${fmt(userSpent)}  (gas for 2 txs + LLM)`);
 
   // ── Summary ──────────────────────────────────────────────────────────
   header("ACCEPTANCE CRITERIA");

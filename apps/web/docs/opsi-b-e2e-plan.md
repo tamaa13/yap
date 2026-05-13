@@ -19,7 +19,7 @@ TEE signature, on-chain ledger visibility) is downstream of that.
 | Private key | `cast wallet new` or `viem.generatePrivateKey()` — kept in `/tmp/opsi-b-test.key`, never committed |
 | Address | recorded in test script output |
 | Funding source | manual transfer from Tama's main test wallet via MetaMask (one tx) |
-| Funding amount | **2.0 OG** (see §3 for derivation) |
+| Funding amount | **0.55 OG** (see §3 for derivation) |
 | Runner | Node script in `apps/web/scripts/opsi-b-smoke.ts`, signs with the test PK via `new Wallet(pk, provider)` |
 
 The runner does NOT use the browser. It instantiates the broker the
@@ -84,30 +84,37 @@ wants a full-sample run after probe is green, that's a follow-up.
 
 ## 3. Cost projection
 
+**SDK correction (2026-05-13):** `transferFund` does NOT carry `msg.value`.
+It calls the ledger contract which shifts balance internally from
+`ledger.availableBalance` → per-provider sub-account
+(`node_modules/@0gfoundation/0g-compute-ts-sdk/lib.commonjs/ledger/contract/ledger.js:157`).
+Only `depositFund` moves OG out of the EOA. The earlier plan double-
+counted the transfer as a second 0.5 OG outflow.
+
 Per-call breakdown (worst-case Aristotle mainnet):
 
-| Item | Estimate | Notes |
+| Item | EOA outflow | Notes |
 | --- | --- | --- |
-| `depositFund(0.5)` gas | ~0.0005 OG | ERC-20-ish write, ~80-100k gas × ~5 gwei |
-| `transferFund(0.5)` gas | ~0.0005 OG | similar |
+| `depositFund(0.5)` msg.value | 0.5 OG | locked into ledger custody, recoverable via refund (§4) |
+| `depositFund(0.5)` gas | ~0.0005 OG | ~80-100k gas × ~5 gwei |
+| `transferFund(0.5)` gas | ~0.0005 OG | NO msg.value — internal balance shift only |
 | 1 LLM call (provider charge) | ~0.0001 OG | empirical, prior testnet runs |
-| ledger custody (deposit) | 0.5 OG | locked into ledger, recoverable via refund (§4) |
-| sub-account custody (transfer) | 0.5 OG | locked into provider sub-account, recoverable |
 
 **Probe run (samples=1) totals:**
 
-- gas: ~0.001 OG (2 txs)
+- EOA outflow into custody: 0.5 OG (recoverable via refund flow)
+- gas for 2 txs: ~0.001 OG
 - LLM: 4 calls × ~0.0001 OG = ~0.0004 OG
-- locked custody: 0.5 OG in ledger + 0.5 OG in sub-account
-- **total OG that leaves the wallet's spendable balance: ~0.0014 OG**
-- **total OG that's still recoverable: 1.0 OG (custody)**
+- **total OG actually spent (gas + LLM): ~0.0014 OG**
+- **total OG still recoverable (custody in ledger/sub-account): 0.5 OG**
 
-**Funding floor:** 1.01 OG (0.5 deposit + 0.5 transfer + gas headroom).
-**Funding ceiling for safety margin:** 2.0 OG. This is what we fund the
-test wallet with.
+**Funding floor:** 0.501 OG (0.5 deposit + ~0.001 gas).
+**Funding target:** **0.55 OG** — 10% headroom over floor covers gas
+variance + 1 RPC retry. Smoke script asserts at 0.501 floor and stops
+short if Tama under-funds.
 
 If a full-sample run follows probe, add 12 more LLM calls ≈ 0.0012 OG.
-Still inside the 2.0 OG ceiling.
+Still trivial against the 0.55 OG target.
 
 ---
 
