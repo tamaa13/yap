@@ -289,23 +289,85 @@ async function pickInferenceProvider(): Promise<string> {
 }
 
 export async function runChat(args: RunChatArgs): Promise<RunChatResult> {
+  // ───── DIAGNOSTIC INSTRUMENTATION (debug/score-persona-mainnet) ─────
+  // The .catch(() => {}) wrappers below were swallowing the truth on
+  // mainnet — "Sub-account not found" surfacing in the API error body
+  // didn't tell us WHICH SDK call threw it. This block logs each step
+  // explicitly so the next E2E cycle pinpoints whether the failure is
+  // in ack / depositFund / transferFund / getServiceMetadata /
+  // getRequestHeaders / the upstream fetch. Revert post-diagnosis.
+
   const broker = await getBroker();
   const providerAddress = args.providerAddress ?? (await pickInferenceProvider());
+  // Broker wallet address — surfaces whether the ledger lookup is keyed
+  // by the wallet we expect. ZGComputeNetworkBroker exposes `.signer`
+  // via the ledger broker; fall back to a sentinel if the SDK version
+  // doesn't expose it on this surface.
+  const brokerAddr = await (async () => {
+    try {
+      const signer = (broker as unknown as { signer?: { getAddress?: () => Promise<string>; address?: string } }).signer;
+      if (!signer) return "<no .signer on broker>";
+      if (typeof signer.getAddress === "function") return await signer.getAddress();
+      return signer.address ?? "<no signer.address>";
+    } catch (e) {
+      return `<signer probe threw: ${e instanceof Error ? e.message : e}>`;
+    }
+  })();
+  console.warn(
+    `[runChat] providerAddress arg=${args.providerAddress ?? "<undefined>"} ` +
+      `envFallback=${process.env.ZG_INFERENCE_PROVIDER ?? "<unset>"} ` +
+      `resolved=${providerAddress} brokerWallet=${brokerAddr}`,
+  );
 
   // Acknowledge provider signer (idempotent — catches "already acked").
-  await broker.inference
-    .acknowledgeProviderSigner(providerAddress)
-    .catch(() => {});
+  try {
+    await broker.inference.acknowledgeProviderSigner(providerAddress);
+    console.warn(`[runChat] ack OK`);
+  } catch (e) {
+    console.warn(
+      `[runChat] ack FAILED: ${e instanceof Error ? e.message : e}`,
+    );
+  }
 
   // Best-effort funding. Contract will surface real balance errors later.
-  await broker.ledger.depositFund(LEDGER_DEPOSIT).catch(() => {});
-  await broker.ledger
-    .transferFund(providerAddress, "inference", TRANSFER_PER_PROVIDER)
-    .catch(() => {});
+  try {
+    await broker.ledger.depositFund(LEDGER_DEPOSIT);
+    console.warn(`[runChat] depositFund OK (${LEDGER_DEPOSIT})`);
+  } catch (e) {
+    console.warn(
+      `[runChat] depositFund FAILED: ${e instanceof Error ? e.message : e}`,
+    );
+  }
+  try {
+    await broker.ledger.transferFund(
+      providerAddress,
+      "inference",
+      TRANSFER_PER_PROVIDER,
+    );
+    console.warn(
+      `[runChat] transferFund OK (provider=${providerAddress} amount=${TRANSFER_PER_PROVIDER.toString()})`,
+    );
+  } catch (e) {
+    console.warn(
+      `[runChat] transferFund FAILED (provider=${providerAddress}): ` +
+        `${e instanceof Error ? e.message : e}`,
+    );
+  }
 
-  const { endpoint, model } = await broker.inference.getServiceMetadata(
-    providerAddress,
-  );
+  let endpoint: string;
+  let model: string;
+  try {
+    const meta = await broker.inference.getServiceMetadata(providerAddress);
+    endpoint = meta.endpoint;
+    model = meta.model;
+    console.warn(`[runChat] getServiceMetadata OK endpoint=${endpoint} model=${model}`);
+  } catch (e) {
+    console.warn(
+      `[runChat] getServiceMetadata FAILED (provider=${providerAddress}): ` +
+        `${e instanceof Error ? e.message : e}`,
+    );
+    throw e;
+  }
 
   // OpenAI-compatible body. Content passed to getRequestHeaders is the
   // billing-hash input — pass the full request body-ish payload for
@@ -320,11 +382,24 @@ export async function runChat(args: RunChatArgs): Promise<RunChatResult> {
     max_tokens: args.maxTokens ?? 256,
   });
 
-  const headers = (await broker.inference.getRequestHeaders(
-    providerAddress,
-    body,
-  )) as unknown as Record<string, string>;
+  let headers: Record<string, string>;
+  try {
+    headers = (await broker.inference.getRequestHeaders(
+      providerAddress,
+      body,
+    )) as unknown as Record<string, string>;
+    console.warn(
+      `[runChat] getRequestHeaders OK (${Object.keys(headers).length} headers)`,
+    );
+  } catch (e) {
+    console.warn(
+      `[runChat] getRequestHeaders FAILED (provider=${providerAddress}): ` +
+        `${e instanceof Error ? e.message : e}`,
+    );
+    throw e;
+  }
 
+  console.warn(`[runChat] about to POST ${endpoint}/chat/completions model=${model}`);
   const res = await fetch(`${endpoint}/chat/completions`, {
     method: "POST",
     headers: {
@@ -334,9 +409,11 @@ export async function runChat(args: RunChatArgs): Promise<RunChatResult> {
     },
     body,
   });
+  console.warn(`[runChat] POST returned status=${res.status}`);
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
+    console.warn(`[runChat] POST !ok body[:200]=${text.slice(0, 200)}`);
     throw new Error(`0G Compute inference HTTP ${res.status}: ${text.slice(0, 200)}`);
   }
 

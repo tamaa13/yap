@@ -55,6 +55,16 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
+  // `?probe=1` caps samples to 1 LLM call per dimension instead of 5.
+  // Burns 3 calls + auto-funding cycles instead of 15 — same diagnostic
+  // signal (raw output of each dim, broker-call trace from the
+  // debug/score-persona-mainnet instrumentation), 80% lower OG burn.
+  // Remove post-diagnosis. The aggregator's malformed-threshold guard
+  // still trips correctly with N=1 (single-call miss → "produced no
+  // parseable scores", which surfaces the raw= snippet too).
+  const url = new URL(req.url);
+  const probe = url.searchParams.get("probe") === "1";
+  const llmSamples = probe ? 1 : 5;
 
   // Mock-mode shortcut. Used in:
   //   - dev environments without ZG_COMPUTE_PROVIDER set
@@ -87,15 +97,18 @@ export async function POST(req: Request) {
     );
   }
   try {
-    const attestation = await scorePersona({
-      providerAddress:
-        process.env.ZG_COMPUTE_PROVIDER ?? process.env.TEE_ORACLE_ADDR,
-      seed,
-      tokenId: body.tokenId,
-      fighterAddr:
-        body.fighterAddr ?? (FIGHTER_INFT_ADDRESS as `0x${string}`),
-      chainId: body.chainId ?? activeChain.id,
-    });
+    const attestation = await scorePersona(
+      {
+        providerAddress:
+          process.env.ZG_COMPUTE_PROVIDER ?? process.env.TEE_ORACLE_ADDR,
+        seed,
+        tokenId: body.tokenId,
+        fighterAddr:
+          body.fighterAddr ?? (FIGHTER_INFT_ADDRESS as `0x${string}`),
+        chainId: body.chainId ?? activeChain.id,
+      },
+      { llmSamples },
+    );
     return NextResponse.json({
       mode: "live",
       scores: {
