@@ -24,6 +24,7 @@ import { useWallet } from "@/hooks/use-wallet";
 import { activeChain } from "@/lib/chains";
 import { FIGHTER_INFT_ADDRESS } from "@/lib/contracts";
 import {
+  ARCHETYPE_INDEX,
   ARCHETYPE_LIST,
   ARCHETYPE_META,
   isAbilityUnlocked,
@@ -165,6 +166,10 @@ export default function MintPage() {
     return "Generating signed canonical attestation";
   })();
   const [scores, setScores] = useState<MockScores | null>(null);
+  // sha256(seedText) as bytes32 hex, captured from the score response.
+  // Required as the 6th arg to YapFighter.mint (v4) so recordMintScores
+  // can cross-verify the seed binding later. Cleared when scores clear.
+  const [seedHash, setSeedHash] = useState<`0x${string}` | null>(null);
   const [scoreError, setScoreError] = useState<string | null>(null);
 
   // Simple-mode: wrap user's free-text lines into JSONL that the backend expects.
@@ -280,6 +285,13 @@ export default function MintPage() {
 
   const runMint = async () => {
     if (!addr) return;
+    if (!seedHash) {
+      push({
+        kind: "error",
+        text: "Score the persona first — mint needs the attested seedHash.",
+      });
+      return;
+    }
     try {
       const result = await mint.write({
         owner: addr,
@@ -287,6 +299,8 @@ export default function MintPage() {
         archetype: arch,
         avatar,
         styleSeed: effectiveSeed,
+        archetypeIndex: ARCHETYPE_INDEX[arch],
+        seedHash,
       });
       push({
         kind: "success",
@@ -350,9 +364,11 @@ export default function MintPage() {
       }
       const data = (await res.json()) as {
         scores: MockScores;
+        seedHash?: `0x${string}`;
         mode?: string;
       };
       setScores(data.scores);
+      if (data.seedHash) setSeedHash(data.seedHash);
       setArch(recommendArchetype(data.scores as unknown as Record<ScoreDimension, number>));
     } catch (e) {
       setScoreError(e instanceof Error ? e.message : "Scoring failed");
@@ -1474,6 +1490,7 @@ Crypto is a slot machine with footnotes.
                     onClick={() => {
                       setLockedConfirmArch(null);
                       setScores(null);
+                      setSeedHash(null);
                       setScoreError(null);
                       setStep(1);
                     }}

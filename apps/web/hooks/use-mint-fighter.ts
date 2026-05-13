@@ -14,6 +14,13 @@ export interface MintFighterArgs {
   archetype: string;
   avatar?: number;
   styleSeed: string;
+  /** uint8 archetype index 0-5 (per ARCHETYPE_INDEX); the v4 6-arg
+   *  mint() overload requires this on-chain. */
+  archetypeIndex: number;
+  /** sha256(seedText) as bytes32 hex. Must match the seedHash the TEE
+   *  echoed inside the score canonical text — `recordMintScores` cross-
+   *  verifies it later. Sourced from /api/mint/score's response. */
+  seedHash: `0x${string}`;
 }
 
 export interface MintSteps {
@@ -116,15 +123,23 @@ export function useMintFighter() {
         // 2. User signs the mint transaction from their own wallet.
         setPhase("signing");
         const fee = (mintFee as bigint | undefined) ?? 0n;
+        // Pin the v4 6-arg overload by explicit function signature.
+        // The 4-arg overload is still in the ABI (compiler emits both
+        // for inheritance) but YapFighter.sol:185 reverts it with
+        // MintNotSupported. viem's `functionName` field accepts a full
+        // signature string for unambiguous selector resolution.
         const txHash = await walletClient.writeContract({
           address: FIGHTER_INFT_ADDRESS as `0x${string}`,
           abi: FIGHTER_INFT_ABI,
-          functionName: "mint",
+          functionName:
+            "mint(address,string,bytes32,bytes,uint8,bytes32)" as "mint",
           args: [
             prep.mint.to,
             prep.mint.encryptedURI,
             prep.mint.metadataHash,
             prep.mint.sealedKey as `0x${string}`,
+            args.archetypeIndex,
+            args.seedHash,
           ],
           value: fee,
         });
