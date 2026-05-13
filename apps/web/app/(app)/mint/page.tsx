@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState, type DragEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { useBalance, useGasPrice } from "wagmi";
 import { formatEther } from "viem";
@@ -126,6 +126,34 @@ export default function MintPage() {
   // server route that calls `lib/0g/score-persona.ts`. `scoreError` is
   // the surface for retryable failures (parser miss, provider flake).
   const [scoring, setScoring] = useState(false);
+  // Elapsed-timer + phase indicator so the user has visible progress
+  // during the ~15-30s server-side TEE scoring window. Median-of-5
+  // judge runs 15 LLM calls (3 dims × 5 samples in parallel across
+  // dims) + 1 canonical-echo + signature fetch. Without this UX the
+  // user can't tell stuck from working.
+  const [scoringStartedAt, setScoringStartedAt] = useState<number | null>(null);
+  const [scoringNow, setScoringNow] = useState<number>(0);
+  useEffect(() => {
+    if (!scoring) return;
+    const id = window.setInterval(() => setScoringNow(Date.now()), 200);
+    return () => window.clearInterval(id);
+  }, [scoring]);
+  const scoringElapsedMs =
+    scoring && scoringStartedAt ? scoringNow - scoringStartedAt : 0;
+  const scoringPhaseLabel = (() => {
+    // Timing budget assumes deepthink-off + parallel-dim execution
+    // from score-persona.ts: stylometric is instant, the three LLM
+    // dims fire concurrently with 5 samples each, then canonical
+    // echo + signature fetch tail it. Labels are honest — we don't
+    // claim serial logos→rhetoric→aggression since the impl is
+    // Promise.all over dims.
+    if (scoringElapsedMs < 1000)
+      return "Computing stylometric · range + concreteness";
+    if (scoringElapsedMs < 15000)
+      return "Judging persona on 3 axes in parallel · median-of-5 per axis";
+    if (scoringElapsedMs < 22000) return "Verifying TEE signature";
+    return "Generating signed canonical attestation";
+  })();
   const [scores, setScores] = useState<MockScores | null>(null);
   const [scoreError, setScoreError] = useState<string | null>(null);
 
@@ -279,6 +307,8 @@ export default function MintPage() {
   // 400s without it — and the mock-mode FE is no longer the prod path.
   const runScoring = async () => {
     setScoreError(null);
+    setScoringStartedAt(Date.now());
+    setScoringNow(Date.now());
     setScoring(true);
     try {
       // Refetch right before scoring so the prediction is as fresh as
@@ -288,14 +318,11 @@ export default function MintPage() {
       // reverts on tokenId mismatch.
       nextTokenId.refetch();
       const tokenIdGuess = nextTokenId.data ?? 1;
-      // Probe mode (llmSamples=1) for the demo window. Full 5-sample
-      // judge hangs mid-sequence on the mainnet TEE provider (16 calls
-      // serialized × 3-5s each + occasional stalls = 8+ min, often
-      // never resolves). Probe runs 3 dim + 1 echo = 4 LLM calls,
-      // completes in seconds. Attestation chain is identical — single
-      // sample loses median-of-5 robustness only, the TEE signature
-      // + canonical-echo + on-chain commit are unchanged.
-      const res = await fetch("/api/mint/score?probe=1", {
+      // Full median-of-5 sampling. With deepthink off on qwen3.6-plus
+      // (lib/0g/inference.ts) the 15 judge calls + canonical echo
+      // finish in ~15-25s. The mint UI surfaces an elapsed timer +
+      // phase indicator so the user has visible progress.
+      const res = await fetch("/api/mint/score", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -762,27 +789,65 @@ Crypto is a slot machine with footnotes.
             {scoring && (
               <div
                 style={{
-                  padding: 28,
-                  textAlign: "center",
+                  padding: 24,
                   background: "var(--bg-sunken)",
-                  border: "1px solid var(--bd-subtle)",
+                  border: "1px solid var(--accent-border)",
                   borderRadius: 4,
                 }}
               >
                 <div
-                  className="mono"
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "baseline",
+                    marginBottom: 14,
+                  }}
+                >
+                  <div
+                    className="mono"
+                    style={{
+                      fontSize: 11,
+                      color: "var(--accent)",
+                      letterSpacing: 1.5,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Scoring persona · TEE attestation
+                  </div>
+                  <div
+                    className="num"
+                    style={{
+                      fontSize: 20,
+                      color: "var(--tx-primary)",
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {Math.floor(scoringElapsedMs / 1000)}s
+                  </div>
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "var(--tx-secondary)",
+                    marginBottom: 14,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {scoringPhaseLabel}
+                </div>
+                <Skel h={6} w="100%" style={{ marginBottom: 12 }} />
+                <div
                   style={{
                     fontSize: 11,
                     color: "var(--tx-tertiary)",
-                    letterSpacing: 1.5,
-                    textTransform: "uppercase",
-                    marginBottom: 10,
+                    lineHeight: 1.5,
                   }}
                 >
-                  Scoring persona via TEE…
+                  ~15–30s typical. Keep this tab open — the TEE judge runs
+                  15 attested LLM calls (median-of-5 across logos /
+                  rhetoric / aggression) plus a signed canonical echo. The
+                  attestation lands on-chain only after all checks pass.
                 </div>
-                <Skel h={10} w="60%" style={{ margin: "0 auto 8px" }} />
-                <Skel h={10} w="40%" style={{ margin: "0 auto" }} />
               </div>
             )}
             {!scoring && scoreError && (
