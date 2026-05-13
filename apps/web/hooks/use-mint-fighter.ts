@@ -123,16 +123,16 @@ export function useMintFighter() {
         // 2. User signs the mint transaction from their own wallet.
         setPhase("signing");
         const fee = (mintFee as bigint | undefined) ?? 0n;
-        // Pin the v4 6-arg overload by explicit function signature.
-        // The 4-arg overload is still in the ABI (compiler emits both
-        // for inheritance) but YapFighter.sol:185 reverts it with
-        // MintNotSupported. viem's `functionName` field accepts a full
-        // signature string for unambiguous selector resolution.
+        // 6-arg v4 overload — viem disambiguates the two mint() entries
+        // in the ABI by args.length, so plain functionName: "mint" with
+        // a 6-element args array selects mint(address,string,bytes32,
+        // bytes,uint8,bytes32) (selector 0x6b1478f8). The 4-arg overload
+        // (selector 0xf693ffaf) is still in the ABI but YapFighter.sol:185
+        // reverts it with MintNotSupported.
         const txHash = await walletClient.writeContract({
           address: FIGHTER_INFT_ADDRESS as `0x${string}`,
           abi: FIGHTER_INFT_ABI,
-          functionName:
-            "mint(address,string,bytes32,bytes,uint8,bytes32)" as "mint",
+          functionName: "mint",
           args: [
             prep.mint.to,
             prep.mint.encryptedURI,
