@@ -18,7 +18,7 @@ import { useToast } from "@/components/ui/toast";
 import { Breadcrumbs } from "@/components/shell/breadcrumbs";
 import { PageContainer } from "@/components/shell/page-container";
 import { GateScreen } from "@/components/wallet/gate-screen";
-import { useMintFighter } from "@/hooks/use-mint-fighter";
+import { useMintFighter, type PersonaAttestation } from "@/hooks/use-mint-fighter";
 import { useNextTokenId } from "@/hooks/use-next-token-id";
 import { useWallet } from "@/hooks/use-wallet";
 import { activeChain } from "@/lib/chains";
@@ -55,6 +55,7 @@ const PHASE_LABELS: Record<string, string> = {
   encrypting: "Sealing your fighter",
   signing: "Sign in your wallet",
   minting: "Landing on-chain",
+  "scoring-commit": "Committing TEE attestation on-chain",
   committing: "Tagging metadata",
 };
 const PHASE_ORDER = [
@@ -62,6 +63,7 @@ const PHASE_ORDER = [
   "encrypting",
   "signing",
   "minting",
+  "scoring-commit",
   "committing",
 ] as const;
 
@@ -166,10 +168,17 @@ export default function MintPage() {
     return "Generating signed canonical attestation";
   })();
   const [scores, setScores] = useState<MockScores | null>(null);
-  // sha256(seedText) as bytes32 hex, captured from the score response.
-  // Required as the 6th arg to YapFighter.mint (v4) so recordMintScores
-  // can cross-verify the seed binding later. Cleared when scores clear.
-  const [seedHash, setSeedHash] = useState<`0x${string}` | null>(null);
+  // Full TEE attestation bundle captured from the score response.
+  // - seedHash binds the seed to the token at mint() time (6th arg).
+  // - The full bundle (scores, responseBody, signedText, signature,
+  //   contentOffset) is replayed via recordMintScores immediately
+  //   after the mint receipt so on-chain traits flip from [0,0,0,0,0]
+  //   → committed values and isScored becomes true. Without this the
+  //   fighter exists but abilities can never unlock.
+  // Mock-mode score responses don't include the signed bundle; in
+  // that path attestation stays null and recordMintScores is skipped
+  // (the dev preview never lands on mainnet anyway).
+  const [attestation, setAttestation] = useState<PersonaAttestation | null>(null);
   const [scoreError, setScoreError] = useState<string | null>(null);
 
   // Simple-mode: wrap user's free-text lines into JSONL that the backend expects.
@@ -285,10 +294,10 @@ export default function MintPage() {
 
   const runMint = async () => {
     if (!addr) return;
-    if (!seedHash) {
+    if (!attestation) {
       push({
         kind: "error",
-        text: "Score the persona first — mint needs the attested seedHash.",
+        text: "Score the persona first — mint needs the live TEE attestation.",
       });
       return;
     }
@@ -300,7 +309,7 @@ export default function MintPage() {
         avatar,
         styleSeed: effectiveSeed,
         archetypeIndex: ARCHETYPE_INDEX[arch],
-        seedHash,
+        attestation,
       });
       push({
         kind: "success",
@@ -365,10 +374,42 @@ export default function MintPage() {
       const data = (await res.json()) as {
         scores: MockScores;
         seedHash?: `0x${string}`;
+        responseBodyHex?: `0x${string}` | null;
+        contentOffset?: number | null;
+        signedText?: string | null;
+        teeSignature?: `0x${string}` | null;
         mode?: string;
       };
       setScores(data.scores);
-      if (data.seedHash) setSeedHash(data.seedHash);
+      // Capture full attestation when the live TEE path returned the
+      // signed bundle. Mock mode returns nulls for signed fields, so
+      // attestation stays null and mint will block at the "Sign the
+      // mint" step (you can't recordMintScores without a real TEE sig).
+      if (
+        data.seedHash &&
+        data.responseBodyHex &&
+        data.contentOffset !== undefined &&
+        data.contentOffset !== null &&
+        data.signedText &&
+        data.teeSignature
+      ) {
+        setAttestation({
+          scores: {
+            logos: data.scores.logos,
+            rhetoric: data.scores.rhetoric,
+            aggression: data.scores.aggression,
+            range: data.scores.range,
+            concreteness: data.scores.concreteness,
+          },
+          seedHash: data.seedHash,
+          responseBodyHex: data.responseBodyHex,
+          contentOffset: data.contentOffset,
+          signedText: data.signedText,
+          teeSignature: data.teeSignature,
+        });
+      } else {
+        setAttestation(null);
+      }
       setArch(recommendArchetype(data.scores as unknown as Record<ScoreDimension, number>));
     } catch (e) {
       setScoreError(e instanceof Error ? e.message : "Scoring failed");
@@ -1490,7 +1531,7 @@ Crypto is a slot machine with footnotes.
                     onClick={() => {
                       setLockedConfirmArch(null);
                       setScores(null);
-                      setSeedHash(null);
+                      setAttestation(null);
                       setScoreError(null);
                       setStep(1);
                     }}

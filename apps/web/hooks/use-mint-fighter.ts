@@ -1,12 +1,34 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { parseEventLogs } from "viem";
+import { parseEventLogs, stringToHex } from "viem";
 import type { Address } from "viem";
 import { useReadContract, useWalletClient } from "wagmi";
 import { usePublicClient } from "wagmi";
 import { FIGHTER_INFT_ABI, FIGHTER_INFT_ADDRESS } from "@/lib/contracts";
 import { activeChain } from "@/lib/chains";
+
+/** Full TEE attestation bundle from /api/mint/score's live path. Required
+ *  by both the v4 6-arg mint() overload (seedHash) AND the subsequent
+ *  recordMintScores tx that writes the 5 scores on-chain. Sourced from
+ *  the score response — every field except `scores` is opaque bytes the
+ *  contract re-verifies against the registered scoreOracleKey. */
+export interface PersonaAttestation {
+  scores: {
+    logos: number;
+    rhetoric: number;
+    aggression: number;
+    range: number;
+    concreteness: number;
+  };
+  seedHash: `0x${string}`;
+  responseBodyHex: `0x${string}`;
+  contentOffset: number;
+  /** ASCII canonical text the TEE echoed. Encoded to hex bytes before
+   *  passing as `bytes signedText` calldata to recordMintScores. */
+  signedText: string;
+  teeSignature: `0x${string}`;
+}
 
 export interface MintFighterArgs {
   owner: Address;
@@ -17,10 +39,10 @@ export interface MintFighterArgs {
   /** uint8 archetype index 0-5 (per ARCHETYPE_INDEX); the v4 6-arg
    *  mint() overload requires this on-chain. */
   archetypeIndex: number;
-  /** sha256(seedText) as bytes32 hex. Must match the seedHash the TEE
-   *  echoed inside the score canonical text — `recordMintScores` cross-
-   *  verifies it later. Sourced from /api/mint/score's response. */
-  seedHash: `0x${string}`;
+  /** Full TEE attestation. seedHash is used at mint() time (binds the
+   *  seed to the token), the rest is replayed in recordMintScores to
+   *  commit the 5 scores. */
+  attestation: PersonaAttestation;
 }
 
 export interface MintSteps {
@@ -42,6 +64,7 @@ export type MintPhase =
   | "encrypting"
   | "signing"
   | "minting"
+  | "scoring-commit"
   | "committing"
   | "done"
   | "error";
@@ -139,7 +162,7 @@ export function useMintFighter() {
             prep.mint.metadataHash,
             prep.mint.sealedKey as `0x${string}`,
             args.archetypeIndex,
-            args.seedHash,
+            args.attestation.seedHash,
           ],
           value: fee,
         });
@@ -171,7 +194,50 @@ export function useMintFighter() {
         if (!firstWithArgs) throw new Error("Minted event missing from receipt");
         const tokenId = Number(firstWithArgs.args.tokenId);
 
-        // 4. Commit plaintext metadata (name/archetype/signatureStyle) server-side.
+        // 4. Commit the TEE-attested persona scores on-chain via
+        //    recordMintScores. Without this, the fighter exists but
+        //    traits stay [0,0,0,0,0] and isScored=false — abilities
+        //    can never unlock. The contract re-verifies the same
+        //    three checks the score endpoint already passed (ECDSA
+        //    recovery to scoreOracleKey, sha256(responseBody),
+        //    canonical reconstruction at offset). signedText is the
+        //    ASCII canonical line the TEE echoed — encoded to
+        //    UTF-8 hex bytes for the `bytes` calldata.
+        setPhase("scoring-commit");
+        const { scores, seedHash, responseBodyHex, contentOffset, signedText, teeSignature } =
+          args.attestation;
+        const scoreTx = await walletClient.writeContract({
+          address: FIGHTER_INFT_ADDRESS as `0x${string}`,
+          abi: FIGHTER_INFT_ABI,
+          functionName: "recordMintScores",
+          args: [
+            BigInt(tokenId),
+            [
+              scores.logos,
+              scores.rhetoric,
+              scores.aggression,
+              scores.range,
+              scores.concreteness,
+            ],
+            seedHash,
+            responseBodyHex,
+            BigInt(contentOffset),
+            stringToHex(signedText),
+            teeSignature,
+          ],
+        });
+        const scoreReceipt = await publicClient.waitForTransactionReceipt({
+          hash: scoreTx,
+          pollingInterval: 4_000,
+          retryCount: 60,
+          retryDelay: 4_000,
+          timeout: 5 * 60_000,
+        });
+        if (scoreReceipt.status !== "success") {
+          throw new Error("recordMintScores tx reverted");
+        }
+
+        // 5. Commit plaintext metadata (name/archetype/signatureStyle) server-side.
         setPhase("committing");
         const commitRes = await fetch("/api/fighters/commit", {
           method: "POST",
