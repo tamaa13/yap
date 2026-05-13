@@ -100,6 +100,11 @@ export async function runCanonicalChat(
     ],
     temperature: args.temperature ?? 0,
     max_tokens: args.maxTokens ?? 256,
+    // qwen3 series defaults to deepthink CoT — ~1.3k reasoning tokens
+    // per call before the verdict line, ~13s wall time per judge call.
+    // Disable it: judge prompts are scoring rubrics, not multi-step
+    // reasoning. Brings per-call latency from ~13s → ~1-2s.
+    chat_template_kwargs: { enable_thinking: false },
   });
   const headers = (await broker.inference.getRequestHeaders(
     providerAddress,
@@ -407,6 +412,8 @@ export async function runChat(args: RunChatArgs): Promise<RunChatResult> {
     ],
     temperature: args.temperature ?? 0.7,
     max_tokens: args.maxTokens ?? 256,
+    // See runCanonicalChat — qwen3 deepthink off for latency.
+    chat_template_kwargs: { enable_thinking: false },
   });
 
   const headers = (await broker.inference.getRequestHeaders(
@@ -498,6 +505,8 @@ export async function streamChat(args: StreamChatArgs): Promise<RunChatResult> {
     ],
     temperature: args.temperature ?? 0.7,
     max_tokens: args.maxTokens ?? 256,
+    // See runCanonicalChat — qwen3 deepthink off for latency.
+    chat_template_kwargs: { enable_thinking: false },
     stream: true,
   });
 
