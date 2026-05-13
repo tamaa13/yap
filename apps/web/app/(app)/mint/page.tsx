@@ -17,16 +17,31 @@ import { PageContainer } from "@/components/shell/page-container";
 import { GateScreen } from "@/components/wallet/gate-screen";
 import { useMintFighter } from "@/hooks/use-mint-fighter";
 import { useWallet } from "@/hooks/use-wallet";
-import type { Archetype, FighterArchetype } from "@/lib/types";
+import {
+  ARCHETYPE_LIST,
+  ARCHETYPE_META,
+  isAbilityUnlocked,
+  recommendArchetype,
+  type ScoreDimension,
+} from "@/lib/archetype-meta";
+import type { MockScores } from "@/lib/stylometry/mock-scores";
+import type { FighterArchetype } from "@/lib/types";
 
-const ARCHETYPES: Archetype[] = [
-  { id: "roaster", name: "Roaster", blurb: "Burns quickly, burns bright.", stat: "Wit 92 · Logic 68" },
-  { id: "debater", name: "Debater", blurb: "Structured argument, surgical rebuttals.", stat: "Logic 90 · Wit 70" },
-  { id: "philosopher", name: "Philosopher", blurb: "First principles, long horizons.", stat: "Logic 95 · Patience 88" },
-  { id: "troll", name: "Troll", blurb: "Unpredictable, derails the opponent.", stat: "Chaos 94 · Wit 80" },
-  { id: "scholar", name: "Scholar", blurb: "Citation-heavy, precedent-driven.", stat: "Logic 88 · Memory 92" },
-  { id: "provocateur", name: "Provocateur", blurb: "Goads with calculated edges.", stat: "Wit 86 · Chaos 78" },
-];
+const DIMENSION_LABEL: Record<ScoreDimension, string> = {
+  logos: "Logos",
+  rhetoric: "Rhetoric",
+  aggression: "Aggression",
+  range: "Range",
+  concreteness: "Concrete",
+};
+
+const DIMENSION_HINT: Record<ScoreDimension, string> = {
+  logos: "Premise → conclusion structure",
+  rhetoric: "Vivid imagery, figurative pull",
+  aggression: "Stance strength, low hedging",
+  range: "Lexical diversity (MTLD)",
+  concreteness: "Sensory, perceivable language",
+};
 
 const PHASE_LABELS: Record<string, string> = {
   seed: "Pinning seed to 0G Storage",
@@ -60,6 +75,14 @@ export default function MintPage() {
   const [arch, setArch] = useState<FighterArchetype>("roaster");
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState(0);
+  // Scoring step state. `scoring` is the spinner gate while the TEE
+  // round-trip is in flight. Pre-Phase-4 this is a 1.2s setTimeout
+  // around `deriveMockScores`; Phase 4 swaps in a fetch to a real
+  // server route that calls `lib/0g/score-persona.ts`. `scoreError` is
+  // the surface for retryable failures (parser miss, provider flake).
+  const [scoring, setScoring] = useState(false);
+  const [scores, setScores] = useState<MockScores | null>(null);
+  const [scoreError, setScoreError] = useState<string | null>(null);
 
   // Simple-mode: wrap user's free-text lines into JSONL that the backend expects.
   // Each non-empty line becomes one training example: the archetype provides the
@@ -195,7 +218,46 @@ export default function MintPage() {
     }
   };
 
-  const stepLabels = ["Style seed", "Archetype", "Name & avatar", "Review & mint"];
+  const stepLabels = [
+    "Style seed",
+    "Score traits",
+    "Archetype",
+    "Name & avatar",
+    "Review & mint",
+  ];
+
+  // Scoring trigger — fires when leaving step 1 → step 2. POSTs the
+  // effective seed to /api/mint/score; the route currently returns a
+  // mock 5-tuple (via lib/stylometry/mock-scores), but Phase 4 swaps
+  // the handler body for a real call to lib/0g/score-persona. The FE
+  // is contract-correct today.
+  const runScoring = async () => {
+    setScoreError(null);
+    setScoring(true);
+    try {
+      const res = await fetch("/api/mint/score", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ seed: effectiveSeed }),
+      });
+      if (!res.ok) {
+        const detail = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        throw new Error(detail.error ?? `Score endpoint returned ${res.status}`);
+      }
+      const data = (await res.json()) as {
+        scores: MockScores;
+        mode?: string;
+      };
+      setScores(data.scores);
+      setArch(recommendArchetype(data.scores as unknown as Record<ScoreDimension, number>));
+    } catch (e) {
+      setScoreError(e instanceof Error ? e.message : "Scoring failed");
+    } finally {
+      setScoring(false);
+    }
+  };
 
   return (
     <PageContainer maxWidth={920}>
@@ -595,7 +657,202 @@ Crypto is a slot machine with footnotes.
         {step === 2 && (
           <div>
             <div className="label" style={{ marginBottom: 10 }}>
+              TEE persona scoring
+            </div>
+            {scoring && (
+              <div
+                style={{
+                  padding: 28,
+                  textAlign: "center",
+                  background: "var(--bg-sunken)",
+                  border: "1px solid var(--bd-subtle)",
+                  borderRadius: 4,
+                }}
+              >
+                <div
+                  className="mono"
+                  style={{
+                    fontSize: 11,
+                    color: "var(--tx-tertiary)",
+                    letterSpacing: 1.5,
+                    textTransform: "uppercase",
+                    marginBottom: 10,
+                  }}
+                >
+                  Scoring persona via TEE…
+                </div>
+                <Skel h={10} w="60%" style={{ margin: "0 auto 8px" }} />
+                <Skel h={10} w="40%" style={{ margin: "0 auto" }} />
+              </div>
+            )}
+            {!scoring && scoreError && (
+              <div
+                style={{
+                  padding: 14,
+                  background: "var(--bg-sunken)",
+                  border: "1px solid var(--danger)",
+                  fontSize: 13,
+                  color: "var(--danger)",
+                }}
+              >
+                {scoreError}
+                <div style={{ marginTop: 8 }}>
+                  <Button size="sm" onClick={runScoring}>
+                    Retry
+                  </Button>
+                </div>
+              </div>
+            )}
+            {!scoring && !scoreError && scores && (
+              <div
+                style={{
+                  padding: 16,
+                  background: "var(--bg-sunken)",
+                  border: "1px solid var(--bd-subtle)",
+                  borderRadius: 4,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 14,
+                  }}
+                >
+                  <div className="label">5-trait persona score</div>
+                  <Button size="sm" onClick={runScoring}>
+                    Re-score
+                  </Button>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {(
+                    [
+                      "logos",
+                      "rhetoric",
+                      "aggression",
+                      "range",
+                      "concreteness",
+                    ] as const
+                  ).map((dim) => {
+                    const score = scores[dim];
+                    return (
+                      <div key={dim}>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            marginBottom: 4,
+                          }}
+                        >
+                          <span
+                            className="mono"
+                            style={{
+                              fontSize: 11,
+                              textTransform: "uppercase",
+                              letterSpacing: 1.2,
+                              color: "var(--tx-secondary)",
+                            }}
+                          >
+                            {DIMENSION_LABEL[dim]}
+                          </span>
+                          <span
+                            className="num"
+                            style={{ fontSize: 13, fontWeight: 600 }}
+                          >
+                            {score}
+                            <span style={{ color: "var(--tx-tertiary)" }}>/5</span>
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            height: 6,
+                            background: "var(--bd-subtle)",
+                            borderRadius: 2,
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: "100%",
+                              width: `${(score / 5) * 100}%`,
+                              background:
+                                score >= 4
+                                  ? "var(--success)"
+                                  : score >= 3
+                                    ? "var(--accent)"
+                                    : "var(--tx-tertiary)",
+                            }}
+                          />
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: "var(--tx-tertiary)",
+                            marginTop: 2,
+                          }}
+                        >
+                          {DIMENSION_HINT[dim]}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div
+                  style={{
+                    marginTop: 14,
+                    padding: 10,
+                    background: "var(--bg-canvas)",
+                    border: "1px solid var(--bd-subtle)",
+                    fontSize: 12,
+                    color: "var(--tx-secondary)",
+                    lineHeight: 1.55,
+                  }}
+                >
+                  Stylometric pair (Range / Concrete) is deterministic from
+                  your seed. The other three score the TEE judge's read of
+                  structure, vividness, and stance strength — committed
+                  on-chain as immutable traits next step.
+                </div>
+              </div>
+            )}
+            {!scoring && !scoreError && !scores && (
+              <div
+                style={{
+                  padding: 14,
+                  background: "var(--bg-sunken)",
+                  border: "1px solid var(--bd-subtle)",
+                  fontSize: 13,
+                }}
+              >
+                Click <strong>Score persona</strong> to send your seed to
+                the TEE judge.
+                <div style={{ marginTop: 10 }}>
+                  <Button size="sm" variant="primary" onClick={runScoring}>
+                    Score persona
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {step === 3 && (
+          <div>
+            <div className="label" style={{ marginBottom: 10 }}>
               Pick an archetype
+            </div>
+            <div
+              style={{
+                fontSize: 12,
+                color: "var(--tx-secondary)",
+                marginBottom: 14,
+                lineHeight: 1.55,
+              }}
+            >
+              Archetype is committed on-chain — fighter is forever this
+              archetype. Each one has a unique ability gated on a trait
+              threshold. Picking a mismatch is allowed; the ability stays
+              locked until the gate is met by a future re-score.
             </div>
             <div
               style={{
@@ -604,46 +861,147 @@ Crypto is a slot machine with footnotes.
                 gap: 10,
               }}
             >
-              {ARCHETYPES.map((a) => (
-                <button
-                  key={a.id}
-                  onClick={() => setArch(a.id)}
-                  style={{
-                    padding: 16,
-                    textAlign: "left",
-                    background: arch === a.id ? "var(--accent-muted)" : "var(--bg-sunken)",
-                    border: `1px solid ${arch === a.id ? "var(--accent-border)" : "var(--bd-default)"}`,
-                    borderRadius: 4,
-                  }}
-                >
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>{a.name}</div>
-                  <div
+              {ARCHETYPE_LIST.map((id) => {
+                const meta = ARCHETYPE_META[id];
+                const unlocked = scores
+                  ? isAbilityUnlocked(id, scores as unknown as Record<ScoreDimension, number>)
+                  : false;
+                const recommended =
+                  scores && recommendArchetype(scores as unknown as Record<ScoreDimension, number>) === id;
+                const userScore =
+                  scores?.[meta.abilityGate.dimension] ?? 0;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => setArch(id)}
                     style={{
-                      fontSize: 12,
-                      color: "var(--tx-secondary)",
-                      marginBottom: 8,
-                      lineHeight: 1.5,
+                      padding: 16,
+                      textAlign: "left",
+                      background:
+                        arch === id ? "var(--accent-muted)" : "var(--bg-sunken)",
+                      border: `1px solid ${
+                        arch === id
+                          ? "var(--accent-border)"
+                          : "var(--bd-default)"
+                      }`,
+                      borderRadius: 4,
+                      position: "relative",
                     }}
                   >
-                    {a.blurb}
-                  </div>
-                  <div
-                    className="mono"
-                    style={{
-                      fontSize: 10,
-                      color: "var(--tx-tertiary)",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {a.stat}
-                  </div>
-                </button>
-              ))}
+                    {recommended && (
+                      <span
+                        className="mono"
+                        style={{
+                          position: "absolute",
+                          top: -8,
+                          right: 10,
+                          padding: "2px 6px",
+                          fontSize: 9,
+                          letterSpacing: 1.5,
+                          textTransform: "uppercase",
+                          background: "var(--accent)",
+                          color: "var(--yap-ink-900)",
+                        }}
+                      >
+                        Recommended
+                      </span>
+                    )}
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        marginBottom: 6,
+                      }}
+                    >
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>
+                        {meta.name}
+                      </div>
+                      <span
+                        className="mono"
+                        style={{
+                          fontSize: 10,
+                          padding: "2px 6px",
+                          background: unlocked
+                            ? "color-mix(in srgb, var(--success) 15%, transparent)"
+                            : "color-mix(in srgb, var(--tx-tertiary) 15%, transparent)",
+                          color: unlocked
+                            ? "var(--success)"
+                            : "var(--tx-tertiary)",
+                          letterSpacing: 1.2,
+                          textTransform: "uppercase",
+                          borderRadius: 2,
+                          whiteSpace: "nowrap",
+                          marginLeft: 6,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {unlocked ? "✓ unlocked" : "✗ locked"}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--tx-secondary)",
+                        marginBottom: 10,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {meta.blurb}
+                    </div>
+                    <div
+                      style={{
+                        padding: 8,
+                        background: "var(--bg-canvas)",
+                        border: "1px solid var(--bd-subtle)",
+                        borderRadius: 3,
+                        marginBottom: 6,
+                      }}
+                    >
+                      <div
+                        className="mono"
+                        style={{
+                          fontSize: 10,
+                          letterSpacing: 1.2,
+                          textTransform: "uppercase",
+                          color: unlocked
+                            ? "var(--accent)"
+                            : "var(--tx-tertiary)",
+                          marginBottom: 2,
+                        }}
+                      >
+                        Ability · {meta.abilityName}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: "var(--tx-secondary)",
+                          lineHeight: 1.45,
+                        }}
+                      >
+                        {meta.abilityBlurb}
+                      </div>
+                    </div>
+                    <div
+                      className="mono"
+                      style={{
+                        fontSize: 10,
+                        color: unlocked ? "var(--tx-tertiary)" : "var(--danger)",
+                        letterSpacing: 1.2,
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Gate · {DIMENSION_LABEL[meta.abilityGate.dimension]}{" "}
+                      {userScore}/{meta.abilityGate.minScore}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <div
             className="al-wizard-2col"
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}
@@ -694,7 +1052,7 @@ Crypto is a slot machine with footnotes.
           </div>
         )}
 
-        {step === 4 && (
+        {step === 5 && (
           <div>
             {mint.phase === "idle" && (
               <>
@@ -862,11 +1220,22 @@ Crypto is a slot machine with footnotes.
           <Button onClick={() => (step > 1 ? setStep(step - 1) : router.push("/"))}>
             {step > 1 ? "Back" : "Cancel"}
           </Button>
-          {step < 4 ? (
+          {step < 5 ? (
             <Button
               variant="primary"
-              disabled={step === 1 && samples < 10}
-              onClick={() => setStep(step + 1)}
+              disabled={
+                (step === 1 && samples < 10) ||
+                (step === 2 && (!scores || scoring))
+              }
+              onClick={() => {
+                // Leaving step 1 → fire scoring if we haven't yet (or
+                // the seed text changed since last score). Cheap to
+                // re-fire — derived locally pre-Phase-4.
+                if (step === 1 && !scores) {
+                  void runScoring();
+                }
+                setStep(step + 1);
+              }}
               trailing={<Icon name="arrowRight" size={14} />}
             >
               Continue
