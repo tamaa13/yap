@@ -588,9 +588,9 @@ export function FighterDetail({
                     marginBottom: 4,
                   }}
                 >
-                  <div className="label">Combat traits</div>
+                  <div className="label">Persona traits</div>
                   <div style={{ fontSize: 10, color: "var(--tx-tertiary)" }}>
-                    base + battle record
+                    TEE-attested at mint
                   </div>
                 </div>
                 <div
@@ -601,51 +601,106 @@ export function FighterDetail({
                     lineHeight: 1.5,
                   }}
                 >
-                  HP shifts with win rate · Logic with ELO · Wit with battles fought.
+                  {fighter.traits
+                    ? "Logos / Rhetoric / Aggression scored by the TEE judge. Range + Concrete computed deterministically from the seed."
+                    : "This fighter pre-dates persona scoring. Re-mint to attest 5-trait scores on-chain."}
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  {(
-                    [
-                      { label: "HP", value: fighter.hp },
-                      { label: "Logic", value: fighter.logic },
-                      { label: "Wit", value: fighter.wit },
-                    ] as const
-                  ).map((s) => (
-                    <div key={s.label}>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          fontSize: 12,
-                          marginBottom: 5,
-                        }}
-                      >
-                        <span style={{ color: "var(--tx-secondary)" }}>{s.label}</span>
-                        <span className="num" style={{ color: "var(--tx-primary)" }}>
-                          {s.value}/100
-                        </span>
-                      </div>
-                      <div
-                        style={{
-                          height: 6,
-                          background: "var(--bg-sunken)",
-                          borderRadius: 3,
-                          overflow: "hidden",
-                        }}
-                      >
+                {fighter.traits ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    {(
+                      [
+                        { label: "Logos", value: fighter.traits.logos, hint: "Argument structure" },
+                        { label: "Rhetoric", value: fighter.traits.rhetoric, hint: "Vividness, voice" },
+                        { label: "Aggression", value: fighter.traits.aggression, hint: "Stance strength" },
+                        { label: "Range", value: fighter.traits.range, hint: "Lexical diversity" },
+                        { label: "Concrete", value: fighter.traits.concreteness, hint: "Sensory framing" },
+                      ] as const
+                    ).map((s) => (
+                      <div key={s.label}>
                         <div
                           style={{
-                            height: "100%",
-                            width: `${Math.max(0, Math.min(100, s.value))}%`,
-                            background: traitColor(s.value),
-                            transition:
-                              "width 300ms ease-out, background 200ms ease-out",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            fontSize: 12,
+                            marginBottom: 5,
                           }}
-                        />
+                        >
+                          <span style={{ color: "var(--tx-secondary)" }}>
+                            {s.label}
+                            <span
+                              style={{
+                                color: "var(--tx-tertiary)",
+                                fontSize: 11,
+                                marginLeft: 6,
+                              }}
+                            >
+                              · {s.hint}
+                            </span>
+                          </span>
+                          <span className="num" style={{ color: "var(--tx-primary)" }}>
+                            {s.value}/5
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            height: 6,
+                            background: "var(--bg-sunken)",
+                            borderRadius: 3,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: "100%",
+                              // Map the 1-5 trait band onto the same 0-100
+                              // bar width the previous HP/Logic/Wit display
+                              // used so the color ramp + transition feel
+                              // is consistent across the page.
+                              width: `${Math.max(0, Math.min(100, (s.value / 5) * 100))}%`,
+                              background: traitColor((s.value / 5) * 100),
+                              transition:
+                                "width 300ms ease-out, background 200ms ease-out",
+                            }}
+                          />
+                        </div>
                       </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      padding: 14,
+                      background: "var(--bg-sunken)",
+                      border: "1px dashed var(--bd-default)",
+                      borderRadius: 4,
+                      textAlign: "center",
+                    }}
+                  >
+                    <div
+                      className="mono"
+                      style={{
+                        fontSize: 11,
+                        letterSpacing: 1.5,
+                        textTransform: "uppercase",
+                        color: "var(--tx-tertiary)",
+                        marginBottom: 4,
+                      }}
+                    >
+                      Legacy fighter · unscored
                     </div>
-                  ))}
-                </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--tx-secondary)",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      Trait commitment landed in Phase 4; this fighter
+                      minted before that. Abilities stay locked because
+                      the gate read is all zeros on-chain.
+                    </div>
+                  </div>
+                )}
               </Card>
 
               <Card style={{ padding: 20 }}>

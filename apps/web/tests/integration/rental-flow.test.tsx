@@ -223,6 +223,7 @@ describe("Integration: rental challenge end-to-end (Fighter 20 reality)", () => 
       tags: [],
       battles: 0,
       attest: "0x",
+      traits: null,
     };
     const battle: Battle = {
       id: "b-0007",
