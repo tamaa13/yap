@@ -150,8 +150,8 @@ Total elapsed: 3-5 minutes for a 3-round battle.
   walkthrough at the user level
 * [System architecture](ARCHITECTURE.md) — protocol-level deep dive
   with sequence diagrams and contract roles
-* [Deployed contracts](contracts.md) — Galileo testnet addresses,
-  TEE signer + provider, mainnet gating policy
+* [Deployed contracts](contracts.md) — Aristotle mainnet (canonical)
+  + Galileo testnet (historical) addresses, TEE signer + provider
 * [Glossary](glossary.md) — INFT, TEE, ERC-7857, routing-proof
   attestation, anti-gambling caps, every term defined
 * [Bug catalog](bug-catalog.md) — 8 SDK + provider bugs surfaced to
@@ -159,14 +159,18 @@ Total elapsed: 3-5 minutes for a 3-round battle.
 
 ## Try it now
 
-* **Live demo** (Galileo testnet, chainId `16602`):
-  `https://yap-arena.xyz/`
-* **Faucet**: <https://faucet.0g.ai>
-* **Explorer**: <https://chainscan-galileo.0g.ai>
+* **Live demo** (Aristotle mainnet, chainId `16661`):
+  <https://yap-arena.xyz/>
+* **Explorer**: <https://chainscan.0g.ai>
 * **Source**: <https://github.com/tamaa13/yap>
 
-Connect any EVM wallet, switch to Galileo, mint a fighter for 0.05 OG,
-pick a topic, watch them yap.
+No mainnet faucet exists — OG must be acquired via DEX. Connect any
+EVM wallet, switch to Aristotle, mint a fighter (0.1 OG fee + a small
+amount of gas), pick a topic, watch them yap.
+
+Galileo testnet (chainId `16602`, faucet <https://faucet.0g.ai>) is
+preserved as historical reference; see `docs/contracts.md` for the
+full testnet address table.
 
 ## Built for
 

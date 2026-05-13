@@ -29,12 +29,13 @@ flowchart TB
     end
     subgraph chain["0G Chain"]
         fighter["YapFighter (ERC-7857)"]
-        trainer["FighterTrainer"]
         escrow["BattleEscrow"]
         registry["BattleRegistry"]
         market["YapMarketplace"]
         rental["RentalEscrow"]
         moment["MomentINFT"]
+        marketMoment["MomentMarketplace"]
+        ability["AbilityEscrow"]
         subname["YapSubnameRegistrar"]
         inbox["YapInbox"]
     end
@@ -48,7 +49,7 @@ flowchart TB
     api --> chain
 
     classDef contract fill:#1A1612,stroke:#C8102E,color:#F2EDE2
-    class fighter,trainer,escrow,registry,market,rental,moment,subname,inbox contract
+    class fighter,escrow,registry,market,rental,moment,marketMoment,ability,subname,inbox contract
 ```
 
 The frontend talks to 0G Compute and Storage off-chain; the user
@@ -101,50 +102,19 @@ runs server-side via Next.js `after()` and the polling client picks
 up the result on its next tick.
 
 > **Phase 2 pivot (2026-05-08)**: dropped on-chain fine-tune from
-> mint/train. The LoRA produced inside the TEE was never re-loaded
-> into battle inference — provider runs against the base model
-> regardless. Cutting it removes ~7 min of latency without changing
-> behavior, frees the mint UX to feel instant, and keeps the
-> ERC-7857 attestation chain (sealed key + metadataHash + on-chain
-> provenance) intact. Legacy fighters minted under the prior
-> pipeline still display their fine-tune metadata as historical
-> context.
-
-## Train a fighter (continuous learning)
-
-```mermaid
-sequenceDiagram
-    actor Owner
-    participant Web as Fighter detail<br/>+ Train modal
-    participant API as POST<br/>/api/fighters/<id>/train/start
-    participant Chain as YapFighter<br/>(read)
-    participant Pipeline as runMintPipeline<br/>(reused)
-    participant Wallet
-    participant Trainer as FighterTrainer<br/>(contract)
-
-    Owner->>Web: Click "Train"<br/>add new style lines
-    Web->>API: { tokenId, seed, archetype }
-    API->>Chain: ownerOf(tokenId)
-    Chain-->>API: owner address
-    Note over API: Reject if owner != requester
-    API->>Pipeline: createMintJob() + fire async
-    API-->>Web: { jobId, tokenId }
-
-    Pipeline->>Pipeline: same seal/upload path<br/>as mint
-    Note over Web: Client polls /status<br/>same hook as mint
-
-    Web->>Wallet: train(tokenId, encryptedURI,<br/>metadataHash, sealedKey,<br/>"", "", "0x")
-    Note right of Wallet: Last 3 args are legacy<br/>(taskId, provider, attestationSig)<br/>— empty post-pivot
-    Wallet->>Trainer: tx
-    Trainer-->>Wallet: FighterTrained event<br/>(tokenId, trainer, sessionNumber)
-    Note over Trainer: Increments trainingCount[tokenId]<br/>Updates latestEncryptedURI[tokenId]
-```
-
-`FighterTrainer` is **additive** — it never mutates `YapFighter`.
-Each call is an on-chain attestation that the new weights belong to
-this token, signed by the current owner. Off-chain indexers can
-replay the full evolution timeline from `FighterTrained` events
-alone.
+> the mint pipeline. The LoRA produced inside the TEE was never
+> re-loaded into battle inference — provider runs against the base
+> model regardless. Cutting it removes ~7 min of latency without
+> changing behavior, frees the mint UX to feel instant, and keeps
+> the ERC-7857 attestation chain (sealed key + metadataHash +
+> on-chain provenance) intact.
+>
+> **v4 cascade (2026-05-13)**: mint() became 6-arg
+> (`mint(to, encryptedURI, metadataHash, sealedKey, archetype, seedHash)`)
+> with a 0.1 OG `mintFee` routed to treasury, and a second tx
+> `recordMintScores(...)` lands the TEE-attested 5-dim persona
+> scores on-chain right after. Traits + abilities are committed
+> as part of the mint flow itself, not minted-then-scored later.
 
 ## Live battle + bet
 
@@ -329,29 +299,6 @@ with optional co-signed dispute lifecycle.
   stray-owner for UI display.
 * Pull-payment for both renter refunds and seller proceeds.
 
-### FighterTrainer
-
-Additive contract that records continuous-learning training
-sessions for existing YapFighter INFTs. Never mutates YapFighter —
-each call is a fresh on-chain attestation that the new weights
-belong to a tokenId, signed by the current owner.
-
-* `train(tokenId, encryptedURI, metadataHash, sealedKey,
-  fineTuneTaskId, fineTuneProvider, attestationSig)` — owner-only;
-  emits `FighterTrained(tokenId, trainer, sessionNumber, ...)` and
-  updates `trainingCount[tokenId]`, `latestEncryptedURI[tokenId]`,
-  `latestTaskId[tokenId]`.
-* All session metadata (taskId, provider, attestation) is emitted
-  in the event so a verifier can replay the full evolution timeline
-  + cross-check each session's TEE attestation independently.
-* Ownership check happens on-chain (`yapFighter.ownerOf(tokenId)
-  == msg.sender`); the API also pre-checks ownership before
-  spending compute resources.
-
-The fighter's "current weights" for inference = the most recent
-`FighterTrained` event; the original `YapFighter.mint` URI is
-treated as session 0 in the timeline.
-
 ### MomentINFT
 
 ERC-7857 sibling for Battle Moments — round highlights minted as
@@ -411,36 +358,38 @@ emits one `Message` event per send. ECIES inline payload up to
 * **Re-encryption on transfer** — sealed key rotates on
   `iTransferFrom`; `encryptedURI` rotation is in the v1.1
   hardening queue (see Known Gaps below).
-* **Persona evolution chain (mint + train)** — each fighter's
-  persona is an encrypted payload pinned on 0G Storage; the sealed
-  key + metadata hash are committed on-chain at mint, and every
-  `FighterTrainer.train(...)` call adds a new `FighterTrained`
-  event tying a fresh `encryptedURI` to the existing tokenId,
-  signed by the owner. Anyone scanning the events can replay the
-  full evolution timeline independently of Yap's backend.
+* **TEE-attested persona scoring at mint** — the 5 trait scores
+  (Logos / Rhetoric / Aggression / Range / Concreteness) are
+  scored inside the 0G Compute TEE judge, packed into a canonical
+  line `YAP_FIGHTER_SCORE|chainId|fighterAddr|tokenId|seedHash|...`
+  that the provider echoes + signs. `YapFighter.recordMintScores`
+  runs the same three on-chain checks as battle-verdict settlement
+  (ECDSA → scoreOracleKey, sha256(responseBody), canonical@offset)
+  and packs the scores into the token's `uint8[5]` trait slot. One
+  trust primitive, two callsites.
 
 ### What's still in-flight
 
-* **Bug #6 (TLS cert validation gap in routing-proof on mainnet
-  path).** Open. Yap mainnet deploy is gated on this resolution;
-  see [bug catalog](bug-catalog.md).
+* **Bug #6 (TLS cert validation gap in routing-proof).** Open
+  upstream; tracked in [bug catalog](bug-catalog.md). Aristotle
+  mainnet is live regardless — Yap's three on-chain checks
+  (ECDSA recovery, sha256 match, canonical reconstruction) do
+  not depend on the bug being closed.
 * **Bug #7 (TEE download proxy timeout).** The provider deployment
   template's reverse proxy times out before the 90 MB LoRA
   finishes streaming. Avoided in production by downloading via 0G
   Storage natively (also faster); the TEE fallback is only used on
   macOS dev.
 * **Bug #8 (FT provider models registry empties spontaneously) —
-  DEFERRED.** Phase 2 pivot dropped fine-tune from the mint/train
-  pipelines, so this bug no longer blocks Yap. Local mitigation
+  DEFERRED.** Phase 2 pivot dropped fine-tune from the mint
+  pipeline, so this bug no longer blocks Yap. Local mitigation
   (provider picker filtering on `models: []`) remains in
   `compute.ts` for any future caller.
-* **Mainnet deploy.** Galileo testnet path is live and verified;
-  Aristotle (chainId 16661) deploy is gated on (1) two-key
-  blast-radius separation for `ZG_BROKER_KEY` and
-  `ZG_RELAYER_KEY`, (2) a recorded provider rotation ceremony if
-  oracleKey needs to differ from testnet, (3) the same
-  `FighterTrainer` deploy + env wiring documented in README
-  §Deployed Addresses.
+* **Continuous learning (train flow).** The standalone
+  FighterTrainer contract is NOT in the v4 cascade. The hackathon
+  product treats the mint-time seal as the single canonical
+  persona for the token. Re-introducing train as a versioned
+  encryptedURI overlay is parked as a post-hackathon explore.
 
 ### Trust assumptions
 

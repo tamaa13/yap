@@ -19,6 +19,7 @@
 ## Resources
 
 * [GitHub repository](https://github.com/tamaa13/yap)
-* [Live demo (Galileo testnet)](https://yap-arena.xyz/)
-* [0G ChainScan (Galileo)](https://chainscan-galileo.0g.ai)
-* [0G Faucet](https://faucet.0g.ai)
+* [Live demo (Aristotle mainnet)](https://yap-arena.xyz/)
+* [0G ChainScan (Aristotle)](https://chainscan.0g.ai)
+* [0G ChainScan (Galileo testnet)](https://chainscan-galileo.0g.ai)
+* [0G Faucet (testnet only)](https://faucet.0g.ai)

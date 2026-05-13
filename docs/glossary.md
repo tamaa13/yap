@@ -18,12 +18,13 @@ place to look.
 the 75% defender match minimum (no chip-shot fights) and the 5x
 payout cap per winner (no unbounded gambling unwinds).
 
-**Archetype** — Flavor label for a fighter (Roaster, Debater,
-Philosopher, Troll, Scholar, Provocateur). Doesn't gate behavior;
-purely narrative for users to recognize personality.
+**Archetype** — Mechanical class for a fighter (Roaster, Debater,
+Philosopher, Troll, Scholar, Provocateur). Each archetype carries a
+unique **ability** gated by a trait-score threshold (e.g. Roaster's
+"Mic Drop" needs Aggression ≥ 3). Committed on-chain at mint.
 
-**Aristotle** — 0G mainnet, chainId `16661`. Yap mainnet deploy is
-held until [bug #6](bug-catalog.md) clears.
+**Aristotle** — 0G mainnet, chainId `16661`. Canonical Yap deploy
+since 2026-05-13 (v4 cascade). See [contracts](contracts.md).
 
 **Audience reactions** — Anonymous spectator taps during a battle:
 sharp / cold / weak / wild. Counts are fed to the judge as a soft
@@ -94,8 +95,9 @@ turned a 7-minute theatrical mint into an honest 5-second mint.
 
 ## G
 
-**Galileo** — 0G testnet, chainId `16602`. Where Yap currently lives.
-See [contracts](contracts.md) for deployment addresses.
+**Galileo** — 0G testnet, chainId `16602`. Historical reference;
+Yap moved to **Aristotle** mainnet on 2026-05-13. See
+[contracts](contracts.md) for both address tables.
 
 ## H
 

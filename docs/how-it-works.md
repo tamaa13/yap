@@ -20,45 +20,45 @@ completion pairs that capture how your fighter talks. Example:
 …
 ```
 
-Pick an **archetype** (Roaster / Debater / Philosopher / Troll /
-Scholar / Provocateur — flavor only, doesn't gate behavior) and a
-**name**.
+First, **Score Traits**. The seed goes to a 0G Compute TEE judge
+that scores five dimensions on a 1–5 scale (Logos, Rhetoric,
+Aggression via median-of-5 LLM judgment with `qwen3.6-plus`; Range
+via MTLD stylometric; Concreteness via Brysbaert ratings). ~15–25s
+wall time, all attested by the same routing-proof signature primitive
+that settles battle verdicts.
 
-Hit *Sign & Mint*. Behind the scenes:
+Then pick an **archetype** (Roaster / Debater / Philosopher / Troll /
+Scholar / Provocateur). Each archetype carries a unique mechanical
+ability gated on the trait scores you just earned — e.g., Roaster's
+"Mic Drop" needs Aggression ≥ 3. The mint UI shows which abilities
+unlock before you commit; picking a locked archetype is allowed but
+the fighter's ability stays permanently locked (the contract has no
+setArchetype function and `recordMintScores` is one-shot per token).
+
+Hit *Sign the mint*. Behind the scenes:
 
 1. Server uploads your seed JSONL to 0G Storage → `seedRoot`
 2. Generates a fresh AES-GCM key, encrypts the seed payload
 3. Uploads the encrypted payload → `weightsRoot`
 4. Computes `metadataHash = keccak(provenance)` and seals the key
 5. Returns the prepare bundle to your wallet
-6. You sign `YapFighter.mint(to, encryptedURI, metadataHash, sealedKey)`
-   on-chain (one tx, ~0.05 OG fee)
+6. You sign `YapFighter.mint(to, encryptedURI, metadataHash, sealedKey, archetype, seedHash)`
+   on-chain — `msg.value = 0.1 OG` mint fee routes to treasury
+7. You sign a second tx, `recordMintScores(tokenId, scores, seedHash, responseBody, contentOffset, signedText, teeSignature)`,
+   which replays the TEE attestation on-chain: ECDSA recovery against
+   the registered `scoreOracleKey`, sha256 match on the response body,
+   canonical reconstruction at the byte offset. Traits flip from
+   `[0,0,0,0,0]` to committed values; `isScored(tokenId)` becomes true.
 
-Total elapsed: about five seconds end to end. Your fighter is now an
-ERC-7857 character INFT — the persona is encrypted on 0G Storage,
-the sealed key + metadataHash + ownership are committed on-chain.
+Total elapsed: ~30s + two MetaMask prompts; cost ≈ 0.16 OG (0.1 fee
++ ~0.06 gas across both txs). Your fighter is now an ERC-7857
+character INFT — the persona is encrypted on 0G Storage, the sealed
+key + metadataHash + TEE-attested traits are committed on-chain.
 
 **What you don't have to do**: no fine-tuning, no model selection, no
 training time. The persona seed is the entire IP.
 
-## 2 — Train a fighter (continuous learning)
-
-After your fighter has fought a few battles, you might want to
-re-seal it with new style lines. Open the fighter detail page, click
-*Train*, paste 1-3 new lines learned from previous battles, sign
-again.
-
-Same async pipeline as mint. The contract emits a `FighterTrained`
-event so the evolution timeline is independently auditable: a
-subgraph or indexer can replay every re-seal session, with all
-metadata (taskId, provider, attestationSig) preserved on-chain.
-
-Crucially, training is **additive**. The original seal at session 0
-stays — `YapFighter.encryptedURI(tokenId)` is the genesis persona;
-`FighterTrainer.latestEncryptedURI(tokenId)` is the current one used
-by inference. Old fighters keep their lineage.
-
-## 3 — Pick an opponent + battle
+## 2 — Pick an opponent + battle
 
 From the arena page, browse open challenges or create one. To create:
 
@@ -77,7 +77,7 @@ auto-rejected — anti-chip-shot rule prevents bullies trading 1 OG vs
 place pari-mutuel bets on either side. Bets stay open until the
 runner submits a verdict on-chain.
 
-## 4 — Run the battle
+## 3 — Run the battle
 
 Anyone can hit `POST /api/battle/<id>/start` (rate-limited per IP).
 The runner spawns the per-round inference loop:
@@ -105,7 +105,7 @@ Spectators can react with sharp / cold / weak / wild taps. The
 counts are anonymous, fed to the judge as a soft prior, and never
 attributed to a specific side.
 
-## 5 — Verdict + settlement
+## 4 — Verdict + settlement
 
 After all rounds (or on TKO), the runner runs two more inference
 calls:
@@ -157,12 +157,13 @@ runs three independent checks:
 Any check fails → tx reverts → no payout. Yap can't pay against a
 broken proof.
 
-After the dispute window (~30s on testnet, configurable), anyone
+After the dispute window (configurable; mainnet currently 5 min for
+demo via `setDisputeWindow(300)`), anyone
 calls `settle(battleId)`. Winners share the losing-side pool minus
 a treasury fee. Payout per winner caps at 5x stake to prevent
 gambling unwinds. `BattleRegistry` updates ELO for both fighters.
 
-## 6 — Mint a moment
+## 5 — Mint a moment
 
 From the battle result page, scroll down to "Mint moment". Each round
 has a button. Click any round → MetaMask sign → tx confirms. The
@@ -175,7 +176,7 @@ NBA Top Shot for AI debate.
 Battle Moments trade in the same marketplace as fighters, with the
 same re-encryption on transfer (new owner gets a fresh sealed key).
 
-## 7 — Trade or rent
+## 6 — Trade or rent
 
 **Sell a fighter**:
 
@@ -203,7 +204,7 @@ disputed defaults to renter refund (no Yap referee).
 Platform fee scales **inverse** to renter-favor: a 100% renter
 refund pays *zero* fee. The platform doesn't profit from disputes.
 
-## 8 — Identity (subnames)
+## 7 — Identity (subnames)
 
 Fighters get a numerical token ID (`Fighter #20`) by default. To
 give them a memorable handle, click *Register subname* on the
@@ -221,7 +222,7 @@ Phase 2 will integrate with SPACE ID's SANN registry once `yap.0g`
 is acquired as a parent name. The on-chain shape (label → tokenId
 binding) is forward-compatible.
 
-## 9 — A2A messaging (YapInbox)
+## 8 — A2A messaging (YapInbox)
 
 `YapInbox` is a stateless A2A encrypted message emitter. Stores
 nothing on-chain — emits one `Message` event per send with:
@@ -241,9 +242,6 @@ server.
 
 Honest disclaimers — Yap currently doesn't have:
 
-* **Mainnet deployment** — held until 0G broker bug #6 (TLS cert
-  validation in routing-proof attestation) clears upstream. See
-  [bug catalog](bug-catalog.md).
 * **Full SPACE ID integration** — subname registry is current
   Phase 1 (standalone); Phase 2 plugs into SPACE ID's SANN
   registry once `yap.0g` is acquired.
