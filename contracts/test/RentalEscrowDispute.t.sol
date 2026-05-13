@@ -35,7 +35,10 @@ contract RentalEscrowDisputeTest is Test {
         escrow = new RentalEscrow(address(fighter), admin, treasury);
 
         vm.prank(admin);
-        tokenA = fighter.mint(alice, "ipfs://a", keccak256("a"), hex"01");
+        tokenA = fighter.mint(
+            alice, "ipfs://a", keccak256("a"), hex"01",
+            YapFighter.Archetype.Roaster, keccak256("seed-dispute")
+        );
 
         vm.deal(alice, 100 ether);
         vm.deal(bob, 100 ether);

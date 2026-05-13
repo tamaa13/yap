@@ -5,6 +5,9 @@ import {Test} from "forge-std/Test.sol";
 import {YapFighter} from "../src/YapFighter.sol";
 import {IERC7857} from "../src/IERC7857.sol";
 import {IAccessControl} from "openzeppelin-contracts/contracts/access/IAccessControl.sol";
+import {TEEAttestationLib} from "../src/TEEAttestationLib.sol";
+import {MessageHashUtils} from "openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
 contract YapFighterTest is Test {
     YapFighter internal fighter;
@@ -28,7 +31,14 @@ contract YapFighterTest is Test {
 
     function _mintTo(address to, bytes32 hash_) internal returns (uint256 id) {
         vm.prank(admin);
-        id = fighter.mint{value: MINT_FEE}(to, "ipfs://enc/1", hash_, hex"01");
+        id = fighter.mint{value: MINT_FEE}(
+            to,
+            "ipfs://enc/1",
+            hash_,
+            hex"01",
+            YapFighter.Archetype.Roaster,
+            keccak256(abi.encodePacked("seed-", hash_))
+        );
     }
 
     function _buildProof(
@@ -76,22 +86,52 @@ contract YapFighterTest is Test {
     function test_Mint_RevertsOnIncorrectFee() public {
         vm.prank(admin);
         vm.expectRevert(YapFighter.IncorrectFee.selector);
-        fighter.mint{value: 0}(alice, "ipfs://x", keccak256("a"), hex"01");
+        fighter.mint{value: 0}(
+            alice, "ipfs://x", keccak256("a"), hex"01",
+            YapFighter.Archetype.Roaster, keccak256("seed")
+        );
     }
 
     function test_Mint_RevertsOnZeroAddress() public {
         vm.prank(admin);
         vm.expectRevert(YapFighter.ZeroAddress.selector);
-        fighter.mint{value: MINT_FEE}(address(0), "ipfs://x", keccak256("a"), hex"01");
+        fighter.mint{value: MINT_FEE}(
+            address(0), "ipfs://x", keccak256("a"), hex"01",
+            YapFighter.Archetype.Roaster, keccak256("seed")
+        );
+    }
+
+    function test_Mint_RevertsOnZeroSeedHash() public {
+        vm.prank(admin);
+        vm.expectRevert(YapFighter.InvalidProof.selector);
+        fighter.mint{value: MINT_FEE}(
+            alice, "ipfs://x", keccak256("a"), hex"01",
+            YapFighter.Archetype.Roaster, bytes32(0)
+        );
     }
 
     /// Public mint: anyone paying the fee can mint — no MINTER_ROLE gate.
     function test_Mint_PublicMint_Succeeds() public {
         vm.deal(alice, MINT_FEE);
         vm.prank(alice);
-        uint256 id = fighter.mint{value: MINT_FEE}(alice, "ipfs://x", keccak256("a"), hex"01");
+        uint256 id = fighter.mint{value: MINT_FEE}(
+            alice, "ipfs://x", keccak256("a"), hex"01",
+            YapFighter.Archetype.Debater, keccak256("alice-seed")
+        );
         assertEq(fighter.ownerOf(id), alice);
         assertEq(fighter.metadataHash(id), keccak256("a"));
+        assertEq(uint8(fighter.getArchetype(id)), uint8(YapFighter.Archetype.Debater));
+        assertEq(fighter.getSeedHash(id), keccak256("alice-seed"));
+        assertFalse(fighter.isScored(id));
+    }
+
+    /// IERC7857.mint (4-arg) reverts unconditionally — clients must use
+    /// the 6-arg overload that commits archetype + seedHash.
+    function test_Mint_LegacyFourArgReverts() public {
+        vm.deal(alice, MINT_FEE);
+        vm.prank(alice);
+        vm.expectRevert(YapFighter.MintNotSupported.selector);
+        fighter.mint{value: MINT_FEE}(alice, "ipfs://x", keccak256("a"), hex"01");
     }
 
     // ---------------- transfer with proof ----------------
@@ -492,5 +532,233 @@ contract YapFighterTest is Test {
         vm.prank(alice);
         vm.expectRevert(YapFighter.InvalidProof.selector);
         fighter.iTransferFrom(alice, bob, id, proofs, "ipfs://reseal");
+    }
+
+    // ---------------- recordMintScores (TEE-attested persona scoring) ----------------
+
+    uint256 internal constant SCORE_ORACLE_PK = 0xC0DE5C;
+
+    /// Builds a complete attestation envelope for a recordMintScores call
+    /// signed by SCORE_ORACLE_PK. Mirrors the BattleEscrow.t.sol helper
+    /// shape — wraps the contract's canonical text inside a mock JSON
+    /// `{"content":"…"}` body at offset 12.
+    struct ScoreArgs {
+        bytes responseBody;
+        uint256 contentOffset;
+        bytes signedText;
+        bytes signature;
+    }
+
+    function _buildScoreArgs(
+        uint256 tokenId,
+        bytes32 seedHash,
+        uint8[5] memory scoresMem,
+        uint256 signerPk
+    ) internal view returns (ScoreArgs memory args) {
+        // Copy memory array → calldata array via an external view roundtrip
+        // by calling scoreCanonicalText which takes uint8[5] calldata.
+        uint8[5] memory s = scoresMem;
+        bytes memory canonical = bytes(
+            this.callScoreCanonicalText(tokenId, seedHash, s)
+        );
+
+        args.responseBody = abi.encodePacked('{"content":"', canonical, '"}');
+        args.contentOffset = 12;
+
+        bytes32 respSha = sha256(args.responseBody);
+        bytes32 dummyReqSha = keccak256("yap-score-req");
+        bytes32 dummyTlsFp = keccak256("yap-score-tls");
+        args.signedText = abi.encodePacked(
+            _hex64(dummyReqSha), ":", _hex64(respSha),
+            ":centralized:test:", _hex64(dummyTlsFp)
+        );
+        bytes32 digest = MessageHashUtils.toEthSignedMessageHash(args.signedText);
+        (uint8 vv, bytes32 r, bytes32 sig_s) = vm.sign(signerPk, digest);
+        args.signature = abi.encodePacked(r, sig_s, vv);
+    }
+
+    /// External callable wrapper so we can pass uint8[5] memory through
+    /// a calldata boundary into the contract's scoreCanonicalText.
+    function callScoreCanonicalText(
+        uint256 tokenId,
+        bytes32 seedHash,
+        uint8[5] calldata scores
+    ) external view returns (string memory) {
+        return fighter.scoreCanonicalText(tokenId, seedHash, scores);
+    }
+
+    function _hex64(bytes32 b) internal pure returns (bytes memory) {
+        bytes memory withPrefix = bytes(Strings.toHexString(uint256(b), 32));
+        bytes memory out = new bytes(64);
+        for (uint256 i = 0; i < 64; ++i) out[i] = withPrefix[i + 2];
+        return out;
+    }
+
+    function _setScoreOracle() internal {
+        address scoreOracle = vm.addr(SCORE_ORACLE_PK);
+        vm.prank(admin);
+        fighter.setScoreOracleKey(scoreOracle);
+    }
+
+    function _mintWithSeed(address to, bytes32 seedHash, YapFighter.Archetype arch)
+        internal
+        returns (uint256 id)
+    {
+        vm.prank(admin);
+        id = fighter.mint{value: MINT_FEE}(
+            to, "ipfs://score", keccak256("score-meta"), hex"01", arch, seedHash
+        );
+    }
+
+    function test_RecordMintScores_HappyPath_OwnerCall() public {
+        _setScoreOracle();
+        bytes32 seedHash = keccak256("happy-seed");
+        uint256 id = _mintWithSeed(alice, seedHash, YapFighter.Archetype.Debater);
+
+        uint8[5] memory scores;
+        scores[0] = 4; scores[1] = 5; scores[2] = 3; scores[3] = 4; scores[4] = 2;
+        ScoreArgs memory a = _buildScoreArgs(id, seedHash, scores, SCORE_ORACLE_PK);
+
+        vm.expectEmit(true, true, false, true, address(fighter));
+        emit YapFighter.FighterScored(id, alice, YapFighter.Archetype.Debater, scores);
+        vm.prank(alice);
+        fighter.recordMintScores(id, scores, seedHash, a.responseBody, a.contentOffset, a.signedText, a.signature);
+
+        uint8[5] memory got = fighter.getTraits(id);
+        assertEq(got[0], 4); assertEq(got[1], 5); assertEq(got[2], 3);
+        assertEq(got[3], 4); assertEq(got[4], 2);
+        assertTrue(fighter.isScored(id));
+    }
+
+    function test_RecordMintScores_RunnerRoleCanCall() public {
+        _setScoreOracle();
+        bytes32 seedHash = keccak256("runner-seed");
+        uint256 id = _mintWithSeed(alice, seedHash, YapFighter.Archetype.Roaster);
+        address runner = makeAddr("score-runner");
+        bytes32 role = fighter.RUNNER_ROLE();
+        vm.prank(admin);
+        fighter.grantRole(role, runner);
+
+        uint8[5] memory scores = [uint8(3), 3, 4, 3, 3];
+        ScoreArgs memory a = _buildScoreArgs(id, seedHash, scores, SCORE_ORACLE_PK);
+
+        vm.prank(runner);
+        fighter.recordMintScores(id, scores, seedHash, a.responseBody, a.contentOffset, a.signedText, a.signature);
+        assertTrue(fighter.isScored(id));
+    }
+
+    function test_RecordMintScores_RevertsOnReplay() public {
+        _setScoreOracle();
+        bytes32 seedHash = keccak256("replay-seed");
+        uint256 id = _mintWithSeed(alice, seedHash, YapFighter.Archetype.Troll);
+        uint8[5] memory scores = [uint8(2), 2, 5, 2, 2];
+        ScoreArgs memory a = _buildScoreArgs(id, seedHash, scores, SCORE_ORACLE_PK);
+        vm.prank(alice);
+        fighter.recordMintScores(id, scores, seedHash, a.responseBody, a.contentOffset, a.signedText, a.signature);
+
+        vm.expectRevert(YapFighter.AlreadyScored.selector);
+        vm.prank(alice);
+        fighter.recordMintScores(id, scores, seedHash, a.responseBody, a.contentOffset, a.signedText, a.signature);
+    }
+
+    function test_RecordMintScores_RevertsOnSeedMismatch() public {
+        _setScoreOracle();
+        bytes32 mintedSeed = keccak256("real-seed");
+        bytes32 fakeSeed = keccak256("fake-seed");
+        uint256 id = _mintWithSeed(alice, mintedSeed, YapFighter.Archetype.Scholar);
+
+        uint8[5] memory scores = [uint8(3), 3, 3, 4, 3];
+        ScoreArgs memory a = _buildScoreArgs(id, fakeSeed, scores, SCORE_ORACLE_PK);
+
+        vm.expectRevert(YapFighter.SeedMismatch.selector);
+        vm.prank(alice);
+        fighter.recordMintScores(id, scores, fakeSeed, a.responseBody, a.contentOffset, a.signedText, a.signature);
+    }
+
+    function test_RecordMintScores_RevertsOnScoreBelowMin() public {
+        _setScoreOracle();
+        bytes32 seedHash = keccak256("range-low");
+        uint256 id = _mintWithSeed(alice, seedHash, YapFighter.Archetype.Provocateur);
+        uint8[5] memory scores = [uint8(0), 3, 3, 3, 3]; // 0 < MIN_TRAIT_SCORE
+        ScoreArgs memory a = _buildScoreArgs(id, seedHash, scores, SCORE_ORACLE_PK);
+
+        vm.expectRevert(YapFighter.InvalidScoreRange.selector);
+        vm.prank(alice);
+        fighter.recordMintScores(id, scores, seedHash, a.responseBody, a.contentOffset, a.signedText, a.signature);
+    }
+
+    function test_RecordMintScores_RevertsOnScoreAboveMax() public {
+        _setScoreOracle();
+        bytes32 seedHash = keccak256("range-high");
+        uint256 id = _mintWithSeed(alice, seedHash, YapFighter.Archetype.Roaster);
+        uint8[5] memory scores = [uint8(3), 3, 6, 3, 3]; // 6 > MAX_TRAIT_SCORE
+        ScoreArgs memory a = _buildScoreArgs(id, seedHash, scores, SCORE_ORACLE_PK);
+
+        vm.expectRevert(YapFighter.InvalidScoreRange.selector);
+        vm.prank(alice);
+        fighter.recordMintScores(id, scores, seedHash, a.responseBody, a.contentOffset, a.signedText, a.signature);
+    }
+
+    function test_RecordMintScores_RevertsOnUnauthorized() public {
+        _setScoreOracle();
+        bytes32 seedHash = keccak256("auth-seed");
+        uint256 id = _mintWithSeed(alice, seedHash, YapFighter.Archetype.Debater);
+        uint8[5] memory scores = [uint8(3), 3, 3, 3, 3];
+        ScoreArgs memory a = _buildScoreArgs(id, seedHash, scores, SCORE_ORACLE_PK);
+
+        // bob is neither owner nor a runner.
+        vm.expectRevert(YapFighter.NotAuthorized.selector);
+        vm.prank(bob);
+        fighter.recordMintScores(id, scores, seedHash, a.responseBody, a.contentOffset, a.signedText, a.signature);
+    }
+
+    function test_RecordMintScores_RevertsWhenOracleKeyUnset() public {
+        // No setScoreOracle() — fighter.oracleKey() is address(0).
+        bytes32 seedHash = keccak256("no-oracle");
+        uint256 id = _mintWithSeed(alice, seedHash, YapFighter.Archetype.Roaster);
+        uint8[5] memory scores = [uint8(3), 3, 3, 3, 3];
+        ScoreArgs memory a = _buildScoreArgs(id, seedHash, scores, SCORE_ORACLE_PK);
+
+        vm.expectRevert(YapFighter.NotAuthorized.selector);
+        vm.prank(alice);
+        fighter.recordMintScores(id, scores, seedHash, a.responseBody, a.contentOffset, a.signedText, a.signature);
+    }
+
+    function test_RecordMintScores_RevertsOnWrongSigner() public {
+        _setScoreOracle();
+        bytes32 seedHash = keccak256("wrong-signer");
+        uint256 id = _mintWithSeed(alice, seedHash, YapFighter.Archetype.Roaster);
+        uint8[5] memory scores = [uint8(3), 3, 3, 3, 3];
+        // Sign with a different key — recovery will return a non-oracle address.
+        ScoreArgs memory a = _buildScoreArgs(id, seedHash, scores, 0xBADBAD);
+
+        vm.expectRevert(TEEAttestationLib.InvalidOracleSignature.selector);
+        vm.prank(alice);
+        fighter.recordMintScores(id, scores, seedHash, a.responseBody, a.contentOffset, a.signedText, a.signature);
+    }
+
+    function test_GetTraits_ReturnsZerosWhenUnscored() public {
+        bytes32 seedHash = keccak256("unscored");
+        uint256 id = _mintWithSeed(alice, seedHash, YapFighter.Archetype.Roaster);
+        uint8[5] memory got = fighter.getTraits(id);
+        for (uint256 i = 0; i < 5; ++i) assertEq(got[i], 0);
+        assertFalse(fighter.isScored(id));
+    }
+
+    function test_SetScoreOracleKey_OnlyAdmin() public {
+        address newKey = makeAddr("new-oracle");
+        vm.prank(bob);
+        vm.expectRevert();
+        fighter.setScoreOracleKey(newKey);
+
+        vm.prank(admin);
+        fighter.setScoreOracleKey(newKey);
+        assertEq(fighter.scoreOracleKey(), newKey);
+    }
+
+    function test_SetScoreOracleKey_RevertsOnZero() public {
+        vm.prank(admin);
+        vm.expectRevert(YapFighter.ZeroAddress.selector);
+        fighter.setScoreOracleKey(address(0));
     }
 }

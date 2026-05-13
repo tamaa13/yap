@@ -101,11 +101,20 @@ contract RentalEscrowTest is Test {
         escrow = new RentalEscrow(address(fighter), admin, treasury);
 
         vm.prank(admin);
-        tokenA = fighter.mint(alice, "ipfs://a", keccak256("a"), hex"01");
+        tokenA = fighter.mint(
+            alice, "ipfs://a", keccak256("a"), hex"01",
+            YapFighter.Archetype.Roaster, keccak256("seed-a")
+        );
         vm.prank(admin);
-        tokenB = fighter.mint(alice, "ipfs://b", keccak256("b"), hex"02");
+        tokenB = fighter.mint(
+            alice, "ipfs://b", keccak256("b"), hex"02",
+            YapFighter.Archetype.Debater, keccak256("seed-b")
+        );
         vm.prank(admin);
-        tokenC = fighter.mint(alice, "ipfs://c", keccak256("c"), hex"03");
+        tokenC = fighter.mint(
+            alice, "ipfs://c", keccak256("c"), hex"03",
+            YapFighter.Archetype.Scholar, keccak256("seed-c")
+        );
 
         vm.deal(alice, 100 ether);
         vm.deal(bob, 100 ether);
@@ -454,7 +463,10 @@ contract RentalEscrowTest is Test {
     function test_Reentrancy_withdraw() public {
         ReentrantOwner owner = new ReentrantOwner(escrow, fighter);
         vm.prank(admin);
-        uint256 id = fighter.mint(address(owner), "ipfs://o", keccak256("o"), hex"99");
+        uint256 id = fighter.mint(
+            address(owner), "ipfs://o", keccak256("o"), hex"99",
+            YapFighter.Archetype.Roaster, keccak256("seed-reentry")
+        );
 
         owner.approveAndList(id, PRICE, MAX_DAYS);
 
