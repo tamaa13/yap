@@ -16,7 +16,10 @@ import { Breadcrumbs } from "@/components/shell/breadcrumbs";
 import { PageContainer } from "@/components/shell/page-container";
 import { GateScreen } from "@/components/wallet/gate-screen";
 import { useMintFighter } from "@/hooks/use-mint-fighter";
+import { useNextTokenId } from "@/hooks/use-next-token-id";
 import { useWallet } from "@/hooks/use-wallet";
+import { activeChain } from "@/lib/chains";
+import { FIGHTER_INFT_ADDRESS } from "@/lib/contracts";
 import {
   ARCHETYPE_LIST,
   ARCHETYPE_META,
@@ -63,6 +66,16 @@ export default function MintPage() {
   const { push } = useToast();
   const { ready, connected, addr } = useWallet();
   const mint = useMintFighter();
+  // Predicted tokenId for the next mint. Required by /api/mint/score
+  // because the canonical text the TEE echoes binds the score to the
+  // specific (chainId, fighterAddr, tokenId, seedHash, scores) tuple
+  // that `YapFighter.recordMintScores` re-verifies on-chain. Without
+  // a tokenId, the route 400s ("tokenId is required for live scoring").
+  // The hook scans Minted events + 1; race-prone for concurrent mints,
+  // but on a fresh mainnet with single-user demo traffic the prediction
+  // is reliable. `refetch` is called right before the mint tx fires
+  // to catch any drift since the score request landed.
+  const nextTokenId = useNextTokenId();
 
   const [step, setStep] = useState(1);
   const [seedText, setSeedText] = useState("");
@@ -227,18 +240,31 @@ export default function MintPage() {
   ];
 
   // Scoring trigger — fires when leaving step 1 → step 2. POSTs the
-  // effective seed to /api/mint/score; the route currently returns a
-  // mock 5-tuple (via lib/stylometry/mock-scores), but Phase 4 swaps
-  // the handler body for a real call to lib/0g/score-persona. The FE
-  // is contract-correct today.
+  // effective seed to /api/mint/score; the live TEE path needs
+  // tokenId + fighterAddr + chainId so the canonical text matches
+  // what recordMintScores will re-verify on-chain. Mock-mode tolerates
+  // the missing tokenId (route 200s with stub fields), but live mode
+  // 400s without it — and the mock-mode FE is no longer the prod path.
   const runScoring = async () => {
     setScoreError(null);
     setScoring(true);
     try {
+      // Refetch right before scoring so the prediction is as fresh as
+      // possible. Concurrent mints between this read and the eventual
+      // mint tx still risk drift (Tama's race-mitigation note); user
+      // can re-score from the receipt screen if `recordMintScores`
+      // reverts on tokenId mismatch.
+      nextTokenId.refetch();
+      const tokenIdGuess = nextTokenId.data ?? 1;
       const res = await fetch("/api/mint/score", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ seed: effectiveSeed }),
+        body: JSON.stringify({
+          seed: effectiveSeed,
+          tokenId: tokenIdGuess,
+          fighterAddr: FIGHTER_INFT_ADDRESS,
+          chainId: activeChain.id,
+        }),
       });
       if (!res.ok) {
         const detail = (await res.json().catch(() => ({}))) as {
