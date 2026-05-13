@@ -68,20 +68,22 @@ NETWORKS = {
     "mainnet": {
         "url": "https://chainscan.0g.ai/open/api",
         "chain_id": 16661,
-        # Aristotle (16661) v3 cascade — populated post-ceremony.
-        # YapInbox uses CREATE2 deterministic deploy → same address as testnet
-        # IF same deployer + same bytecode + same salt. Other contracts differ.
+        # Aristotle (16661) v3 cascade — deployed 2026-05-13.
+        # Addresses where ctor args reference only YapFighter (no escrow/registry
+        # cross-refs) match testnet because CREATE2 sees the same deployer + salt
+        # + bytecode + ctor args. BattleEscrow + its downstream differ because
+        # mainnet oracleKey is qwen3.6-plus's TEE signer, not the testnet one.
         "contracts": [
-            ("YapInbox",            "", "src/YapInbox.sol:YapInbox",                 "verify/YapInbox/standard-json-input.json"),
-            ("YapFighter",          "", "src/YapFighter.sol:YapFighter",             "verify/YapFighter/standard-json-input.json"),
-            ("BattleEscrow",        "", "src/BattleEscrow.sol:BattleEscrow",         "verify/BattleEscrow/standard-json-input.json"),
-            ("BattleRegistry",      "", "src/BattleRegistry.sol:BattleRegistry",     "verify/BattleRegistry/standard-json-input.json"),
-            ("YapMarketplace",      "", "src/YapMarketplace.sol:YapMarketplace",     "verify/YapMarketplace/standard-json-input.json"),
-            ("RentalEscrow",        "", "src/RentalEscrow.sol:RentalEscrow",         "verify/RentalEscrow/standard-json-input.json"),
-            ("MomentINFT",          "", "src/MomentINFT.sol:MomentINFT",             "verify/MomentINFT/standard-json-input.json"),
-            ("MomentMarketplace",   "", "src/YapMarketplace.sol:YapMarketplace",     "verify/YapMarketplace/standard-json-input.json"),
-            ("YapSubnameRegistrar", "", "src/YapSubnameRegistrar.sol:YapSubnameRegistrar", "verify/YapSubnameRegistrar/standard-json-input.json"),
-            ("AbilityEscrow",       "", "src/AbilityEscrow.sol:AbilityEscrow",       "verify/AbilityEscrow/standard-json-input.json"),
+            ("YapInbox",            "0xe92dB21A770c32a19795556C46D5c6a274955DBD", "src/YapInbox.sol:YapInbox",                 "verify/YapInbox/standard-json-input.json"),
+            ("YapFighter",          "0x066259CCB37C0AF962c112a70C6338e52e1D16ee", "src/YapFighter.sol:YapFighter",             "verify/YapFighter/standard-json-input.json"),
+            ("BattleEscrow",        "0x242d1cd3100706b26a3067dd64cecb415a20f398", "src/BattleEscrow.sol:BattleEscrow",         "verify/BattleEscrow/standard-json-input.json"),
+            ("BattleRegistry",      "0x4ec3eb96161fbef86849d40a5d331d3c1209d5de", "src/BattleRegistry.sol:BattleRegistry",     "verify/BattleRegistry/standard-json-input.json"),
+            ("YapMarketplace",      "0x9569cE03CD9934Fd206A40b3721f7Ae3DC2a1f36", "src/YapMarketplace.sol:YapMarketplace",     "verify/YapMarketplace/standard-json-input.json"),
+            ("RentalEscrow",        "0xE986a6C47dA1fD3c0b01EC6695Ccf020EC16bC96", "src/RentalEscrow.sol:RentalEscrow",         "verify/RentalEscrow/standard-json-input.json"),
+            ("MomentINFT",          "0x059adf223c3281302d25ac36a4f861ef4b5df169", "src/MomentINFT.sol:MomentINFT",             "verify/MomentINFT/standard-json-input.json"),
+            ("MomentMarketplace",   "0x35125df161d64a8ac59936c0dbfcfe30c9f4220d", "src/YapMarketplace.sol:YapMarketplace",     "verify/YapMarketplace/standard-json-input.json"),
+            ("YapSubnameRegistrar", "0xF5F99bd86b00ad32D16E1Ae97Dd4aaa7AdeD5c8C", "src/YapSubnameRegistrar.sol:YapSubnameRegistrar", "verify/YapSubnameRegistrar/standard-json-input.json"),
+            ("AbilityEscrow",       "0x2cc877baa12be163973a43cac998b8d82b3a58a4", "src/AbilityEscrow.sol:AbilityEscrow",       "verify/AbilityEscrow/standard-json-input.json"),
         ],
     },
 }
