@@ -43,17 +43,18 @@ COMPILER = "v0.8.24+commit.e11b9ed9"
 # (name, address, contractname-for-api, json-input-file)
 CONTRACTS = [
     ("YapInbox",            "0xe92dB21A770c32a19795556C46D5c6a274955DBD", "src/YapInbox.sol:YapInbox",                 "verify/YapInbox/standard-json-input.json"),
-    # v2 redeploys (Strategy A full cascade — see docs/REDEPLOY_V2_CEREMONY.md).
-    # v1 ecosystem orphaned on 2026-05-13 by Tama's explicit choice for
-    # feature parity over data continuity.
-    ("YapFighter",          "0xc2A82B1c6cb820ccf0C7732F40733A4101615CA2", "src/YapFighter.sol:YapFighter",             "verify/YapFighter/standard-json-input.json"),
-    ("BattleEscrow",        "0xC3a196f1e25485E1059199c2F4D2afdd07043Cb8", "src/BattleEscrow.sol:BattleEscrow",         "verify/BattleEscrow/standard-json-input.json"),
-    ("BattleRegistry",      "0x8A665bd7dFed87A1d6B87f1e5ecbc70E08fb7bD3", "src/BattleRegistry.sol:BattleRegistry",     "verify/BattleRegistry/standard-json-input.json"),
-    ("YapMarketplace",      "0xf4e65e53b203E4EF64Fedfe0C77BD83C56f7CEf1", "src/YapMarketplace.sol:YapMarketplace",     "verify/YapMarketplace/standard-json-input.json"),
-    ("RentalEscrow",        "0xad7b130d1ED52e33F1c64C7349E4994423e19E5b", "src/RentalEscrow.sol:RentalEscrow",         "verify/RentalEscrow/standard-json-input.json"),
-    ("MomentINFT",          "0xde6f1Ad216B2de19DBE5418c278DDbec1633092f", "src/MomentINFT.sol:MomentINFT",             "verify/MomentINFT/standard-json-input.json"),
-    ("MomentMarketplace",   "0xDC77b8a4BE9C1aaAAFb80a3342A457700E070c20", "src/YapMarketplace.sol:YapMarketplace",     "verify/YapMarketplace/standard-json-input.json"),
-    ("YapSubnameRegistrar", "0xD9c17C941C6307FbBf4fB6A9959Fc6d7490CCb31", "src/YapSubnameRegistrar.sol:YapSubnameRegistrar", "verify/YapSubnameRegistrar/standard-json-input.json"),
+    # v3 redeploys (Strategy A full cascade — see docs/REDEPLOY_V2_CEREMONY.md).
+    # v2 ecosystem orphaned on 2026-05-13 (second cascade — persona scoring
+    # + archetype + ability lib forced a fresh deploy).
+    ("YapFighter",          "0x066259CCB37C0AF962c112a70C6338e52e1D16ee", "src/YapFighter.sol:YapFighter",             "verify/YapFighter/standard-json-input.json"),
+    ("BattleEscrow",        "0x06c61C3112B98Afc16002bD523D26eF836e7e659", "src/BattleEscrow.sol:BattleEscrow",         "verify/BattleEscrow/standard-json-input.json"),
+    ("BattleRegistry",      "0x104a65bf0cB4fAE0F4bb606cE1694115Ce87F2A1", "src/BattleRegistry.sol:BattleRegistry",     "verify/BattleRegistry/standard-json-input.json"),
+    ("YapMarketplace",      "0x9569cE03CD9934Fd206A40b3721f7Ae3DC2a1f36", "src/YapMarketplace.sol:YapMarketplace",     "verify/YapMarketplace/standard-json-input.json"),
+    ("RentalEscrow",        "0xE986a6C47dA1fD3c0b01EC6695Ccf020EC16bC96", "src/RentalEscrow.sol:RentalEscrow",         "verify/RentalEscrow/standard-json-input.json"),
+    ("MomentINFT",          "0x86cdEe1aF79dd9F56AA5358Eb0Ae39F96dbD4DbB", "src/MomentINFT.sol:MomentINFT",             "verify/MomentINFT/standard-json-input.json"),
+    ("MomentMarketplace",   "0x13f52f5787fcE95364Bf0CDeE96D5dB3ab4B12bD", "src/YapMarketplace.sol:YapMarketplace",     "verify/YapMarketplace/standard-json-input.json"),
+    ("YapSubnameRegistrar", "0xF5F99bd86b00ad32D16E1Ae97Dd4aaa7AdeD5c8C", "src/YapSubnameRegistrar.sol:YapSubnameRegistrar", "verify/YapSubnameRegistrar/standard-json-input.json"),
+    ("AbilityEscrow",       "0x18563e7E015c9e5742485E47698E067FAff279e6", "src/AbilityEscrow.sol:AbilityEscrow",       "verify/AbilityEscrow/standard-json-input.json"),
 ]
 
 

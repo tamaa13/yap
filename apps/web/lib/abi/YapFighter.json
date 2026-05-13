@@ -66,6 +66,32 @@
   },
   {
     "type": "function",
+    "name": "MAX_TRAIT_SCORE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MIN_TRAIT_SCORE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "PROOF_VALIDITY",
     "inputs": [],
     "outputs": [
@@ -294,6 +320,25 @@
   },
   {
     "type": "function",
+    "name": "getArchetype",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "enum YapFighter.Archetype"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getRoleAdmin",
     "inputs": [
       {
@@ -307,6 +352,44 @@
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getSeedHash",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getTraits",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "out",
+        "type": "uint8[5]",
+        "internalType": "uint8[5]"
       }
     ],
     "stateMutability": "view"
@@ -587,6 +670,25 @@
   },
   {
     "type": "function",
+    "name": "isScored",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "logAccess",
     "inputs": [
       {
@@ -645,11 +747,55 @@
         "name": "sealedKey",
         "type": "bytes",
         "internalType": "bytes"
+      },
+      {
+        "name": "archetype",
+        "type": "uint8",
+        "internalType": "enum YapFighter.Archetype"
+      },
+      {
+        "name": "seedHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "outputs": [
       {
         "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "mint",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -684,6 +830,19 @@
   },
   {
     "type": "function",
+    "name": "oracleKey",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "ownerOf",
     "inputs": [
       {
@@ -700,6 +859,49 @@
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "recordMintScores",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "scores",
+        "type": "uint8[5]",
+        "internalType": "uint8[5]"
+      },
+      {
+        "name": "seedHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "responseBody",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "contentOffset",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "signedText",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "teeSignature",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -808,6 +1010,48 @@
   },
   {
     "type": "function",
+    "name": "scoreCanonicalText",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "seedHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "scores",
+        "type": "uint8[5]",
+        "internalType": "uint8[5]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "scoreOracleKey",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "sealedKeys",
     "inputs": [
       {
@@ -851,6 +1095,19 @@
         "name": "mintFee_",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setScoreOracleKey",
+    "inputs": [
+      {
+        "name": "newKey",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -1065,6 +1322,37 @@
   },
   {
     "type": "event",
+    "name": "FighterScored",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "scorer",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "archetype",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "enum YapFighter.Archetype"
+      },
+      {
+        "name": "scores",
+        "type": "uint8[5]",
+        "indexed": false,
+        "internalType": "uint8[5]"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "Minted",
     "inputs": [
       {
@@ -1227,6 +1515,25 @@
   },
   {
     "type": "event",
+    "name": "ScoreOracleKeyUpdated",
+    "inputs": [
+      {
+        "name": "previousKey",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "newKey",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "Transfer",
     "inputs": [
       {
@@ -1341,6 +1648,43 @@
       },
       {
         "name": "neededRole",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "AlreadyScored",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "CanonicalContentMissing",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ECDSAInvalidSignature",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ECDSAInvalidSignatureLength",
+    "inputs": [
+      {
+        "name": "length",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ECDSAInvalidSignatureS",
+    "inputs": [
+      {
+        "name": "s",
         "type": "bytes32",
         "internalType": "bytes32"
       }
@@ -1482,7 +1826,32 @@
   },
   {
     "type": "error",
+    "name": "InvalidContentOffset",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidOracleSignature",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidProof",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidScoreRange",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidSignedTextFormat",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MintNotSupported",
     "inputs": []
   },
   {
@@ -1504,6 +1873,32 @@
     "type": "error",
     "name": "ReentrancyGuardReentrantCall",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ResponseHashMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SeedMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "StringsInsufficientHexLength",
+    "inputs": [
+      {
+        "name": "value",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "length",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",
