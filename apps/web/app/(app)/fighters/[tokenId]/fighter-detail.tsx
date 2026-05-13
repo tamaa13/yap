@@ -29,6 +29,7 @@ import { activeChain } from "@/lib/chains";
 import { FIGHTER_INFT_ADDRESS, YAP_SUBNAME_ADDRESS } from "@/lib/contracts";
 import { BattleHistoryTable } from "./battle-history-table";
 import { AccessLogTable } from "./access-log-table";
+import { CommitScoresGate } from "./commit-scores-panel";
 import { DisputePanel } from "./dispute-panel";
 import { SubnameModal } from "./subname-modal";
 import { useFighterAccessCount } from "@/hooks/use-fighter-access-log";
@@ -579,6 +580,15 @@ export function FighterDetail({
 
           {tab === "overview" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {/* Retroactive recovery panel: only renders when the
+                * connected viewer owns the fighter AND on-chain
+                * isScored() is false (i.e. mint() landed but
+                * recordMintScores never fired — pre-06c6c43 bug). */}
+              <CommitScoresGate
+                tokenId={fighter.id}
+                ownerAddr={fighter.owner}
+                viewerAddr={viewerAddr}
+              />
               <Card style={{ padding: 20 }}>
                 <div
                   style={{
