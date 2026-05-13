@@ -15,6 +15,9 @@ export function FighterPanel({
   corner,
   compact = false,
   liveHp,
+  battleId,
+  round,
+  isController,
 }: {
   fighter: Fighter;
   corner: "a" | "b";
@@ -23,6 +26,13 @@ export function FighterPanel({
    *  (depletes per round). Reputation HP shown on the fighter card stays
    *  unchanged; this is just the live arena view. */
   liveHp?: number;
+  /** When passed alongside `round` + `isController`, the AbilityChip
+   *  mounts its in-battle CTA wired to AbilityEscrow.useAbility().
+   *  Spectator surfaces leave these undefined and get the read-only
+   *  chip. */
+  battleId?: number;
+  round?: number;
+  isController?: boolean;
 }) {
   const cornerColor =
     corner === "a" ? "var(--yap-crimson)" : "var(--yap-gold)";
@@ -101,10 +111,17 @@ export function FighterPanel({
             <HPBar label="LGC" value={fighter.logic} color="var(--yap-info)" />
             <HPBar label="WIT" value={fighter.wit} color="var(--yap-warning)" />
           </div>
-          {/* Archetype ability indicator. Read-only scaffold today — */}
-          {/* Phase 8 final adds the in-battle "Use ability" CTA wired */}
-          {/* to AbilityEscrow.useAbility() for the controlling viewer. */}
-          <AbilityChip fighter={fighter} compact />
+          {/* Archetype ability indicator. CTA mounts when battle context
+           *  is supplied AND viewer iControls this side; otherwise the
+           *  chip stays read-only (spectators, opposing side owner). */}
+          <AbilityChip
+            fighter={fighter}
+            compact
+            battleId={battleId}
+            side={corner}
+            round={round}
+            isController={isController}
+          />
           {fighter.tags.length > 0 && (
             <div
               className="mono"

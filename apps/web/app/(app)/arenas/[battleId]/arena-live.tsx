@@ -320,7 +320,14 @@ export function ArenaLive({
           className="al-arena-left"
           style={{ background: "var(--bg-canvas)", padding: 16, overflowY: "auto" }}
         >
-          <FighterPanel fighter={fighterA} corner="a" liveHp={liveState?.hpA} />
+          <FighterPanel
+            fighter={fighterA}
+            corner="a"
+            liveHp={liveState?.hpA}
+            battleId={battleIdNum ?? undefined}
+            round={liveState?.currentRound}
+            isController={controlSide === "a"}
+          />
         </div>
 
         <div
@@ -389,7 +396,14 @@ export function ArenaLive({
           className="al-arena-right"
           style={{ background: "var(--bg-canvas)", padding: 16, overflowY: "auto" }}
         >
-          <FighterPanel fighter={fighterB} corner="b" liveHp={liveState?.hpB} />
+          <FighterPanel
+            fighter={fighterB}
+            corner="b"
+            liveHp={liveState?.hpB}
+            battleId={battleIdNum ?? undefined}
+            round={liveState?.currentRound}
+            isController={controlSide === "b"}
+          />
         </div>
       </div>
 
