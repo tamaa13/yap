@@ -67,8 +67,15 @@ export interface ScorePersonaState {
   subAccountSpendable: number | null;
 }
 
-const NEXT_PUBLIC_LEDGER_DEPOSIT = Number(
-  process.env.NEXT_PUBLIC_ZG_COMPUTE_LEDGER_DEPOSIT ?? 3,
+// Contract enforces minimum 3 OG on FIRST depositFund (creates the
+// ledger account). Subsequent top-ups can be any amount, but defending
+// at 3 here makes the first-mint UX bulletproof against a misconfigured
+// NEXT_PUBLIC_ZG_COMPUTE_LEDGER_DEPOSIT env (e.g. an older 0.5 value
+// would silently break fresh-wallet mints with a cryptic SDK error).
+// Ref: @0gfoundation/0g-compute-ts-sdk ledger/broker.ts:175.
+const NEXT_PUBLIC_LEDGER_DEPOSIT = Math.max(
+  3,
+  Number(process.env.NEXT_PUBLIC_ZG_COMPUTE_LEDGER_DEPOSIT ?? 3),
 );
 
 function weiToOg(wei: bigint): number {

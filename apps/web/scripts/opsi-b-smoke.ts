@@ -39,7 +39,9 @@ import { scorePersona } from "../lib/0g/client/score-persona";
 
 const KEY_FILE = "/tmp/opsi-b-test.key";
 const LLM_SAMPLES = 1 as const; // probe — never bump without plan revision
-const DEPOSIT_OG = 0.5;
+// 3 OG is the contract minimum for FIRST depositFund (account creation).
+// SDK ref: @0gfoundation/0g-compute-ts-sdk ledger/broker.ts:175.
+const DEPOSIT_OG = 3;
 const TRANSFER_OG_WEI = parseEther("0.5");
 const FIXED_SEED = `I refuse the comfortable middle. Either a claim survives its strongest objection, or it doesn't. Hedging is a tax we pay to look reasonable, and the bill is paid in clarity. Show me your premise, your inference, and the edge case you didn't dodge — I'll meet you there or concede the ground.`;
 
@@ -145,17 +147,19 @@ async function run(): Promise<void> {
   const userBalanceBefore = await rpcProvider.getBalance(testWallet.address);
   console.log(`  server broker: ${fmt(serverBalanceBefore)}`);
   console.log(`  test wallet:   ${fmt(userBalanceBefore)}`);
-  // Funding floor: 0.501 OG = 0.5 (depositFund msg.value) + ~0.001 (gas
-  // for 2 txs). transferFund moves balance INSIDE the ledger contract
+  // Funding floor: 3.001 OG = 3 (depositFund msg.value — contract
+  // minimum for new ledger accounts) + ~0.001 (gas for 2 txs).
+  // transferFund moves balance INSIDE the ledger contract
   // (ledger.availableBalance → sub-account) with no msg.value, so the
-  // EOA only pays gas there. SDK ref: lib/ledger/contract/ledger.js:157.
-  if (userBalanceBefore < parseEther("0.501")) {
+  // EOA only pays gas there. SDK ref: lib/ledger/contract/ledger.js:157
+  // (transfer) + ledger/broker.ts:175 (3 OG creation floor).
+  if (userBalanceBefore < parseEther("3.001")) {
     fail(
-      `Test wallet balance ${fmt(userBalanceBefore)} below floor 0.501 OG. ` +
+      `Test wallet balance ${fmt(userBalanceBefore)} below floor 3.001 OG. ` +
         `Send more OG to ${testWallet.address} before running.`,
     );
   }
-  pass(`test wallet above 0.501 OG floor`);
+  pass(`test wallet above 3.001 OG floor`);
 
   const broker = await createZGComputeNetworkBroker(testWallet);
   pass(`broker initialized with test wallet`);
@@ -191,10 +195,10 @@ async function run(): Promise<void> {
   await broker.ledger.depositFund(DEPOSIT_OG);
   const ledgerAfter = await broker.ledger.getLedger();
   console.log(`  ledger availableBalance: ${fmt(ledgerAfter.availableBalance)}`);
-  if (ledgerAfter.availableBalance < parseEther("0.5")) {
-    fail(`Ledger availableBalance ${fmt(ledgerAfter.availableBalance)} below 0.5 OG after deposit.`);
+  if (ledgerAfter.availableBalance < parseEther("3")) {
+    fail(`Ledger availableBalance ${fmt(ledgerAfter.availableBalance)} below 3 OG after deposit.`);
   }
-  pass(`ledger >= 0.5 OG`);
+  pass(`ledger >= 3 OG`);
 
   // ── Step 2: transferFund ─────────────────────────────────────────────
   header(`Step 2 — transferFund(${providerAddress}, "inference", 0.5 OG)`);
@@ -278,12 +282,12 @@ async function run(): Promise<void> {
   }
   pass(`server broker EOA balance UNCHANGED — Opsi B invariant holds`);
 
-  // Only depositFund moved OG out of the EOA (msg.value=0.5). transferFund
+  // Only depositFund moved OG out of the EOA (msg.value=3). transferFund
   // shifted balance ledger→sub-account inside the contract — no EOA outflow.
-  const userSpent = userBalanceBefore - userBalanceAfter - parseEther("0.5");
+  const userSpent = userBalanceBefore - userBalanceAfter - parseEther("3");
   console.log(`\n  test wallet before:   ${fmt(userBalanceBefore)}`);
   console.log(`  test wallet after:    ${fmt(userBalanceAfter)}`);
-  console.log(`  custody locked:       0.5 OG (recoverable via refund flow)`);
+  console.log(`  custody locked:       3 OG (recoverable via refund flow)`);
   console.log(`  actually spent:       ${fmt(userSpent)}  (gas for 2 txs + LLM)`);
 
   // ── Summary ──────────────────────────────────────────────────────────

@@ -748,9 +748,11 @@ Crypto is a slot machine with footnotes.
                     lineHeight: 1.5,
                   }}
                 >
-                  One-time deposit of ~0.5 OG into the 0G Compute ledger
-                  so your wallet can pay for persona scoring. Approve
-                  the tx in your wallet to continue.
+                  One-time deposit of 3 OG into the 0G Compute ledger
+                  (contract minimum for new accounts). This funds your
+                  persona scoring credit; unspent balance is recoverable
+                  via the standard 24h refund flow. Approve the tx in
+                  your wallet to continue.
                   {score.state.ledgerAvailable !== null && (
                     <span style={{ display: "block", marginTop: 6, fontSize: 12 }}>
                       Current ledger balance:{" "}

@@ -44,11 +44,16 @@ export interface RunChatResult {
 
 const DEFAULT_MODEL_HINT = "qwen";
 
-/** Client-side LEDGER_DEPOSIT default. Mainnet env should pin this via
- *  `NEXT_PUBLIC_ZG_COMPUTE_LEDGER_DEPOSIT` so the deposit prompt the
- *  user sees matches the value the server-side path used to use. */
-const LEDGER_DEPOSIT = Number(
-  process.env.NEXT_PUBLIC_ZG_COMPUTE_LEDGER_DEPOSIT ?? 3,
+/** Client-side LEDGER_DEPOSIT default. Mainnet env can pin this via
+ *  `NEXT_PUBLIC_ZG_COMPUTE_LEDGER_DEPOSIT`. Hard-floored at 3 because
+ *  the ledger contract rejects depositFund < 3 OG on FIRST deposit
+ *  (account creation). A misconfigured 0.5 env would otherwise
+ *  silently break every fresh-wallet mint. Subsequent top-ups can be
+ *  any amount, but 3 is fine — over-funding refills isn't a footgun.
+ *  Ref: @0gfoundation/0g-compute-ts-sdk ledger/broker.ts:175. */
+const LEDGER_DEPOSIT = Math.max(
+  3,
+  Number(process.env.NEXT_PUBLIC_ZG_COMPUTE_LEDGER_DEPOSIT ?? 3),
 );
 const TRANSFER_PER_PROVIDER = parseEther("0.5");
 
