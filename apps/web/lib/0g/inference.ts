@@ -87,10 +87,7 @@ export async function runCanonicalChat(
   await broker.inference
     .acknowledgeProviderSigner(providerAddress)
     .catch(() => {});
-  await broker.ledger.depositFund(LEDGER_DEPOSIT).catch(() => {});
-  await broker.ledger
-    .transferFund(providerAddress, "inference", TRANSFER_PER_PROVIDER)
-    .catch(() => {});
+  await ensureFunded(providerAddress);
 
   const { endpoint, model } = await broker.inference.getServiceMetadata(
     providerAddress,
@@ -273,6 +270,98 @@ const DEFAULT_MODEL_HINT = "qwen";
 const LEDGER_DEPOSIT = Number(process.env.ZG_COMPUTE_LEDGER_DEPOSIT ?? 3);
 const TRANSFER_PER_PROVIDER = parseEther("0.5");
 
+/** Refill thresholds — only call depositFund / transferFund when the
+ *  on-chain balance has actually drained below these. Pre-fix the
+ *  every-call deposit + transfer pattern was a 16 OG burn per
+ *  score-persona cycle (15 LLM calls × 1 OG of fund-tx-side moves):
+ *  the `.catch(() => {})` wrappers silenced JS errors but never
+ *  prevented the on-chain txs from settling and bleeding the broker
+ *  EOA. Now we read state first and only refill when actually low.
+ *
+ *  `LEDGER_REFILL_BELOW` — bottom of the ledger band. 0.6 OG keeps
+ *  enough headroom for the next per-provider transferFund (0.5 OG) +
+ *  small buffer.
+ *
+ *  `SUBACCOUNT_REFILL_BELOW` — bottom of the per-provider sub-account
+ *  band. 0.1 OG is generous for a 5-call median round (each call
+ *  spends ~0.0001 OG of LLM credit) but low enough that we don't
+ *  refill mid-cycle on warm sub-accounts. */
+const LEDGER_REFILL_BELOW = parseEther("0.6");
+const SUBACCOUNT_REFILL_BELOW = parseEther("0.1");
+
+/**
+ * Idempotent fund-check that fires depositFund / transferFund txs only
+ * when the on-chain state demands it. Read-first pattern saves the
+ * 1 OG/call burn the prior unconditional .catch chain was bleeding;
+ * the upstream contract surfaces the real balance errors at request
+ * time if the read-then-write window races, so the fail-open behavior
+ * is preserved.
+ *
+ * Both fund txs are wrapped in try/catch + console.warn so a transient
+ * RPC blip can't kill the inference path — same fail-open posture as
+ * the old `.catch(() => {})` form, but with operator-visible logs when
+ * something does go wrong.
+ */
+async function ensureFunded(providerAddress: string): Promise<void> {
+  const broker = await getBroker();
+  // Ledger top-up — read first, deposit only if drained below the band.
+  try {
+    const ledger = await broker.ledger.getLedger();
+    if (ledger.availableBalance < LEDGER_REFILL_BELOW) {
+      try {
+        await broker.ledger.depositFund(LEDGER_DEPOSIT);
+      } catch (e) {
+        console.warn(
+          `[ensureFunded] depositFund failed: ${e instanceof Error ? e.message : e}`,
+        );
+      }
+    }
+  } catch (e) {
+    console.warn(
+      `[ensureFunded] getLedger probe failed (skipping deposit): ${e instanceof Error ? e.message : e}`,
+    );
+  }
+
+  // Per-provider sub-account top-up — read first, transfer only when
+  // the spendable balance (balance − pendingRefund) is below the floor.
+  try {
+    const account = await broker.inference.getAccount(providerAddress);
+    const pendingRefund = account.pendingRefund ?? 0n;
+    const spendable = account.balance - pendingRefund;
+    if (spendable < SUBACCOUNT_REFILL_BELOW) {
+      try {
+        await broker.ledger.transferFund(
+          providerAddress,
+          "inference",
+          TRANSFER_PER_PROVIDER,
+        );
+      } catch (e) {
+        console.warn(
+          `[ensureFunded] transferFund failed (provider=${providerAddress}): ${e instanceof Error ? e.message : e}`,
+        );
+      }
+    }
+  } catch (e) {
+    // getAccount throws "Sub-account not found" on first use against a
+    // provider. Bootstrap path: transfer once so the sub-account
+    // exists, then subsequent calls go down the read-first branch.
+    console.warn(
+      `[ensureFunded] getAccount probe failed (bootstrapping with one transferFund): ${e instanceof Error ? e.message : e}`,
+    );
+    try {
+      await broker.ledger.transferFund(
+        providerAddress,
+        "inference",
+        TRANSFER_PER_PROVIDER,
+      );
+    } catch (bootstrapErr) {
+      console.warn(
+        `[ensureFunded] bootstrap transferFund failed (provider=${providerAddress}): ${bootstrapErr instanceof Error ? bootstrapErr.message : bootstrapErr}`,
+      );
+    }
+  }
+}
+
 /** Pick an available chatbot provider. Prefer one whose model string looks
  *  like a chat LLM (contains "qwen" or the env-configured hint). */
 async function pickInferenceProvider(): Promise<string> {
@@ -297,11 +386,11 @@ export async function runChat(args: RunChatArgs): Promise<RunChatResult> {
     .acknowledgeProviderSigner(providerAddress)
     .catch(() => {});
 
-  // Best-effort funding. Contract will surface real balance errors later.
-  await broker.ledger.depositFund(LEDGER_DEPOSIT).catch(() => {});
-  await broker.ledger
-    .transferFund(providerAddress, "inference", TRANSFER_PER_PROVIDER)
-    .catch(() => {});
+  // Read-first auto-fund — see ensureFunded(). Replaces a prior
+  // unconditional depositFund + transferFund pair that was bleeding
+  // 1 OG/call from the broker EOA on every call (17 OG drained in
+  // a single mainnet test cycle before the fix).
+  await ensureFunded(providerAddress);
 
   const { endpoint, model } = await broker.inference.getServiceMetadata(
     providerAddress,
@@ -395,10 +484,7 @@ export async function streamChat(args: StreamChatArgs): Promise<RunChatResult> {
   await broker.inference
     .acknowledgeProviderSigner(providerAddress)
     .catch(() => {});
-  await broker.ledger.depositFund(LEDGER_DEPOSIT).catch(() => {});
-  await broker.ledger
-    .transferFund(providerAddress, "inference", TRANSFER_PER_PROVIDER)
-    .catch(() => {});
+  await ensureFunded(providerAddress);
 
   const { endpoint, model } = await broker.inference.getServiceMetadata(
     providerAddress,
