@@ -20,7 +20,7 @@ import { MOMENT_MARKET_ADDRESS } from "@/lib/contracts";
 import type { FighterArchetype } from "@/lib/types";
 import { MomentsMarket } from "./moments-market";
 
-type MarketTab = "buy" | "rent" | "auction" | "moments";
+type MarketTab = "buy" | "rent" | "moments";
 type ViewMode = "grid" | "list";
 
 const ARCHETYPES: Array<{ id: FighterArchetype; label: string }> = [
@@ -54,12 +54,11 @@ export default function MarketPage() {
     const eloMaxN = eloMax === "" ? null : Number(eloMax);
     const priceMaxN = priceMax === "" ? null : Number(priceMax);
     return all.filter((f) => {
-      // Tab filter — buy shows listings for sale, rent shows rental availability.
-      // Auction is P2 feature. Strict filter: tabs show only fighters actually
+      // Tab filter — buy shows listings for sale, rent shows rental
+      // availability. Strict filter: tabs show only fighters actually
       // in the matching state. Empty state surfaces when nothing qualifies.
       if (tab === "buy" && !f.forSale) return false;
       if (tab === "rent" && !f.forRent) return false;
-      if (tab === "auction") return false;
       // Search by name
       if (q && !f.name.toLowerCase().includes(q.toLowerCase())) return false;
       // Archetype checkbox filter (empty set = all allowed)
@@ -79,7 +78,6 @@ export default function MarketPage() {
   const counts = {
     buy: all.filter((f) => f.forSale).length,
     rent: all.filter((f) => f.forRent).length,
-    auction: 0,
   };
 
   // Page slicing — list is the post-filter set; pagination consumes
@@ -146,7 +144,6 @@ export default function MarketPage() {
         tabs={[
           { value: "buy", label: "Buy", count: counts.buy },
           { value: "rent", label: "Rent", count: counts.rent },
-          { value: "auction", label: "Auction", count: counts.auction },
           ...(MOMENT_MARKET_ADDRESS !== ""
             ? [
                 {
@@ -310,11 +307,9 @@ export default function MarketPage() {
                   ? n === 1
                     ? "listing"
                     : "listings"
-                  : tab === "rent"
-                    ? n === 1
-                      ? "rental"
-                      : "rentals"
-                    : "auctions";
+                  : n === 1
+                    ? "rental"
+                    : "rentals";
               return (
                 <>
                   <span className="num">{n}</span> {label}
@@ -533,13 +528,7 @@ export default function MarketPage() {
           <Pagination
             total={list.length}
             limit={CARD_GRID_PAGE_SIZE}
-            noun={
-              tab === "buy"
-                ? "listings"
-                : tab === "rent"
-                  ? "rentals"
-                  : "auctions"
-            }
+            noun={tab === "buy" ? "listings" : "rentals"}
           />
         </div>
       </div>

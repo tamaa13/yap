@@ -6,7 +6,7 @@ export default function MarketLoading() {
     <PageContainer>
       <h1 style={{ fontSize: 24, marginBottom: 4 }}>Marketplace</h1>
       <div style={{ fontSize: 13, color: "var(--tx-secondary)", marginBottom: 24 }}>
-        Buy, rent, or auction INFT fighters.
+        Buy or rent INFT fighters.
       </div>
       <div
         style={{
