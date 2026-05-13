@@ -91,6 +91,7 @@ function fighter(opts: {
     battles: 0,
     attest: "0x",
     rentedBy: opts.rentedBy ?? undefined,
+    traits: null,
   };
 }
 

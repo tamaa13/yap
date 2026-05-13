@@ -55,26 +55,47 @@ export interface OnChainFighterCore {
 
 const clamp = (lo: number, hi: number, v: number) => Math.max(lo, Math.min(hi, v));
 
+/** Per-trait 5-tuple committed on-chain via YapFighter.recordMintScores
+ *  at mint time. Phase 6 reads these directly; legacy fighters minted
+ *  before persona scoring report all-zeros and surface as `null` upon
+ *  fighter adaptation. */
+export interface OnChainFighterTraits {
+  logos: number;
+  rhetoric: number;
+  aggression: number;
+  range: number;
+  concreteness: number;
+}
+
+/** Treat the canonical zero tuple as "unscored" — pre-Phase-4 fighters
+ *  fall into this branch since YapFighter.getTraits returns all zeros
+ *  before recordMintScores ever fires. Any non-zero entry indicates a
+ *  real attestation; the UI then renders the full 5-trait card. */
+export function isFighterScored(t: OnChainFighterTraits | null): boolean {
+  if (!t) return false;
+  return (
+    t.logos + t.rhetoric + t.aggression + t.range + t.concreteness > 0
+  );
+}
+
 /**
  * Adapt raw contract reads into the rich `Fighter` UI shape.
  *
- * Some fields (name, color, tags, archetype) have no on-chain source and
- * are synthesized deterministically from the tokenId + metadataHash so the
- * UI stays stable across renders.
+ * Display-only fields (name, color, tags, archetype) are synthesized
+ * deterministically from the tokenId + metadataHash so the UI stays
+ * stable across renders.
  *
- * Combat traits (HP / Logic / Wit) use a **hybrid** model:
- *   base (synthesized per-fighter) + real modifier (from on-chain stats)
- * so fighters start distinct at mint time but the trait sheet actually
- * shifts as they battle. Modifiers are intentionally small (~±10) so no
- * single battle swings a trait wildly — growth is earned over time.
- *
- * - HP       = defensive resilience  → base + (winRate − 0.5) × 20
- * - Logic    = argument skill        → base + (ELO − 1200) / 15
- * - Wit      = quick thinking        → base + min(10, battles × 1.5)
+ * Combat HP / Logic / Wit remain on the type for legacy callers
+ * (FighterPanel, runner reputation prior) — synthesized + career-bumped
+ * the same way as before. Phase 6 hands those slots over to the real
+ * 5-trait system on `fighter.traits` once `recordMintScores` is the
+ * canonical source everywhere. The synthesized values stay so that
+ * unscored / legacy fighters still render a battle-ready HP bar.
  */
 export function adaptFighter(
   core: OnChainFighterCore,
   stats: OnChainFighterStats,
+  traits?: OnChainFighterTraits | null,
 ): Fighter {
   const id = Number(core.tokenId);
   const seed = hashU32(`${core.tokenId}:${core.metadataHash}`);
@@ -112,6 +133,7 @@ export function adaptFighter(
     tags,
     battles,
     attest: core.metadataHash,
+    traits: isFighterScored(traits ?? null) ? traits ?? null : null,
   };
 }
 
