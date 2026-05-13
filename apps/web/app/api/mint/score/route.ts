@@ -27,10 +27,16 @@ import { deriveMockScores } from "@/lib/stylometry/mock-scores";
 
 export const runtime = "nodejs";
 // Persona scoring runs 5 sequential LLM calls × 3 parallel dimensions
-// + canonical echo + signature fetch. Default 30s response timeout is
-// tight; bump explicitly so a slow provider doesn't kill the response
-// mid-aggregation.
-export const maxDuration = 60;
+// + canonical echo + signature fetch. Mainnet TEE latency runs ~3s
+// per call vs ~1s on testnet, and a transient mainnet RPC blip
+// (`dial tcp4 …:8545 failed after 0 retries`) bumps individual calls
+// into the retry path. With those two factors stacked the prior 60s
+// ceiling was getting hit during real UI mints. 180s gives ~3× the
+// observed worst-case wall-clock without unbounded hangs. Follow-up
+// fix is to parallelize the 5 samples per dimension in
+// score-persona.ts:judgeDimension — that drops the LLM phase from
+// 5×per-call latency to 1× and the bump becomes unnecessary.
+export const maxDuration = 180;
 
 interface Body {
   seed?: string;
