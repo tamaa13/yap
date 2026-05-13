@@ -66,12 +66,24 @@ export function aggregate(
   );
   const malformed = attempts.length - parsed.length;
   if (malformed >= 2) {
+    // Surface the first 120 chars of each raw output so the API error
+    // body alone is enough to tell safety-refusal from format-drift
+    // from truncation. VPS logs get fuller context via the per-call
+    // console.warn in score-persona.ts.
+    const snippets = attempts
+      .map((a, i) => `[${i + 1}] ${(a.raw ?? "").slice(0, 120)}`)
+      .join(" | ");
     throw new Error(
-      `score-persona: ${dimension} judge_unstable — ${malformed}/${attempts.length} calls malformed`,
+      `score-persona: ${dimension} judge_unstable — ${malformed}/${attempts.length} calls malformed. raw=${snippets}`,
     );
   }
   if (parsed.length === 0) {
-    throw new Error(`score-persona: ${dimension} produced no parseable scores`);
+    const snippets = attempts
+      .map((a, i) => `[${i + 1}] ${(a.raw ?? "").slice(0, 120)}`)
+      .join(" | ");
+    throw new Error(
+      `score-persona: ${dimension} produced no parseable scores. raw=${snippets}`,
+    );
   }
   const scores = parsed.map((a) => a.score);
   const med = median(scores);
