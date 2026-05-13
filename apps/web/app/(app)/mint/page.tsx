@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Hash } from "@/components/ui/hash";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
 import { Sigil } from "@/components/ui/sigil";
 import { Skel } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
@@ -118,6 +119,15 @@ export default function MintPage() {
   const [simpleLines, setSimpleLines] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [arch, setArch] = useState<FighterArchetype>("roaster");
+  // Locked-archetype confirm modal. Picking an archetype whose ability
+  // gate the seed doesn't clear permanently gimps the fighter:
+  // `YapFighter.recordMintScores` is one-shot per token (reverts
+  // `AlreadyScored` on re-call) and there's no setArchetype. The
+  // modal surfaces that consequence + offers a re-score path before
+  // letting the user commit. Holds the pending archetype id while
+  // open; cleared on confirm/cancel/escape.
+  const [lockedConfirmArch, setLockedConfirmArch] =
+    useState<FighterArchetype | null>(null);
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState(0);
   // Scoring step state. `scoring` is the spinner gate while the TEE
@@ -1038,7 +1048,17 @@ Crypto is a slot machine with footnotes.
                 return (
                   <button
                     key={id}
-                    onClick={() => setArch(id)}
+                    onClick={() => {
+                      // Unlocked picks commit straight through. Locked
+                      // picks open the confirm modal — once minted, the
+                      // ability is gone forever (no setArchetype, and
+                      // recordMintScores reverts AlreadyScored).
+                      if (unlocked) {
+                        setArch(id);
+                      } else {
+                        setLockedConfirmArch(id);
+                      }
+                    }}
                     style={{
                       padding: 16,
                       textAlign: "left",
@@ -1421,6 +1441,90 @@ Crypto is a slot machine with footnotes.
           )}
         </div>
       )}
+
+      {/* Locked-archetype confirm modal. Renders when the user clicks
+        * an archetype card whose ability gate the current scores
+        * don't clear. Two outs: "Re-score" (back to step 1 + clear
+        * scores so they can edit seed or re-fire) and "Pick anyway"
+        * (commit setArch + close). Closing via Escape / backdrop
+        * acts as cancel — no archetype change. */}
+      {lockedConfirmArch &&
+        (() => {
+          const meta = ARCHETYPE_META[lockedConfirmArch];
+          const gateDim = meta.abilityGate.dimension;
+          const gateMin = meta.abilityGate.minScore;
+          const userScore = scores?.[gateDim] ?? 0;
+          const dimLabel =
+            gateDim.charAt(0).toUpperCase() + gateDim.slice(1);
+          return (
+            <Modal
+              open
+              onClose={() => setLockedConfirmArch(null)}
+              title={`Ability "${meta.abilityName}" locked`}
+              footer={
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: 10,
+                  }}
+                >
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setLockedConfirmArch(null);
+                      setScores(null);
+                      setScoreError(null);
+                      setStep(1);
+                    }}
+                  >
+                    Re-score
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => {
+                      setArch(lockedConfirmArch);
+                      setLockedConfirmArch(null);
+                    }}
+                  >
+                    Pick anyway
+                  </Button>
+                </div>
+              }
+            >
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "var(--tx-secondary)",
+                  lineHeight: 1.6,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 12,
+                }}
+              >
+                <div>
+                  {meta.name} requires <span className="mono">{dimLabel}</span>{" "}
+                  ≥ <span className="num">{gateMin}</span>. Your current{" "}
+                  <span className="mono">{dimLabel}</span>:{" "}
+                  <span className="num">{userScore}</span>.
+                </div>
+                <div style={{ color: "var(--tx-primary)" }}>
+                  If you mint with this pick, <strong>{meta.abilityName}</strong>{" "}
+                  will be locked for this fighter — forever.
+                </div>
+                <div style={{ color: "var(--tx-tertiary)", fontSize: 12 }}>
+                  YapFighter's <span className="mono">recordMintScores</span>{" "}
+                  is one-shot per token. Re-scoring after mint isn't
+                  possible (the contract reverts{" "}
+                  <span className="mono">AlreadyScored</span>). There's no{" "}
+                  <span className="mono">setArchetype</span> function either.
+                </div>
+                <div>You can re-score now to try to unlock it.</div>
+              </div>
+            </Modal>
+          );
+        })()}
     </PageContainer>
   );
 }
