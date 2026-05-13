@@ -124,31 +124,28 @@ pnpm dev
 
 ## Deployed Addresses
 
-### Mainnet (Aristotle, chainId 16661)
+### Mainnet (Aristotle, chainId 16661) — canonical
 
 | Contract | Address | Explorer |
 |---|---|---|
-| YapFighter | `pending` | — |
-| FighterTrainer | `pending` | — |
-| BattleEscrow | `pending` | — |
-| BattleRegistry | `pending` | — |
+| YapFighter (ERC-7857 + persona scoring + archetype commit) | `0x066259CCB37C0AF962c112a70C6338e52e1D16ee` | [chainscan](https://chainscan.0g.ai/address/0x066259CCB37C0AF962c112a70C6338e52e1D16ee) |
+| BattleEscrow | `0x242d1cd3100706b26a3067dd64cecb415a20f398` | [chainscan](https://chainscan.0g.ai/address/0x242d1cd3100706b26a3067dd64cecb415a20f398) |
+| BattleRegistry | `0x4ec3eb96161fbef86849d40a5d331d3c1209d5de` | [chainscan](https://chainscan.0g.ai/address/0x4ec3eb96161fbef86849d40a5d331d3c1209d5de) |
+| YapMarketplace | `0x9569cE03CD9934Fd206A40b3721f7Ae3DC2a1f36` | [chainscan](https://chainscan.0g.ai/address/0x9569cE03CD9934Fd206A40b3721f7Ae3DC2a1f36) |
+| RentalEscrow | `0xE986a6C47dA1fD3c0b01EC6695Ccf020EC16bC96` | [chainscan](https://chainscan.0g.ai/address/0xE986a6C47dA1fD3c0b01EC6695Ccf020EC16bC96) |
+| MomentINFT | `0x059adf223c3281302d25ac36a4f861ef4b5df169` | [chainscan](https://chainscan.0g.ai/address/0x059adf223c3281302d25ac36a4f861ef4b5df169) |
+| MomentMarketplace | `0x35125df161d64a8ac59936c0dbfcfe30c9f4220d` | [chainscan](https://chainscan.0g.ai/address/0x35125df161d64a8ac59936c0dbfcfe30c9f4220d) |
+| YapSubnameRegistrar | `0xF5F99bd86b00ad32D16E1Ae97Dd4aaa7AdeD5c8C` | [chainscan](https://chainscan.0g.ai/address/0xF5F99bd86b00ad32D16E1Ae97Dd4aaa7AdeD5c8C) |
+| AbilityEscrow | `0x2cc877baa12be163973a43cac998b8d82b3a58a4` | [chainscan](https://chainscan.0g.ai/address/0x2cc877baa12be163973a43cac998b8d82b3a58a4) |
+| YapInbox | `0xe92dB21A770c32a19795556C46D5c6a274955DBD` | [chainscan](https://chainscan.0g.ai/address/0xe92dB21A770c32a19795556C46D5c6a274955DBD) |
 
-### Testnet (Galileo, chainId 16602)
+`oracleKey` + `scoreOracleKey` both = `0xd45b4301940B297F76d6e622c1CeA2AE660617d4` — the TEE-derived signing address registered by 0G Compute provider `0x992e6396157Dc4f22E74F2231235D7DE62696db5` running `qwen3.6-plus`. Same signer attests battle verdicts AND mint-time persona scores — one trust assumption, two callsites.
 
-| Contract | Address | Explorer |
-|---|---|---|
-| YapFighter | `0xd023b0c5b0ccc829dbf0b39df5e81aece4d36a24` | [chainscan](https://chainscan-galileo.0g.ai/address/0xd023b0c5b0ccc829dbf0b39df5e81aece4d36a24) |
-| FighterTrainer | `0xC10bd77cdA8300877898612B00608bA522d5a460` | [chainscan](https://chainscan-galileo.0g.ai/address/0xC10bd77cdA8300877898612B00608bA522d5a460) |
-| BattleEscrow | `0x4bd214fdfe925124c9e145e577ac860c0d93fb2e` | [chainscan](https://chainscan-galileo.0g.ai/address/0x4bd214fdfe925124c9e145e577ac860c0d93fb2e) |
-| BattleRegistry | `0x755ef230d456b6cc991ccfff38ec5c6b0133d37b` | [chainscan](https://chainscan-galileo.0g.ai/address/0x755ef230d456b6cc991ccfff38ec5c6b0133d37b) |
-| YapMarketplace | `0x076e42a64e4ba43700ebb0830086138468dfa275` | [chainscan](https://chainscan-galileo.0g.ai/address/0x076e42a64e4ba43700ebb0830086138468dfa275) |
-| RentalEscrow | `0xe5Df2d51ef75A268daAd122038D94cEA9c3111EA` | [chainscan](https://chainscan-galileo.0g.ai/address/0xe5Df2d51ef75A268daAd122038D94cEA9c3111EA) |
-| YapInbox (CREATE2) | `0xe92dB21A770c32a19795556C46D5c6a274955DBD` | [chainscan](https://chainscan-galileo.0g.ai/address/0xe92dB21A770c32a19795556C46D5c6a274955DBD) |
-| MomentINFT (CREATE2) | `0xf6cadAb5276A16b7C8213CD7B6BBB547f55be4AC` | [chainscan](https://chainscan-galileo.0g.ai/address/0xf6cadAb5276A16b7C8213CD7B6BBB547f55be4AC) |
-| MomentMarketplace (CREATE2) | `0x18653aa16a4ffc7093be0270ab427688dfd2fb81` | [chainscan](https://chainscan-galileo.0g.ai/address/0x18653aa16a4ffc7093be0270ab427688dfd2fb81) |
-| YapSubnameRegistrar (CREATE2) | `0xb84c024c3456b7c82ad8a08bf4b7c69804bbd56f` | [chainscan](https://chainscan-galileo.0g.ai/address/0xb84c024c3456b7c82ad8a08bf4b7c69804bbd56f) |
+Runner role (server-side `logAccess` per inference round): `0xe5e0bf763be8CF6a7BBA1B18Fa5Ca110b0587fdC` granted `RUNNER_ROLE` on YapFighter at deploy.
 
-`oracleKey` = `0x83df4B8EbA7c0B3B740019b8c9a77ffF77D508cF` — the TEE-derived signing address registered by 0G Compute provider `0xa48f01287233509FD694a22Bf840225062E67836`.
+### Testnet (Galileo, chainId 16602) — historical reference
+
+Mainnet supersedes testnet as of **2026-05-13**. Testnet ecosystem is preserved but not actively maintained. See [`docs/contracts.md`](docs/contracts.md) for the full testnet address table.
 
 ## 0G Modules Used
 
@@ -165,7 +162,7 @@ During the integration we surfaced 8 SDK + provider bugs in `@0gfoundation/0g-co
 
 ## Demo
 
-- Demo URL: https://yap-arena.xyz/ (Galileo testnet)
+- Demo URL: https://yap-arena.xyz/ (Aristotle mainnet, chainId 16661)
 - Video: *pending*
 - X post: *pending*
 - Sample fighter (full UI E2E with real MetaMask): [Fighter #26](https://yap-arena.xyz/fighters/26) — mint tx [`0xfcf99...`](https://chainscan-galileo.0g.ai/tx/0xfcf9960f0583ab3eec7a156fb2e7be663f799cbf6c40d863b00dc870063d0ed7), train session 1 tx [`0x94bd3...`](https://chainscan-galileo.0g.ai/tx/0x94bd3c0276c9af2c393a91eb37423515027bbcd5d58862e0d645d282201681c8)

@@ -101,28 +101,28 @@ Same trust primitive at both ends. Same provider's TEE signer registered in the 
 4. **Verdict** — same routing-proof signature primitive runs again, now over the battle transcript. Three on-chain checks gate settlement.
 5. **Settle** — winners share the losing pool (5x cap), 5% routes to the winning fighter's owner as a royalty. ELO updates in BattleRegistry.
 
-## Deployments — Galileo testnet (chainId 16602)
+## Deployments — Aristotle mainnet (chainId 16661)
 
 | Contract | Address |
 |---|---|
 | YapFighter (ERC-7857) | `0x066259CCB37C0AF962c112a70C6338e52e1D16ee` |
-| BattleEscrow | `0x06c61C3112B98Afc16002bD523D26eF836e7e659` |
-| BattleRegistry | `0x104a65bf0cB4fAE0F4bb606cE1694115Ce87F2A1` |
+| BattleEscrow | `0x242d1cd3100706b26a3067dd64cecb415a20f398` |
+| BattleRegistry | `0x4ec3eb96161fbef86849d40a5d331d3c1209d5de` |
 | YapMarketplace | `0x9569cE03CD9934Fd206A40b3721f7Ae3DC2a1f36` |
 | RentalEscrow | `0xE986a6C47dA1fD3c0b01EC6695Ccf020EC16bC96` |
 | YapSubnameRegistrar | `0xF5F99bd86b00ad32D16E1Ae97Dd4aaa7AdeD5c8C` |
-| MomentINFT | `0x86cdEe1aF79dd9F56AA5358Eb0Ae39F96dbD4DbB` |
-| MomentMarketplace | `0x13f52f5787fcE95364Bf0CDeE96D5dB3ab4B12bD` |
-| AbilityEscrow | `0x18563e7E015c9e5742485E47698E067FAff279e6` |
+| MomentINFT | `0x059adf223c3281302d25ac36a4f861ef4b5df169` |
+| MomentMarketplace | `0x35125df161d64a8ac59936c0dbfcfe30c9f4220d` |
+| AbilityEscrow | `0x2cc877baa12be163973a43cac998b8d82b3a58a4` |
 | YapInbox | `0xe92dB21A770c32a19795556C46D5c6a274955DBD` |
 
-**TEE signer** (Galileo): `0x83df4B8EbA7c0B3B740019b8c9a77ffF77D508cF` for provider `0xa48f01287233509FD694a22Bf840225062E67836`. Same signer verifies both mint-time persona scores AND settle-time verdicts — single TEE attestation primitive used at two callsites.
+**TEE signer** (Aristotle): `0xd45b4301940B297F76d6e622c1CeA2AE660617d4` for provider `0x992e6396157Dc4f22E74F2231235D7DE62696db5` running `qwen3.6-plus` (1M context, roleplay-tuned, separated-centralized TeeTLS routing-proof architecture). Same signer verifies both mint-time persona scores AND settle-time verdicts — single TEE attestation primitive used at two callsites.
 
 **Score oracle key** on YapFighter: same as verdict oracle, decoupled via separate setter (`setScoreOracleKey`) for independent rotation if needed.
 
 **Runner role** (server-side `logAccess` calls per inference round): `0xe5e0bf763be8CF6a7BBA1B18Fa5Ca110b0587fdC` granted RUNNER_ROLE on YapFighter at deploy.
 
-**Mainnet (Aristotle, 16661)** held until 0G broker SDK lockfile bumped to ≥ Apr 13 2026 (PRs #439 + #446 merged upstream — TLS routing-proof + streaming billing fix). Migration is mechanical config swap; cost projection ~45-50 OG/month operator burn for 100 users at average activity.
+**Galileo testnet (chainId 16602)** preserved as historical reference — see `docs/contracts.md` for the full testnet address table.
 
 ## Demo
 
