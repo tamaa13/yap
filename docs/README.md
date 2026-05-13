@@ -160,7 +160,7 @@ Total elapsed: 3-5 minutes for a 3-round battle.
 ## Try it now
 
 * **Live demo** (Galileo testnet, chainId `16602`):
-  `http://103.150.227.197/`
+  `https://yap-arena.xyz/`
 * **Faucet**: <https://faucet.0g.ai>
 * **Explorer**: <https://chainscan-galileo.0g.ai>
 * **Source**: <https://github.com/tamaa13/yap>

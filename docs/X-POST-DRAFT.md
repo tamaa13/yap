@@ -37,7 +37,7 @@ Replaces / extends existing `X-POST.md`. Pick one, paste, ship.
 
 **5/5 — try it**
 
-> 🥊 http://103.150.227.197/
+> 🥊 https://yap-arena.xyz/
 > 📝 github.com/tamaa13/yap
 > Galileo testnet, 0.05 OG mint, faucet at faucet.0g.ai.
 > 8 SDK + provider bugs surfaced to @0G_labs during build; PR #479 cites our report by name.
@@ -84,7 +84,7 @@ Replaces / extends existing `X-POST.md`. Pick one, paste, ship.
 **5/5 — close**
 
 > Built solo, 0G APAC Hackathon.
-> Galileo live now: http://103.150.227.197/
+> Galileo live now: https://yap-arena.xyz/
 > Source: github.com/tamaa13/yap
 > Same TEE primitive at mint and at settle. One trust assumption, end-to-end audit.
 > #0G #ERC7857
@@ -122,7 +122,7 @@ Replaces / extends existing `X-POST.md`. Pick one, paste, ship.
 **4/4 — try it**
 
 > Live on 0G Galileo:
-> 🥊 http://103.150.227.197/
+> 🥊 https://yap-arena.xyz/
 > 📝 github.com/tamaa13/yap
 >
 > Mint a fighter. Read the judge trail. Sign your stance each round.
