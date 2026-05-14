@@ -18,6 +18,28 @@ Built on [0G](https://0g.ai) for the [0G APAC Hackathon 2026](https://www.hackqu
 
 ---
 
+## 0G Stack Integration
+
+### Required HackQuest components (5/5 — verified at file:line)
+
+| Component | Yap usage | Code citation |
+|---|---|---|
+| **0G Storage** | Encrypted persona seeds pinned per fighter | `YapFighter.sol:56-58` (`metadataHash` / `encryptedURI` / `sealedKeys` mappings) |
+| **0G Compute** | TEE judge for trait scoring + per-round battle inference (median-of-5 LLM) | `apps/web/package.json:15` — `@0gfoundation/0g-compute-ts-sdk@0.8.1` |
+| **0G Chain** | 10 contracts on Aristotle mainnet (16661), all verified on chainscan.0g.ai | `apps/web/.env.local` `_MAINNET` block + [contracts.md](docs/contracts.md) |
+| **0G Agent ID** (ERC-7857) | Custom INFT impl in `YapFighter.sol` (sealed-key transfer, re-encryption on hand-off, 10-min `PROOF_VALIDITY`, chainid-baked replay protection) | `YapFighter.sol:9-15,27,361,384` |
+| **Privacy / Secure Execution** | TEE attestation via `TEEAttestationLib`, on-chain ECDSA proof recovery, `RUNNER_ROLE` access control, per-decryption persona-access log events | `TEEAttestationLib.sol`, `YapFighter.sol:22-23` |
+
+### Bonus integration depth
+
+- **0G DA** — per-battle DA epoch anchoring via DASigners precompile
+  - `BattleEscrow.sol:28-33` — `interface IDASigners { function epochNumber() external view returns (uint256); }`
+  - `BattleEscrow.sol:177` — precompile address `0x0000000000000000000000000000000000001000`
+  - `BattleEscrow.sol:179-180` — `uint256 daEpoch` per-battle storage anchor
+  - `BattleEscrow.sol:507-515` — `staticcall(precompile, IDASigners.epochNumber.selector)` in `submitVerdict`, anchors verdict to DA-committee context for downstream verifiers
+
+---
+
 > Voice & UI guide: [`apps/web/STYLE.md`](apps/web/STYLE.md) — voice anchor, forbidden phrases, before/after table.
 
 ## Stack
