@@ -9,17 +9,31 @@ Foundry project for the Yap AI combat arena on 0G:
 | `BattleRegistry.sol` | Match history + ELO (K=32) tracking. Mutations gated to the escrow. |
 | `YapMarketplace.sol` | Secondary market for YapFighter tokens. Fixed-price listings, pull payments for sellers + treasury, 2.5% platform fee (cap 10%), pausable. Reused by `MomentMarketplace` (separate instance, identical code). |
 | `RentalEscrow.sol` | Open-market rental escrow (custody-based). Owners deposit a fighter with a price-per-day; any wallet rents for N days; escrow is the token owner during a listing and calls `YapFighter.authorizeUsage` on the renter so the canonical authorization reflects the rental. 2.5% platform fee, pausable. |
-| `FighterTrainer.sol` | Append-only on-chain training timeline; emits `FighterTrained` per session. |
 | `YapInbox.sol` | Singleton CREATE2 inbox for cross-agent messaging. |
 | `MomentINFT.sol` | ERC-7857 collectible for outstanding battle rounds — sibling of YapFighter. Mint gated by `BattleEscrow.Settled` + caller-owns-side; (battleId, roundNo, side) uniqueness; clones inherit provenance. |
 | `YapSubnameRegistrar.sol` | Permissionless `<label>.yap.0g` registrar. Standalone phase 1 (label↔tokenId, no SidRegistry); SPACE ID integration is phase 2. |
 
-## Galileo testnet deployments
+## Aristotle mainnet deployments (canonical, v4 cascade — 2026-05-13)
+
+Verified on https://chainscan.0g.ai
+
+| Contract | Address |
+|---|---|
+| `YapFighter` | `0x3a3b176E91AE3Da4eF3a6B968E84120fC61CFd2b` |
+| `BattleEscrow` | `0x311ecf5B66Ab569Bcb4cB96e7b4085CA2b59b037` |
+| `BattleRegistry` | `0xda4f5279e677576831Fb5d99f2C754D5407030ee` |
+| `YapFighterMarket` | `0xb20769dD18F1438CA0aDa66Adf9ba670Cab6b9B0` |
+| `RentalEscrow` | `0x6b89A8E306E3E567598A6233F10D6c410da07eB8` |
+| `MomentINFT` | `0x42C85f0EAa8Aef98c0ec1057e6c241769861A1aF` |
+| `MomentMarketplace` | `0x0514c5F6a9b7a57d329f41125C9E84C805F3Be7c` |
+| `AbilityEscrow` | `0x07E47975Aac222B0D82DB8b5f5A6a24Fd87C7148` |
+| `YapSubname` | `0x4aC6E562b1b3CF9B2c0B6A3789200E889eD7576d` |
+
+## Galileo testnet deployments (historical — chainId 16602)
 
 | Contract | Address |
 |---|---|
 | `YapFighter` | `0xD023b0C5B0CcC829DBF0B39Df5E81aECe4d36A24` |
-| `FighterTrainer` | `0xC10bd77cdA8300877898612B00608bA522d5a460` |
 | `BattleEscrow` | `0x4bd214FdFE925124c9e145E577Ac860C0D93Fb2e` |
 | `BattleRegistry` | `0x755ef230d456b6cc991ccfff38ec5c6b0133d37b` |
 | `YapMarketplace` | `0x076e42a64e4ba43700ebb0830086138468dfa275` |
@@ -160,7 +174,6 @@ out/BattleEscrow.sol/BattleEscrow.json
 out/BattleRegistry.sol/BattleRegistry.json
 out/YapMarketplace.sol/YapMarketplace.json
 out/RentalEscrow.sol/RentalEscrow.json
-out/FighterTrainer.sol/FighterTrainer.json
 out/YapInbox.sol/YapInbox.json
 out/MomentINFT.sol/MomentINFT.json
 out/YapSubnameRegistrar.sol/YapSubnameRegistrar.json

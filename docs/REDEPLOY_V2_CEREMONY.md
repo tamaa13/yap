@@ -1,5 +1,11 @@
 # V2 redeploy ceremony — Strategy A (full cascade)
 
+> **Historical context (post-shipped note)**: This document describes
+> the **testnet** V2 redeploy on 2026-05-11. The v4 cascade was later
+> deployed to **0G Aristotle mainnet (chainId 16661)** on 2026-05-13
+> — see `contracts/README.md` for the canonical mainnet address
+> table. This runbook is retained as a record of the ceremony pattern.
+
 The Phase-3 audit pass (commits `7a68798` through `9a87d81`) changed
 the bytecode of every contract that holds a YapFighter pointer as an
 `immutable`. Per PM decision on 2026-05-11, we drop the existing

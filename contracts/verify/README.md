@@ -1,7 +1,12 @@
-# Contract verification — Galileo testnet
+# Contract verification — Aristotle mainnet + Galileo testnet
 
-**All 10 contracts are verified on-chain.** This directory contains
-the standard JSON inputs + an automation script that ran them.
+**Mainnet (Aristotle, chainId 16661)** — 9 contracts verified on
+`https://chainscan.0g.ai` (v4 cascade deployed 2026-05-13). Addresses
+in the table below.
+
+**Testnet (Galileo, chainId 16602)** — historical record of the
+testnet ceremony. The standard-json-inputs in this directory and the
+automation script were used for the testnet pass.
 
 ## How verification works on chainscan-galileo
 
@@ -48,7 +53,23 @@ Each subdirectory has:
   (paste verbatim into the "Constructor Arguments" field, with or
   without the `0x` prefix as the explorer accepts).
 
-## Deployment table (Galileo, chainId 16602)
+## Deployment table — Aristotle mainnet (canonical, chainId 16661)
+
+| Contract | Address |
+|---|---|
+| YapFighter | `0x3a3b176E91AE3Da4eF3a6B968E84120fC61CFd2b` |
+| BattleEscrow | `0x311ecf5B66Ab569Bcb4cB96e7b4085CA2b59b037` |
+| BattleRegistry | `0xda4f5279e677576831Fb5d99f2C754D5407030ee` |
+| YapFighterMarket | `0xb20769dD18F1438CA0aDa66Adf9ba670Cab6b9B0` |
+| RentalEscrow | `0x6b89A8E306E3E567598A6233F10D6c410da07eB8` |
+| MomentINFT | `0x42C85f0EAa8Aef98c0ec1057e6c241769861A1aF` |
+| MomentMarketplace | `0x0514c5F6a9b7a57d329f41125C9E84C805F3Be7c` |
+| AbilityEscrow | `0x07E47975Aac222B0D82DB8b5f5A6a24Fd87C7148` |
+| YapSubname | `0x4aC6E562b1b3CF9B2c0B6A3789200E889eD7576d` |
+
+Verify via `https://chainscan.0g.ai/address/<addr>`.
+
+## Deployment table — Galileo testnet (historical, chainId 16602)
 
 | Contract | Address |
 |---|---|
@@ -57,7 +78,6 @@ Each subdirectory has:
 | BattleRegistry | `0x755ef230d456b6cc991ccfff38ec5c6b0133d37b` |
 | YapMarketplace | `0x076e42a64e4ba43700ebb0830086138468dfa275` |
 | RentalEscrow | `0xe5Df2d51ef75A268daAd122038D94cEA9c3111EA` |
-| FighterTrainer | `0xC10bd77cdA8300877898612B00608bA522d5a460` |
 | MomentINFT | `0xf6cadAb5276A16b7C8213CD7B6BBB547f55be4AC` |
 | MomentMarketplace | `0x18653aa16a4ffc7093be0270ab427688dfd2fb81` |
 | YapSubnameRegistrar | `0xb84c024c3456b7c82ad8a08bf4b7c69804bbd56f` |
