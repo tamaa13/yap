@@ -90,4 +90,9 @@ export const RENTAL_ESCROW_ABI = rentalEscrowAbi as Abi;
 export const YAP_INBOX_ABI = yapInboxAbi as Abi;
 export const YAP_SUBNAME_ABI = yapSubnameAbi as Abi;
 export const MOMENT_INFT_ABI = momentInftAbi as Abi;
+/** MomentMarketplace shares the YapMarketplace Solidity bytecode —
+ *  same listItem / buyItem / cancelListing surface, only the bound
+ *  INFT differs. Re-export the marketplace ABI under a Moment-flavored
+ *  name for callsite clarity. */
+export const MOMENT_MARKET_ABI = marketplaceAbi as Abi;
 export const ABILITY_ESCROW_ABI = abilityEscrowAbi as Abi;

@@ -15,7 +15,9 @@ import { PageContainer } from "@/components/shell/page-container";
 import { useBattleDAEpoch } from "@/hooks/use-battle-da-epoch";
 import { useBattleState } from "@/hooks/use-battle-state";
 import { useClaimPayout } from "@/hooks/use-claim-payout";
+import { useListMoment } from "@/hooks/use-list-moment";
 import { useMintMoment, useMomentClaimed } from "@/hooks/use-mint-moment";
+import { ListMomentModal } from "@/components/moment/list-moment-modal";
 import { useSettleBattle } from "@/hooks/use-settle-battle";
 import { useWallet } from "@/hooks/use-wallet";
 import {
@@ -1033,6 +1035,9 @@ function MomentMintRow({
 }) {
   const { push } = useToast();
   const mint = useMintMoment();
+  const list = useListMoment();
+  const [listOpen, setListOpen] = useState(false);
+  const [justListed, setJustListed] = useState(false);
   const isOwner =
     !!viewerAddr &&
     fighter.owner.toLowerCase() === viewerAddr.toLowerCase();
@@ -1041,6 +1046,32 @@ function MomentMintRow({
       ? { battleId: battleIdNum, roundNo, side }
       : null;
   const { claimed, isLoading: claimedLoading } = useMomentClaimed(args);
+
+  const listSubmitting = list.isPending || list.isConfirming;
+  const listPhaseLabel: string | null =
+    list.phase === "approving"
+      ? "Approving marketplace"
+      : list.phase === "listing"
+        ? "Listing on-chain"
+        : null;
+
+  const onList = async (priceEth: string) => {
+    if (mint.phase !== "done" || !mint.result) return;
+    try {
+      await list.write({ tokenId: mint.result.tokenId, priceEth });
+      setJustListed(true);
+      setListOpen(false);
+      push({
+        kind: "success",
+        text: `Moment #${mint.result.tokenId} listed at ${priceEth} OG.`,
+      });
+    } catch (e) {
+      push({
+        kind: "error",
+        text: e instanceof Error ? e.message : "List failed",
+      });
+    }
+  };
 
   const previewSnippet = argumentContent
     ? argumentContent.length > 90
@@ -1145,6 +1176,39 @@ function MomentMintRow({
       >
         {buttonLabel}
       </Button>
+      {/* Post-mint list affordance. Surfaces once mint settles and we
+        * know the tokenId. The button stays mounted but switches to a
+        * "Listed" label after the user submits, so they don't double-
+        * list the same token. */}
+      {mint.phase === "done" && mint.result && (
+        <Button
+          size="sm"
+          variant={justListed ? undefined : "primary"}
+          onClick={() => setListOpen(true)}
+          disabled={listSubmitting || justListed}
+          title={
+            justListed
+              ? "This Moment is now listed on the marketplace."
+              : `List Moment #${mint.result.tokenId} for sale.`
+          }
+        >
+          {justListed
+            ? "Listed"
+            : listSubmitting
+              ? listPhaseLabel ?? "Working…"
+              : "List for sale"}
+        </Button>
+      )}
+      {mint.phase === "done" && mint.result && (
+        <ListMomentModal
+          open={listOpen}
+          onClose={() => setListOpen(false)}
+          tokenId={mint.result.tokenId}
+          submitting={listSubmitting}
+          phaseLabel={listPhaseLabel}
+          onSubmit={onList}
+        />
+      )}
     </div>
   );
 }
