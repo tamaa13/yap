@@ -108,11 +108,12 @@ provider `0xa48f01287233509FD694a22Bf840225062E67836`.
 
 Solidity sources, deployment scripts, and full test suite live under
 [`contracts/`](https://github.com/tamaa13/yap/tree/main/contracts) in
-the repo. Built with Foundry, `--evm-version cancun`. **287 unit tests
-passing on the v3 cascade**, slither 0 high findings.
+the repo. Built with Foundry, `--evm-version cancun`. Full forge
+unit + fork-E2E test suite passing on the v4 cascade, slither 0
+high findings.
 
 ### Verification
 
 Both networks verified via `scripts/verify-all.py --network <mainnet|testnet>`.
-Mainnet 9/9 verified on `chainscan.0g.ai`. (YapInbox same-address as
-testnet via CREATE2 — already verified there.)
+Mainnet 10/10 verified on `chainscan.0g.ai`. (YapInbox same-address
+as testnet via CREATE2 — already verified there.)

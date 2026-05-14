@@ -17,7 +17,7 @@ which cites our hackathon report by name in the PR body.
 | 3 | Broker | Verdict signature lacked replay protection across battles | **Fixed in 0G PR #479** |
 | 4 | Broker | TLS cert in routing-proof attestation was empty for some providers | **Fixed in 0G PR #479** |
 | 5 | Provider | `models: []` degraded state served as healthy in `listService` — accepted createTask but failed silently after 10 min | Mitigated client-side (filter, fail-fast 1s); reported to provider operator |
-| 6 | Broker | TLS cert validation gap in mainnet path — gates Yap mainnet deploy | **Open** |
+| 6 | Broker | TLS cert validation gap in mainnet path — not on Yap's critical path (three on-chain checks substitute for the missing TLS bind) | **Open** |
 | 7 | Storage | `txSeq` derivation timing on rapid sequential uploads | Mitigated client-side; reported |
 | 8 | Compute | Fine-tune `taskStatus` polled `nil` after job graduation — required acknowledgeModel race fix | Patched locally |
 
@@ -33,9 +33,14 @@ The fact that PR #479 cites the hackathon report by name is a signal
 that Yap's contribution to 0G — testing the primitives at depth — is
 load-bearing for the platform's maturation, not just a checkbox demo.
 
-## Mainnet gate
+## Status on mainnet
 
-Bug #6 is the open one. Until it clears, Yap mainnet deploy is held —
-no point shipping a verdict signing path with a TLS cert validation
-gap. See [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) for the gating
-policy.
+Bug #6 is still open upstream, but Yap shipped to Aristotle mainnet
+on 2026-05-13 with the v4 cascade. The three on-chain checks
+`BattleEscrow.submitVerdict` runs (ECDSA recovery against
+`oracleKey`, sha256 match on responseBody, canonical reconstruction
+at offset) substitute for the missing TLS-cert bind — none of them
+depend on the bug being closed. The same primitive is shared with
+`YapFighter.recordMintScores` for mint-time persona scoring. See
+[`docs/ARCHITECTURE.md`](ARCHITECTURE.md) "What's still in-flight"
+for the full reasoning.

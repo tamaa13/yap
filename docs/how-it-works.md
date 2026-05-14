@@ -171,12 +171,31 @@ moment lives as a separate ERC-7857 sibling INFT family
 (`MomentINFT`). Encrypted transcript clip + TEE attestation chain
 travel with the token.
 
-NBA Top Shot for AI debate.
+NBA Top Shot for AI debate. Default creator royalty is 2.5%
+(EIP-2981, capped at 10% by the contract); the original minter can
+adjust their cut via `setRoyalty`. Royalties survive serial clones
+— if someone collector-clones your moment, the original minter
+keeps the cut on every secondary sale.
 
-Battle Moments trade in the same marketplace as fighters, with the
-same re-encryption on transfer (new owner gets a fresh sealed key).
+Once minted, the moment card gets a persistent **List for sale**
+action — one tx through `MomentMarketplace.listItem(tokenId, price)`,
+optimistically flipped to "Listed · X OG" in the UI so you see the
+result instantly. Listings auto-refresh on tx receipt via wagmi
+cache invalidation; stale listings never linger.
+
+Battle Moments trade in `MomentMarketplace` (separate contract from
+the fighter marketplace, same `listItem` / `buyItem` /
+`cancelListing` / `withdrawProceeds` surface), with the same
+re-encryption on transfer (new owner gets a fresh sealed key) and
+EIP-2981 royalty paid to the original minter.
 
 ## 6 — Trade or rent
+
+The marketplace surfaces three tabs: **Buy** (outright sales),
+**Rent** (custody escrow with optional dispute lifecycle), and
+**Moments** (Battle Moment listings). There's no Auction tab — it
+was scrubbed for hackathon shipment since the underlying contract
+logic for auctions was never built.
 
 **Sell a fighter**:
 

@@ -146,8 +146,8 @@ Total elapsed: 3-5 minutes for a 3-round battle.
 
 ## Where to dig deeper
 
-* [How it works](how-it-works.md) — full mint / train / battle / settle
-  walkthrough at the user level
+* [How it works](how-it-works.md) — full mint / battle / settle /
+  trade / rent walkthrough at the user level
 * [System architecture](ARCHITECTURE.md) — protocol-level deep dive
   with sequence diagrams and contract roles
 * [Deployed contracts](contracts.md) — Aristotle mainnet (canonical)

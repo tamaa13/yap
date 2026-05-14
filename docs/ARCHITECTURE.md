@@ -27,13 +27,16 @@ flowchart TB
         seed["Encrypted persona payload"]
         transcripts["Battle transcripts"]
     end
+    subgraph da["0G DA"]
+        epoch["DASigners precompile<br/>epochNumber() → battleDAEpoch"]
+    end
     subgraph chain["0G Chain"]
         fighter["YapFighter (ERC-7857)"]
         escrow["BattleEscrow"]
         registry["BattleRegistry"]
         market["YapMarketplace"]
         rental["RentalEscrow"]
-        moment["MomentINFT"]
+        moment["MomentINFT (ERC-7857 + EIP-2981)"]
         marketMoment["MomentMarketplace"]
         ability["AbilityEscrow"]
         subname["YapSubnameRegistrar"]
@@ -47,10 +50,19 @@ flowchart TB
     compute -. "TEE attestation:<br/>ECIES wrap of AES key<br/>+ sig over chunk-tags" .-> chain
     user -. "Sign tx<br/>(mint / battle / trade)" .-> chain
     api --> chain
+    escrow -. "staticcall epochNumber()" .-> da
 
     classDef contract fill:#1A1612,stroke:#C8102E,color:#F2EDE2
     class fighter,escrow,registry,market,rental,moment,marketMoment,ability,subname,inbox contract
 ```
+
+**Five 0G primitives Yap uses end-to-end:** 0G Storage (encrypted
+persona payloads + transcripts), 0G Compute TEE (inference +
+judging + routing-proof verdict signing + persona scoring), 0G
+Chain (the 10-contract cascade), 0G DA (DASigners epoch anchoring
+on verdict submission), and ERC-7857 (encrypted INFT standard with
+sealed-key handoff on transfer — used by both YapFighter and
+MomentINFT).
 
 The frontend talks to 0G Compute and Storage off-chain; the user
 signs every state-changing on-chain action with their own wallet.
@@ -73,15 +85,15 @@ sequenceDiagram
 
     User->>Web: Wizard: name, archetype,<br/>JSONL seed (≥3 lines)
     Web->>API: { seed, archetype, name }
-    API->>Pipeline: createMintJob() + fire async
-    API-->>Web: { jobId } (returns < 2s)
+    API->>Pipeline: persona scoring (median-of-5<br/>TEE judgments) + storage upload
+    API-->>Web: { prepare bundle, scores,<br/>responseBody, signedText, sig }
 
-    par Server pipeline (~5s)
+    par Server pipeline (~15-25s)
         Pipeline->>Storage: upload seed JSONL → seedRoot
         Pipeline->>Pipeline: AES-GCM seal seed bytes<br/>with fresh key K
         Pipeline->>Storage: upload encrypted blob → weightsRoot
-        Pipeline->>Pipeline: sealedKey = iv ‖ K<br/>metadataHash = keccak(provenance)
-        Pipeline->>Pipeline: setMintJobResult(...)<br/>status = "ready"
+        Pipeline->>Pipeline: sealedKey = iv ‖ K<br/>metadataHash = keccak(provenance)<br/>seedHash = keccak(seedJSONL)
+        Pipeline->>Pipeline: TEE-attested persona scoring<br/>(L/R/A/V/C) via median-of-5
     and Client polls
         loop Every 1.5s
             Web->>API: GET /api/mint/status/<jobId>
@@ -89,17 +101,23 @@ sequenceDiagram
         end
     end
 
-    Web->>Wallet: mint(to, encryptedURI,<br/>metadataHash, sealedKey)<br/>+ 0.05 OG fee
-    Wallet->>Fighter: tx
-    Fighter-->>Wallet: Minted event<br/>+ tokenId
+    Web->>Wallet: mint(to, encryptedURI,<br/>metadataHash, sealedKey,<br/>archetype, seedHash)<br/>+ 0.1 OG mintFee
+    Wallet->>Fighter: tx 1
+    Fighter-->>Wallet: Minted + MintFeePaid<br/>+ tokenId
+    Web->>Wallet: recordMintScores(tokenId,<br/>scores, seedHash, responseBody,<br/>contentOffset, signedText,<br/>teeSignature)
+    Wallet->>Fighter: tx 2
+    Fighter-->>Wallet: FighterScored<br/>(traits committed)
     Web->>Commit: off-chain meta<br/>{ name, archetype,<br/>signatureStyle, txHash }
     Commit-->>Web: ok
     Web->>User: Redirect /fighters/<tokenId>
 ```
 
-Total wall-clock: **~5 seconds**. HTTP returns in <2s; the pipeline
-runs server-side via Next.js `after()` and the polling client picks
-up the result on its next tick.
+Total wall-clock: **~30 seconds + two MetaMask prompts**. The persona
+scoring stage runs server-side via TEE-attested median-of-5 LLM
+judgments (~15-25s) before the prepare bundle returns. The user signs
+two transactions back-to-back: `mint()` commits the encrypted persona
++ archetype + seedHash, then `recordMintScores()` lands the TEE-
+attested 5-trait vector on the same tokenId.
 
 > **Phase 2 pivot (2026-05-08)**: dropped on-chain fine-tune from
 > the mint pipeline. The LoRA produced inside the TEE was never
@@ -115,6 +133,9 @@ up the result on its next tick.
 > `recordMintScores(...)` lands the TEE-attested 5-dim persona
 > scores on-chain right after. Traits + abilities are committed
 > as part of the mint flow itself, not minted-then-scored later.
+> The 4-arg legacy overload is preserved on the IERC7857 surface
+> but reverts unconditionally with `MintNotSupported()` — clients
+> MUST call the 6-arg overload.
 
 ## Live battle + bet
 
@@ -217,28 +238,50 @@ no incentive structure pulling toward "default to owner."
 
 ### YapFighter (ERC-7857)
 
-ERC-721-extended INFT with encrypted character metadata.
+ERC-721-extended INFT with encrypted character metadata, archetype
+commitments, and TEE-attested persona scoring.
 
-* `mint(to, encryptedURI, metadataHash, sealedKey) → tokenId` —
-  user-paid mint with `0.05 OG` fee; no role gate.
-* `iTransferFrom(from, to, tokenId, TransferValidityProof[])` —
-  re-encryption on transfer (rotates sealed key + metadata hash).
+* `mint(to, encryptedURI, metadataHash, sealedKey, archetype, seedHash) → tokenId`
+  — 6-arg user-paid mint with `0.1 OG` `mintFee` routed to treasury;
+  no role gate. Commits the immutable `archetype` (Roaster / Debater
+  / Philosopher / Troll / Scholar / Provocateur) and the off-chain
+  JSONL seed commitment so the scoring path can prove scores belong
+  to this specific seed. Emits `Minted`, `PublishedSealedKey`, and
+  `MintFeePaid`.
+* `mint(to, encryptedURI, metadataHash, sealedKey)` — 4-arg legacy
+  overload preserved for IERC7857 interface conformance; reverts
+  unconditionally with `MintNotSupported()`.
+* `recordMintScores(tokenId, scores, seedHash, responseBody, contentOffset, signedText, teeSignature)`
+  — one-shot per tokenId; lands the TEE-attested 5-trait vector
+  `[Logos, Rhetoric, Aggression, Range, Concreteness]` after running
+  the same three-check attestation pipeline as battle verdicts
+  (ECDSA recover → `scoreOracleKey`, sha256 match, canonical
+  reconstruction). Auth: token owner or `RUNNER_ROLE` bearer.
+* `iTransferFrom(from, to, tokenId, TransferValidityProof[], newEncryptedURI)`
+  — re-encryption on transfer (rotates sealed key, metadata hash,
+  AND `encryptedURI` ciphertext pointer).
 * `iCloneFrom(to, tokenId, proof) → newTokenId` — clones token to
   recipient with verified proof; restricted to token owner.
   `_proofConsumed` mapping prevents reuse of a single proof for
   multiple clones.
 * `authorizeUsage(tokenId, subscriber, permissions)` — third-party
   usage grants (rentals, agent-as-a-service).
-* `verifier() → IERC7857DataVerifier` — TEE/ZKP oracle for
-  transfer proofs.
+* `logAccess(tokenId, battleId)` — server-runner audit log entry.
+  Gated to token owner / executor / `RUNNER_ROLE`; emits
+  `PersonaAccessed` once per persona-decryption round so collectors
+  see lifetime usage.
+* `setMintFee(uint256)` / `setScoreOracleKey(address)` — admin
+  controls for fee adjustments + scoring oracle rotation.
 
-Roles: `ADMIN_ROLE` (config + role grants), `OPERATOR_ROLE` (limited
-admin operations). Mint is permissionless; the historical
+Roles: `ADMIN_ROLE` (config + role grants), `RUNNER_ROLE` (off-chain
+inference runner — calls `logAccess` + may call `recordMintScores`
+on behalf of owners). Mint is permissionless; the historical
 `MINTER_ROLE` was removed when minting moved to user-paid flow.
 
 ### BattleEscrow
 
-Match lifecycle + pari-mutuel pool with anti-gambling caps.
+Match lifecycle + pari-mutuel pool with anti-gambling caps,
+fighter-owner royalty, and 0G DA epoch anchoring.
 
 * `createBattle(fighterA, fighterB, topic, roundsMax) payable → battleId`
   — challenger stake escrowed.
@@ -249,15 +292,28 @@ Match lifecycle + pari-mutuel pool with anti-gambling caps.
 * `placeBet(battleId, side) payable` — spectator stake on a side
   pool.
 * `submitVerdict(battleId, winner, verdictHash, responseBody, contentOffset, signedText, teeSignature)`
-  — relayer submits the 0G Compute TEE provider's routing-proof
-  attestation. Three independent checks (see flowchart above).
+  — anyone may call; authorization is cryptographic. Three
+  independent attestation checks (see flowchart above), then a
+  low-level `staticcall` to the `DASigners` precompile at
+  `0x...1000` to record the active DA-committee epoch via
+  `battleDAEpoch[battleId]` (emits `BattleDAAnchored`). On chains
+  where the precompile isn't deployed the staticcall fails closed
+  and a zero epoch is recorded gracefully — verdict still settles.
 * `settle(battleId)` — payout cap `MAX_PAYOUT_MULTIPLIER = 5x` per
-  winner; surplus refunded pro-rata to losers.
+  winner; surplus refunded pro-rata to losers. Pays
+  `PLATFORM_FEE_BPS = 250` (2.5%) to treasury and
+  `FIGHTER_ROYALTY_BPS = 500` (5%) to the winning fighter's
+  current owner; emits `FighterRoyaltyPaid` + recordEarnings on
+  the registry.
 * `setOracleKey(addr)` / `setDisputeWindow(seconds)` — admin
-  controls.
+  controls. `DEFAULT_DISPUTE_WINDOW = 24h`, `MAX_DISPUTE_WINDOW = 7
+  days`; mainnet currently configured to **5 minutes** via
+  `setDisputeWindow(300)` for demo throughput.
 
-State per battle: `{ challenger, defender, fighterA, fighterB,
-poolA, poolB, status, verdictDigest, verdictSignedAt }`.
+State per battle: `{ fighterA, fighterB, creator, startTime,
+verdictTime, maxRounds, winner, status, poolA, poolB,
+feeCollected, topic, verdictSig, verdictHash, totalClaimed,
+settledAt, royaltyPaid }`.
 
 ### BattleRegistry
 
@@ -302,11 +358,61 @@ with optional co-signed dispute lifecycle.
 ### MomentINFT
 
 ERC-7857 sibling for Battle Moments — round highlights minted as
-their own collectible INFT family.
+their own collectible INFT family with EIP-2981 creator royalties.
 
 * `mintMoment(battleId, roundNo, side, encryptedURI, metadataHash, sealedKey, provenanceHash)`
   — verifies battle is `Settled` status via BattleEscrow,
-  enforces uniqueness on `(battleId, roundNo, side)`.
+  enforces uniqueness on `(battleId, roundNo, side)`. Caller must
+  own (or be active executor on) the fighter on the chosen side.
+  Records `_royalties[tokenId] = (minter, DEFAULT_ROYALTY_BPS=250)`
+  — a 2.5% creator royalty by default. Emits `MomentMinted` +
+  `RoyaltySet`.
+* `setRoyalty(tokenId, royaltyBps)` — original minter only; bounded
+  by `MAX_ROYALTY_BPS = 1000` (10% hard ceiling).
+* `royaltyInfo(tokenId, salePrice)` — EIP-2981 view; marketplaces
+  probe via staticcall before paying out a sale.
+* `iTransferFrom` / `iCloneFrom` — same re-encryption + sealed-key
+  rotation as YapFighter; clones inherit parent provenance +
+  royalty so the original minter keeps the cut across serials.
+
+### MomentMarketplace
+
+Buy/sell escrow for Battle Moments. Same `listItem` / `buyItem` /
+`cancelListing` / `withdrawProceeds` surface as YapMarketplace
+(shares the YapMarketplace Solidity bytecode — only the bound INFT
+differs).
+
+### AbilityEscrow
+
+Per-battle archetype-ability state machine + trait-gate
+enforcement. Holds no value — purely a coordination contract that
+records ability declarations during a Live battle.
+
+* `useAbility(battleId, side, round)` — declares this side's
+  archetype ability is deployed on the given round. Reverts unless:
+  battle is `Live`, round is `1..maxRounds`, side hasn't already
+  used its ability this battle, caller is the fighter owner /
+  authorized executor / global `RUNNER_ROLE`, AND the fighter's
+  trait score for its archetype's gate trait clears the per-
+  archetype threshold (see table below).
+* `requiredScore(archetype) → (traitIdx, minScore)` — pure view
+  exposing the gate table.
+
+Per-archetype gate (trait index → trait name; `0=Logos,
+1=Rhetoric, 2=Aggression, 3=Range, 4=Concreteness`):
+
+| Archetype     | Gate         | Threshold |
+|---             |---            |---        |
+| Roaster       | Aggression   | ≥ 3       |
+| Debater       | Logos        | ≥ 3       |
+| Philosopher   | Logos        | ≥ 4       |
+| Troll         | Aggression   | ≥ 4       |
+| Scholar       | Range        | ≥ 3       |
+| Provocateur   | Rhetoric     | ≥ 3       |
+
+Picking a locked archetype at mint is allowed — the fighter mints
+fine but the ability stays permanently inert (no setArchetype
+function; recordMintScores is one-shot per token).
 
 ### YapSubnameRegistrar
 
@@ -355,9 +461,18 @@ emits one `Message` event per send. ECIES inline payload up to
   every cap-active and cap-inactive scenario; surplus refunded
   pro-rata to losers. Verified via 134-test forge suite (including
   tampered-responseBody and offset-misuse cases).
-* **Re-encryption on transfer** — sealed key rotates on
-  `iTransferFrom`; `encryptedURI` rotation is in the v1.1
-  hardening queue (see Known Gaps below).
+* **Re-encryption on transfer** — sealed key, metadata hash, AND
+  `encryptedURI` ciphertext pointer all rotate on `iTransferFrom`
+  on both YapFighter and MomentINFT. Prior owner's blob ceases to
+  be the canonical pointer the moment the transfer lands.
+* **DA-committee anchoring** — `BattleEscrow.submitVerdict`
+  staticcalls the 0G DA `DASigners` precompile (`0x...1000`,
+  `epochNumber()`) and records the active epoch as
+  `battleDAEpoch[battleId]`, emitting `BattleDAAnchored`. Anchors
+  the verdict transcript to the DA committee responsible for the
+  block height that finalised it. Falls back to zero when the
+  precompile is unreachable (e.g. local Anvil) without blocking
+  settlement.
 * **TEE-attested persona scoring at mint** — the 5 trait scores
   (Logos / Rhetoric / Aggression / Range / Concreteness) are
   scored inside the 0G Compute TEE judge, packed into a canonical
@@ -375,21 +490,20 @@ emits one `Message` event per send. ECIES inline payload up to
   mainnet is live regardless — Yap's three on-chain checks
   (ECDSA recovery, sha256 match, canonical reconstruction) do
   not depend on the bug being closed.
-* **Bug #7 (TEE download proxy timeout).** The provider deployment
-  template's reverse proxy times out before the 90 MB LoRA
-  finishes streaming. Avoided in production by downloading via 0G
-  Storage natively (also faster); the TEE fallback is only used on
-  macOS dev.
+* **Bug #7 (TEE download proxy timeout).** Avoided in production by
+  downloading via 0G Storage natively. Used to matter for
+  fine-tune fetch; no longer on the Yap critical path post-pivot.
 * **Bug #8 (FT provider models registry empties spontaneously) —
   DEFERRED.** Phase 2 pivot dropped fine-tune from the mint
   pipeline, so this bug no longer blocks Yap. Local mitigation
   (provider picker filtering on `models: []`) remains in
   `compute.ts` for any future caller.
 * **Continuous learning (train flow).** The standalone
-  FighterTrainer contract is NOT in the v4 cascade. The hackathon
-  product treats the mint-time seal as the single canonical
-  persona for the token. Re-introducing train as a versioned
-  encryptedURI overlay is parked as a post-hackathon explore.
+  FighterTrainer contract is NOT in the v4 cascade and there is no
+  Yap-shipped `train()` codepath. The hackathon product treats the
+  mint-time seal as the single canonical persona for the token.
+  Re-introducing train as a versioned encryptedURI overlay is
+  parked as a post-hackathon explore.
 
 ### Trust assumptions
 
@@ -423,23 +537,26 @@ Users do **not** need to trust:
 ## Known gaps
 
 The 2026-04-25 audit hardening queue closed out the contract-level
-gaps (commits `46b1363` / `c44e629`). What remains:
+gaps (commits `46b1363` / `c44e629`). Yap shipped to Aristotle
+mainnet on 2026-05-13 with the v4 cascade (see
+[contracts](contracts.md)). What remains:
 
 * **0G Compute fine-tune** — Phase 2 pivot dropped fine-tune from
-  mint/train (the LoRA was never reloaded into inference, so the
-  latency cost was pure UX drag). Yap now ships persona-as-INFT
+  the mint pipeline (the LoRA was never reloaded into inference, so
+  the latency cost was pure UX drag). Yap now ships persona-as-INFT
   (spec-conformant per ERC-7857 "character definitions").
   Re-introducing fine-tune is parked as a post-hackathon explore —
   the existing `lib/0g/compute.ts` wrapper is preserved.
-* **`FighterStats.earnings` wiring.** Currently a placeholder —
-  always reads zero. Wiring requires hook into
-  `BattleEscrow.PayoutClaimed` with attribution from bettor →
-  fighter (creator/defender side mapping), pushed back via a
-  registry mutator. High value for the marketplace (fighters
-  become provable revenue-generating assets, not just rating
-  numbers) but deferred since current ranking + W/L + ELO covers
-  v1 collector signals.
-* **Mainnet deploy** — gated as noted in *In-flight*.
+* **DA epoch on Aristotle.** The `DASigners` precompile isn't live
+  on Aristotle yet — the staticcall fallback records `0` gracefully
+  and settlement continues. `BattleDAAnchored` events fire on every
+  verdict; once the precompile lights up, the epoch field populates
+  automatically without a redeploy.
+* **`FighterStats.earnings` partial wiring.** Now records the 5%
+  fighter-owner royalty paid out at `settle` (verified on mainnet
+  battle 1 — `0.00055 OG` ✓). The bettor-pool share is not yet
+  attributed back to the fighter — adding that requires the same
+  PayoutClaimed → fighter mapping pattern.
 
 ## Deploy topology
 
@@ -459,3 +576,24 @@ pm2) with build-on-runner CI:
 The runner kicks off via Next.js `after()` so it keeps executing
 after the route response ships — long enough for a 5-round × ~60
 s/round battle plus judging plus canonical signing.
+
+### Resilient receipt waiter
+
+Aristotle's RPC occasionally lags between "tx mined" and "receipt
+observable" — viem's default `waitForTransactionReceipt` poll loop
+gives up between submission and surfacing, especially across
+mint + recordMintScores back-to-back. `lib/0g/wait-receipt.ts`
+wraps every receipt wait with a three-stage fallback:
+
+1. viem's `waitForTransactionReceipt` with an aggressive budget
+   (2s polling × 240 retries, single confirmation).
+2. On failure, direct `getTransactionReceipt` poll for up to
+   `fallbackMs` (default 90s) — viem sometimes throws on `null`
+   receipt where the direct call returns the mined receipt cleanly.
+3. Still nothing → typed `ReceiptPendingError` carrying the
+   `txHash` + chainscan URL so the UI renders "submitted, awaiting
+   confirmation" instead of an outright failure.
+
+Used by `useMintFighter` for both mint() and recordMintScores()
+transactions so users never lose mid-mint progress to a transient
+RPC blip.

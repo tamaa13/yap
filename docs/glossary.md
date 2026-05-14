@@ -20,8 +20,15 @@ payout cap per winner (no unbounded gambling unwinds).
 
 **Archetype** — Mechanical class for a fighter (Roaster, Debater,
 Philosopher, Troll, Scholar, Provocateur). Each archetype carries a
-unique **ability** gated by a trait-score threshold (e.g. Roaster's
-"Mic Drop" needs Aggression ≥ 3). Committed on-chain at mint.
+unique **ability** gated by a trait-score threshold. Committed
+on-chain at mint and immutable thereafter.
+
+**Archetype gate** — The per-archetype trait-score threshold
+`AbilityEscrow.useAbility` enforces. Roaster: Aggression ≥ 3;
+Debater: Logos ≥ 3; Philosopher: Logos ≥ 4; Troll: Aggression ≥ 4;
+Scholar: Range ≥ 3; Provocateur: Rhetoric ≥ 3. Picking a locked
+archetype at mint succeeds but the ability stays permanently inert
+(no setArchetype function; recordMintScores is one-shot).
 
 **Aristotle** — 0G mainnet, chainId `16661`. Canonical Yap deploy
 since 2026-05-13 (v4 cascade). See [contracts](contracts.md).
@@ -59,6 +66,30 @@ Yap acts as referee.
 where the canonical verdict bytes start. The contract walks the
 response body to this offset and confirms the canonical bytes are
 between JSON quote characters before accepting the verdict.
+
+## D
+
+**DA epoch** — 0G Data Availability committee epoch number, anchored
+into `BattleEscrow.battleDAEpoch[battleId]` at verdict-submission
+time via a low-level `staticcall` to the DASigners precompile
+(`0x0000…1000`, `epochNumber()`). Emits `BattleDAAnchored`. Lets
+downstream verifiers reconstruct the DA-committee context for the
+block height that finalised the verdict transcript. Records `0`
+gracefully when the precompile isn't deployed (e.g. Aristotle today,
+local Anvil) without blocking settlement.
+
+**`decideStance`** — Server-side deterministic heuristic in
+`apps/web/lib/battle-state/runner.ts` that picks ATTACK / BUILD for
+each fighter per round from current battle state (round number, own
+HP, prior-round outcome, archetype lean). Fully autonomous —
+replaces the previous 5-second user picker so spectators see fights
+play themselves end-to-end without per-round input gates.
+
+**Dispute window** — Time between `submitVerdict` and earliest
+`settle` call on `BattleEscrow`. `DEFAULT_DISPUTE_WINDOW = 24h`,
+`MAX_DISPUTE_WINDOW = 7 days`; admin can tune via
+`setDisputeWindow(window)`. Mainnet is currently configured at
+**5 minutes** (`setDisputeWindow(300)`) for demo throughput.
 
 ## E
 
@@ -137,18 +168,28 @@ Logic fighters argue more deliberately, get more tokens.
 
 ## M
 
-**mainnet gating policy** — Yap's policy of holding mainnet deploy
-until specific upstream issues (currently 0G bug #6) are resolved.
-We don't ship a verdict signing path with a known TLS cert
-validation gap.
-
 **MetaData hash** — Keccak-256 of a fighter's provenance bundle
 (seedRoot + weightsRoot + sealed key components). Bound to the
 tokenId on-chain. Updated on every re-seal session.
 
-**Mint** — Create a new fighter. Async pipeline: upload seed →
-encrypt → upload encrypted blob → sign on-chain. ~5 seconds end to
-end.
+**Mint** — Create a new fighter. Two-tx flow on the v4 cascade:
+(1) `mint(to, encryptedURI, metadataHash, sealedKey, archetype, seedHash)`
+with `msg.value = 0.1 OG` mintFee routed to treasury — commits
+encrypted persona + archetype + seed commitment. (2)
+`recordMintScores(...)` — one-shot per token, lands the TEE-
+attested 5-trait vector via the same routing-proof verification
+pipeline as battle verdicts. Together: ~30s wall-clock + two
+MetaMask prompts; cost ≈ 0.16 OG (0.1 fee + ~0.06 gas).
+
+**MintFeePaid** — Event on YapFighter emitted whenever a non-zero
+`mintFee` is paid on the 6-arg `mint()`. Auditors / analytics can
+count mints + sum fees from this event alone without parsing tx
+value.
+
+**Moment** — See *Battle Moment*. Minted via `MomentINFT.mintMoment`
+once a battle reaches `Settled`. Carries a default 2.5% EIP-2981
+creator royalty (`royaltyInfo(tokenId, salePrice)`), adjustable by
+the minter up to 10% max. Listable on MomentMarketplace.
 
 ## O
 
@@ -178,9 +219,18 @@ the persona payload is re-sealed with a fresh AES-GCM key for the
 new owner. The old sealed key is invalidated.
 
 **Replay protection** — `_proofConsumed` mapping on `YapFighter`
-that records which `(proofId, tokenId, recipient)` triples have
-been used. Prevents a single transfer-validity-proof from being
-used to mint N clones.
+and `MomentINFT` that records which `(proofId, tokenId, recipient)`
+triples have been used. Prevents a single transfer-validity-proof
+from being used to mint N clones. Inner proofId derivation binds
+`block.chainid` so a proof attested on one chain cannot replay on
+another (defends a hypothetical testnet→mainnet TEE-key reuse
+window).
+
+**Resilient receipt** — `lib/0g/wait-receipt.ts` three-stage receipt
+fallback (viem → direct `getTransactionReceipt` poll → typed
+`ReceiptPendingError`). Used by mint + recordMintScores flows so a
+transient RPC blip between "tx mined" and "receipt observable"
+doesn't dead-end the user mid-mint.
 
 **Routing-proof attestation** — TEE provider's signature format:
 `<sha256(reqBody)>:<sha256(respBody)>:<providerType>:<providerIdentity>:<sha256(tlsCert)>`.
@@ -194,6 +244,12 @@ competitor's verdict.
 subname registrar will plug into SANN once `yap.0g` is acquired
 as a parent name (Phase 2). Current shape (label → tokenId binding)
 is forward-compatible.
+
+**Scoring oracle key** — `YapFighter.scoreOracleKey`, the TEE
+signer address whose attestation `recordMintScores` accepts. On
+the v4 cascade mainnet deploy, set equal to `oracleKey` on
+BattleEscrow — same TEE provider attests both battle verdicts AND
+mint-time persona scores. One trust primitive, two callsites.
 
 **Sealed key** — The AES key encrypting a fighter's persona,
 itself encrypted (sealed) for the current owner. Transferred and
