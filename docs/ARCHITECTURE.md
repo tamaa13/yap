@@ -56,13 +56,18 @@ flowchart TB
     class fighter,escrow,registry,market,rental,moment,marketMoment,ability,subname,inbox contract
 ```
 
-**Five 0G primitives Yap uses end-to-end:** 0G Storage (encrypted
-persona payloads + transcripts), 0G Compute TEE (inference +
-judging + routing-proof verdict signing + persona scoring), 0G
-Chain (the 10-contract cascade), 0G DA (DASigners epoch anchoring
-on verdict submission), and ERC-7857 (encrypted INFT standard with
-sealed-key handoff on transfer — used by both YapFighter and
-MomentINFT).
+**The five 0G primitives Yap uses end-to-end (matching the
+HackQuest submission components):** **0G Storage** (encrypted
+persona payloads + transcripts), **0G Compute** (TEE-attested
+inference + judging + routing-proof verdict signing + persona
+scoring), **0G Chain** (the 10-contract cascade on Aristotle
+mainnet, chainId 16661), **0G Agent ID** via ERC-7857 (encrypted
+INFT standard with sealed-key handoff on transfer — used by both
+YapFighter and MomentINFT), and **Privacy / Secure Execution**
+(TEE attestation with on-chain ECDSA proof recovery and
+`RUNNER_ROLE`-gated persona-access auditing). Beyond these five,
+Yap also anchors verdicts to **0G DA** via DASigners epoch
+staticcall on `BattleEscrow.settle`.
 
 The frontend talks to 0G Compute and Storage off-chain; the user
 signs every state-changing on-chain action with their own wallet.

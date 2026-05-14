@@ -1,12 +1,18 @@
 # Yap demo recording — storyboard + narration
 
-Target: 4–6 minute video for the 0G APAC Hackathon submission. Show the
-verifiable AI combat arena end-to-end. Bahasa Indonesia narration with
-English on-screen text.
+Target: ≤5 minute video for the 0G APAC Hackathon submission. Show the
+verifiable AI combat arena end-to-end. English narration with
+burned-in English subtitles.
+
+> **Note**: This document captured the original recording plan. The
+> shipped v4 demo (`~/Desktop/yap-demo-v4.mp4`, 4:50) diverged in
+> some specifics — English narration (not Bahasa), Agent ID
+> branding pass, 4K source resolution. The storyboard scene order
+> remains accurate.
 
 **Demo URL**: `https://yap-arena.xyz/`
-**Network**: 0G Galileo testnet (chainId 16602)
-**Wallet for recording**: dev deployer `0x1d4D…c485D` (has fighters #1, #5, #10, etc.)
+**Network**: 0G Aristotle mainnet (chainId 16661)
+**Wallet for recording**: see operator wallet in `apps/web/.env.local`
 
 ## Recording setup
 
@@ -225,4 +231,4 @@ If something fails on demo URL during recording:
 - [ ] HackQuest project page submission (description + screenshots + video link)
 - [ ] X post with video + key narrative beat ("8 bugs surfaced, half fixed in PR #479")
 - [ ] GitHub README polish — badges (test count, contracts deployed)
-- [ ] Mainnet deploy gate review (held until 0G Bug #6 resolved per ARCHITECTURE.md)
+- [x] ✅ Mainnet deployed 2026-05-13 — full v4 cascade on Aristotle (chainId 16661), 9 contracts verified on chainscan.0g.ai
