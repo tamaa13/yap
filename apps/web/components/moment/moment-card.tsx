@@ -107,18 +107,25 @@ export function MomentCard({
             )}
           </div>
         </div>
-        <div style={{ display: "flex", gap: 6, marginTop: 14 }}>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 6,
+            marginTop: 14,
+          }}
+        >
           <Button
             size="sm"
             onClick={() => router.push(battleArenaPath(moment.battleId))}
-            style={{ flex: 1 }}
+            style={{ flex: 1, minWidth: 0 }}
           >
-            Source battle
+            Battle
           </Button>
           <Button
             size="sm"
             onClick={() => router.push(`/fighters/${moment.fighterTokenId}`)}
-            style={{ flex: 1 }}
+            style={{ flex: 1, minWidth: 0 }}
           >
             Fighter
           </Button>
@@ -127,6 +134,7 @@ export function MomentCard({
               size="sm"
               onClick={() => setEditOpen(true)}
               disabled={setRoyalty.isPending || setRoyalty.isConfirming}
+              style={{ flex: 1, minWidth: 0 }}
             >
               Royalty
             </Button>
