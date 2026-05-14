@@ -7,6 +7,7 @@ import { useReadContract, useWalletClient } from "wagmi";
 import { usePublicClient } from "wagmi";
 import { FIGHTER_INFT_ABI, FIGHTER_INFT_ADDRESS } from "@/lib/contracts";
 import { activeChain } from "@/lib/chains";
+import { waitReceiptResilient } from "@/lib/0g/wait-receipt";
 
 /** Full TEE attestation bundle from /api/mint/score's live path. Required
  *  by both the v4 6-arg mint() overload (seedHash) AND the subsequent
@@ -169,17 +170,16 @@ export function useMintFighter() {
 
         // 3. Wait for receipt + parse Minted event for tokenId.
         //
-        // viem's defaults give up well before Galileo testnet propagates
-        // a fresh tx. Override with a longer poll window (5 min, 4-second
-        // interval) so we don't false-alarm the user.
+        // 0G RPC sometimes lags briefly between tx submission and
+        // receipt observability. waitReceiptResilient bumps viem's
+        // budget (2s × 240 = 8min + 10min hard cap) and falls back
+        // to a direct getTransactionReceipt poll for another 90s on
+        // failure, then throws ReceiptPendingError carrying a
+        // chainscan link instead of a generic "could not be found"
+        // — so UI surfaces a "submitted, pending" state with a
+        // verify link rather than a false-positive failure.
         setPhase("minting");
-        const receipt = await publicClient.waitForTransactionReceipt({
-          hash: txHash,
-          pollingInterval: 4_000,
-          retryCount: 60,
-          retryDelay: 4_000,
-          timeout: 5 * 60_000,
-        });
+        const receipt = await waitReceiptResilient(publicClient, txHash);
         if (receipt.status !== "success") throw new Error("Mint tx reverted");
 
         const events = parseEventLogs({
@@ -226,13 +226,7 @@ export function useMintFighter() {
             teeSignature,
           ],
         });
-        const scoreReceipt = await publicClient.waitForTransactionReceipt({
-          hash: scoreTx,
-          pollingInterval: 4_000,
-          retryCount: 60,
-          retryDelay: 4_000,
-          timeout: 5 * 60_000,
-        });
+        const scoreReceipt = await waitReceiptResilient(publicClient, scoreTx);
         if (scoreReceipt.status !== "success") {
           throw new Error("recordMintScores tx reverted");
         }

@@ -19,6 +19,7 @@ import { Breadcrumbs } from "@/components/shell/breadcrumbs";
 import { PageContainer } from "@/components/shell/page-container";
 import { GateScreen } from "@/components/wallet/gate-screen";
 import { useMintFighter, type PersonaAttestation } from "@/hooks/use-mint-fighter";
+import { ReceiptPendingError } from "@/lib/0g/wait-receipt";
 import { useNextTokenId } from "@/hooks/use-next-token-id";
 import { useWallet } from "@/hooks/use-wallet";
 import { activeChain } from "@/lib/chains";
@@ -1439,20 +1440,77 @@ Crypto is a slot machine with footnotes.
                 txHash={mint.result.txHash}
               />
             )}
-            {mint.phase === "error" && (
-              <div
-                style={{
-                  padding: 18,
-                  background: "rgba(232,107,107,0.08)",
-                  border: "1px solid rgba(232,107,107,0.30)",
-                  borderRadius: 4,
-                  fontSize: 13,
-                  color: "var(--tx-primary)",
-                }}
-              >
-                {mint.error?.message ?? "Mint failed"}
-              </div>
-            )}
+            {mint.phase === "error" && (() => {
+              const pending =
+                mint.error instanceof ReceiptPendingError
+                  ? mint.error
+                  : null;
+              const tint = pending
+                ? {
+                    bg: "rgba(232,178,107,0.10)",
+                    bd: "rgba(232,178,107,0.35)",
+                  }
+                : {
+                    bg: "rgba(232,107,107,0.08)",
+                    bd: "rgba(232,107,107,0.30)",
+                  };
+              return (
+                <div
+                  style={{
+                    padding: 18,
+                    background: tint.bg,
+                    border: `1px solid ${tint.bd}`,
+                    borderRadius: 4,
+                    fontSize: 13,
+                    color: "var(--tx-primary)",
+                    lineHeight: 1.55,
+                  }}
+                >
+                  {pending ? (
+                    <>
+                      <div
+                        className="mono"
+                        style={{
+                          fontSize: 11,
+                          color: "var(--accent)",
+                          letterSpacing: 1.2,
+                          textTransform: "uppercase",
+                          marginBottom: 6,
+                        }}
+                      >
+                        Submitted · receipt pending
+                      </div>
+                      <div style={{ marginBottom: 10 }}>
+                        Your tx was submitted but the receipt hasn't
+                        surfaced through 0G&apos;s RPC yet. The transaction
+                        often confirms anyway — verify on chainscan and,
+                        if the fighter exists with{" "}
+                        <span className="mono">isScored = false</span>,
+                        use the &quot;Commit scores&quot; recovery panel
+                        on the fighter detail page to finalize.
+                      </div>
+                      <a
+                        href={pending.explorerUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mono"
+                        style={{
+                          fontSize: 11,
+                          color: "var(--accent)",
+                          letterSpacing: 1.2,
+                          textTransform: "uppercase",
+                          textDecoration: "underline",
+                        }}
+                      >
+                        Verify on chainscan ↗
+                      </a>
+                    </>
+                  ) : (
+                    mint.error?.message ?? "Mint failed"
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
       </Card>

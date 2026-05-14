@@ -30,6 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import { activeChain } from "@/lib/chains";
 import { FIGHTER_INFT_ABI, FIGHTER_INFT_ADDRESS } from "@/lib/contracts";
+import { waitReceiptResilient, ReceiptPendingError } from "@/lib/0g/wait-receipt";
 
 type Phase = "idle" | "scoring" | "signing" | "confirming" | "error";
 
@@ -49,6 +50,12 @@ export function CommitScoresPanel({
   const [seed, setSeed] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Captured when a tx submits but its receipt doesn't surface in the
+  // resilient-wait budget. Surfaces as a yellow "submitted, pending"
+  // banner with a chainscan link instead of a hard red error, since
+  // the tx may still confirm — and the recovery panel itself is the
+  // re-run mechanism. Null = no pending state.
+  const [pendingTx, setPendingTx] = useState<ReceiptPendingError | null>(null);
 
   // Pull the committed seedHash so we can hash-match locally before
   // burning the LLM judge spend. Mismatch = wrong seed, no point
@@ -164,13 +171,7 @@ export function CommitScoresPanel({
       });
 
       setPhase("confirming");
-      const receipt = await publicClient.waitForTransactionReceipt({
-        hash: txHash,
-        pollingInterval: 4_000,
-        retryCount: 60,
-        retryDelay: 4_000,
-        timeout: 5 * 60_000,
-      });
+      const receipt = await waitReceiptResilient(publicClient, txHash);
       if (receipt.status !== "success") {
         throw new Error("recordMintScores tx reverted");
       }
@@ -182,8 +183,13 @@ export function CommitScoresPanel({
       router.refresh();
       setPhase("idle");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Commit failed";
-      setErrorMessage(msg);
+      if (e instanceof ReceiptPendingError) {
+        setPendingTx(e);
+        setErrorMessage(null);
+      } else {
+        setErrorMessage(e instanceof Error ? e.message : "Commit failed");
+        setPendingTx(null);
+      }
       setPhase("error");
     }
   };
@@ -262,7 +268,55 @@ export function CommitScoresPanel({
           {phaseLabel}…
         </div>
       )}
-      {phase === "error" && errorMessage && (
+      {phase === "error" && pendingTx && (
+        <div
+          style={{
+            padding: 10,
+            background: "rgba(232,178,107,0.10)",
+            border: "1px solid rgba(232,178,107,0.35)",
+            borderRadius: 4,
+            fontSize: 12,
+            color: "var(--tx-primary)",
+            marginBottom: 10,
+            lineHeight: 1.55,
+          }}
+        >
+          <div
+            className="mono"
+            style={{
+              fontSize: 10,
+              color: "var(--accent)",
+              letterSpacing: 1.2,
+              textTransform: "uppercase",
+              marginBottom: 6,
+            }}
+          >
+            Submitted · receipt pending
+          </div>
+          <div style={{ marginBottom: 8 }}>
+            Tx submitted but the receipt hasn&apos;t surfaced through
+            0G&apos;s RPC yet. The transaction often confirms anyway —
+            verify on chainscan; if the fighter is now scored you can
+            close this panel.
+          </div>
+          <a
+            href={pendingTx.explorerUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mono"
+            style={{
+              fontSize: 11,
+              color: "var(--accent)",
+              letterSpacing: 1.2,
+              textTransform: "uppercase",
+              textDecoration: "underline",
+            }}
+          >
+            Verify on chainscan ↗
+          </a>
+        </div>
+      )}
+      {phase === "error" && errorMessage && !pendingTx && (
         <div
           style={{
             padding: 10,
