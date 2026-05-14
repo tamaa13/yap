@@ -153,44 +153,65 @@ export function MomentCard({
             )}
           </div>
         </div>
+        {/* Two-row stack:
+          *   Row 1 — nav actions (Battle / Fighter / Royalty)
+          *   Row 2 — list state ("List for sale" CTA or "Listed · X OG"
+          *           status), full-width so the price text doesn't get
+          *           truncated by a 4-way flex slot.
+          * Same Row 2 slot for unlisted + listed states → status reads
+          * as the primary owner signal. */}
         <div
           style={{
             display: "flex",
-            flexWrap: "wrap",
+            flexDirection: "column",
             gap: 6,
             marginTop: 14,
           }}
         >
-          <Button
-            size="sm"
-            onClick={() => router.push(battleArenaPath(moment.battleId))}
-            style={{ flex: 1, minWidth: 0 }}
-          >
-            Battle
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => router.push(`/fighters/${moment.fighterTokenId}`)}
-            style={{ flex: 1, minWidth: 0 }}
-          >
-            Fighter
-          </Button>
+          <div style={{ display: "flex", gap: 6 }}>
+            <Button
+              size="sm"
+              onClick={() => router.push(battleArenaPath(moment.battleId))}
+              style={{ flex: 1, minWidth: 0 }}
+            >
+              Battle
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => router.push(`/fighters/${moment.fighterTokenId}`)}
+              style={{ flex: 1, minWidth: 0 }}
+            >
+              Fighter
+            </Button>
+            {isMinter && (
+              <Button
+                size="sm"
+                onClick={() => setEditOpen(true)}
+                disabled={setRoyalty.isPending || setRoyalty.isConfirming}
+                style={{ flex: 1, minWidth: 0 }}
+              >
+                Royalty
+              </Button>
+            )}
+          </div>
           {viewerAddr && !alreadyListed && (
             <Button
               size="sm"
               variant="primary"
               onClick={() => setListOpen(true)}
               disabled={listSubmitting}
-              style={{ flex: 1, minWidth: 0 }}
+              style={{ width: "100%" }}
             >
-              {listSubmitting ? listPhaseLabel ?? "Working" : "List"}
+              {listSubmitting
+                ? listPhaseLabel ?? "Working"
+                : "List for sale"}
             </Button>
           )}
           {alreadyListed && (
             <Button
               size="sm"
               disabled
-              style={{ flex: 1, minWidth: 0 }}
+              style={{ width: "100%" }}
               title={
                 listing?.seller
                   ? `Listed by ${listing.seller}`
@@ -198,16 +219,6 @@ export function MomentCard({
               }
             >
               {listing ? `Listed · ${listing.price} OG` : "Listed"}
-            </Button>
-          )}
-          {isMinter && (
-            <Button
-              size="sm"
-              onClick={() => setEditOpen(true)}
-              disabled={setRoyalty.isPending || setRoyalty.isConfirming}
-              style={{ flex: 1, minWidth: 0 }}
-            >
-              Royalty
             </Button>
           )}
         </div>
