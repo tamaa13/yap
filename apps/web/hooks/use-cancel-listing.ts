@@ -3,10 +3,12 @@
 import { useCallback } from "react";
 import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { MARKETPLACE_ABI, MARKETPLACE_ADDRESS } from "@/lib/contracts";
+import { useInvalidateOnReceipt } from "./use-invalidate-on-receipt";
 
 export function useCancelListing() {
   const cancel = useWriteContract();
   const receipt = useWaitForTransactionReceipt({ hash: cancel.data });
+  useInvalidateOnReceipt(receipt.isSuccess);
 
   const write = useCallback(
     async (tokenId: number) => {

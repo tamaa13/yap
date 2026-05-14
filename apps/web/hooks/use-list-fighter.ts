@@ -14,6 +14,7 @@ import {
   MARKETPLACE_ABI,
   MARKETPLACE_ADDRESS,
 } from "@/lib/contracts";
+import { useInvalidateOnReceipt } from "./use-invalidate-on-receipt";
 
 type Phase = "idle" | "approving" | "listing" | "done" | "error";
 
@@ -28,6 +29,7 @@ export function useListFighter() {
   const list = useWriteContract();
   const approveReceipt = useWaitForTransactionReceipt({ hash: approve.data });
   const listReceipt = useWaitForTransactionReceipt({ hash: list.data });
+  useInvalidateOnReceipt(listReceipt.isSuccess);
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<Error | null>(null);

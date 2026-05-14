@@ -3,10 +3,12 @@
 import { useCallback } from "react";
 import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { RENTAL_ESCROW_ABI, RENTAL_ESCROW_ADDRESS } from "@/lib/contracts";
+import { useInvalidateOnReceipt } from "./use-invalidate-on-receipt";
 
 export function useRentFighter() {
   const rent = useWriteContract();
   const receipt = useWaitForTransactionReceipt({ hash: rent.data });
+  useInvalidateOnReceipt(receipt.isSuccess);
 
   const write = useCallback(
     async ({
@@ -46,6 +48,7 @@ export function useRentFighter() {
 export function useCancelRentListing() {
   const cancel = useWriteContract();
   const receipt = useWaitForTransactionReceipt({ hash: cancel.data });
+  useInvalidateOnReceipt(receipt.isSuccess);
 
   const write = useCallback(
     async (tokenId: number) => {

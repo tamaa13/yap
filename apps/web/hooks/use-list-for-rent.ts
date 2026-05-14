@@ -14,6 +14,7 @@ import {
   RENTAL_ESCROW_ABI,
   RENTAL_ESCROW_ADDRESS,
 } from "@/lib/contracts";
+import { useInvalidateOnReceipt } from "./use-invalidate-on-receipt";
 
 type Phase = "idle" | "approving" | "listing" | "done";
 
@@ -27,6 +28,7 @@ export function useListForRent() {
   const list = useWriteContract();
   const approveReceipt = useWaitForTransactionReceipt({ hash: approve.data });
   const listReceipt = useWaitForTransactionReceipt({ hash: list.data });
+  useInvalidateOnReceipt(listReceipt.isSuccess);
 
   const [phase, setPhase] = useState<Phase>("idle");
 

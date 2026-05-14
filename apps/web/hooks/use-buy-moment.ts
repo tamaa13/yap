@@ -14,10 +14,12 @@ import {
   MARKETPLACE_ABI,
   MOMENT_MARKET_ADDRESS,
 } from "@/lib/contracts";
+import { useInvalidateOnReceipt } from "./use-invalidate-on-receipt";
 
 export function useBuyMoment() {
   const buy = useWriteContract();
   const receipt = useWaitForTransactionReceipt({ hash: buy.data });
+  useInvalidateOnReceipt(receipt.isSuccess);
 
   const write = useCallback(
     async ({ tokenId, priceWei }: { tokenId: number; priceWei: bigint }) => {
