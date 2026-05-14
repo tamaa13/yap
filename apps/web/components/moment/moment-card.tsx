@@ -21,12 +21,15 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Sigil } from "@/components/ui/sigil";
 import { useToast } from "@/components/ui/toast";
+import { useListMoment } from "@/hooks/use-list-moment";
+import { useMomentListing } from "@/hooks/use-moment-listing";
 import { battleArenaPath, type OwnedMoment } from "@/hooks/use-my-moments";
 import {
   useMomentRoyalty,
   useSetMomentRoyalty,
 } from "@/hooks/use-moment-royalty";
 import { EditRoyaltyModal } from "./edit-royalty-modal";
+import { ListMomentModal } from "./list-moment-modal";
 
 export function MomentCard({
   moment,
@@ -37,6 +40,7 @@ export function MomentCard({
 }) {
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
   const { push } = useToast();
   const { data: royalty } = useMomentRoyalty(moment.tokenId);
   const setRoyalty = useSetMomentRoyalty();
@@ -44,6 +48,41 @@ export function MomentCard({
     !!royalty &&
     !!viewerAddr &&
     royalty.minter.toLowerCase() === viewerAddr.toLowerCase();
+  // Marketplace state. The card is only mounted from the vault grid's
+  // owned-moments enumeration (useMyMoments verifies ownerOf), so any
+  // viewerAddr that lands here is by definition the current owner —
+  // no extra ownerOf round-trip needed for the gate.
+  const list = useListMoment();
+  const { data: listing, refetch: refetchListing } = useMomentListing(
+    moment.tokenId,
+  );
+  const alreadyListed = listing?.active === true;
+  const listSubmitting = list.isPending || list.isConfirming;
+  const listPhaseLabel: string | null =
+    list.phase === "approving"
+      ? "Approving marketplace"
+      : list.phase === "listing"
+        ? "Listing on-chain"
+        : null;
+
+  const onList = async (priceEth: string) => {
+    try {
+      await list.write({ tokenId: moment.tokenId, priceEth });
+      setListOpen(false);
+      push({
+        kind: "success",
+        text: `Moment #${moment.tokenId} listed at ${priceEth} OG.`,
+      });
+      // Refetch listing so the button row switches to the "Listed"
+      // badge without requiring a page reload.
+      void refetchListing();
+    } catch (e) {
+      push({
+        kind: "error",
+        text: e instanceof Error ? e.message : "List failed",
+      });
+    }
+  };
 
   return (
     <>
@@ -129,6 +168,40 @@ export function MomentCard({
           >
             Fighter
           </Button>
+          {viewerAddr && !alreadyListed && (
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => setListOpen(true)}
+              disabled={listSubmitting}
+              style={{ flex: 1, minWidth: 0 }}
+            >
+              {listSubmitting ? listPhaseLabel ?? "Working" : "List"}
+            </Button>
+          )}
+          {alreadyListed && listing && (
+            <div
+              className="mono"
+              style={{
+                flex: 1,
+                minWidth: 0,
+                fontSize: 10,
+                color: "var(--accent)",
+                letterSpacing: 1.2,
+                textTransform: "uppercase",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "0 6px",
+                border: "1px solid var(--accent-border)",
+                borderRadius: 4,
+              }}
+              title={`Listed by ${listing.seller}`}
+            >
+              Listed · <span className="num" style={{ marginLeft: 4 }}>{listing.price}</span>
+              <span style={{ marginLeft: 4 }}>OG</span>
+            </div>
+          )}
           {isMinter && (
             <Button
               size="sm"
@@ -167,6 +240,16 @@ export function MomentCard({
               });
             }
           }}
+        />
+      )}
+      {viewerAddr && !alreadyListed && (
+        <ListMomentModal
+          open={listOpen}
+          onClose={() => setListOpen(false)}
+          tokenId={moment.tokenId}
+          submitting={listSubmitting}
+          phaseLabel={listPhaseLabel}
+          onSubmit={onList}
         />
       )}
     </>
