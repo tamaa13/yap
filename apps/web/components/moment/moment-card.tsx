@@ -41,6 +41,11 @@ export function MomentCard({
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
   const [listOpen, setListOpen] = useState(false);
+  // Optimistic flip the moment the list tx confirms — refetchListing
+  // is async and wagmi's cache won't flush instantly, so without this
+  // the button briefly snaps back to "List" before re-resolving as
+  // "Listed". Stays sticky until the real on-chain read catches up.
+  const [justListed, setJustListed] = useState(false);
   const { push } = useToast();
   const { data: royalty } = useMomentRoyalty(moment.tokenId);
   const setRoyalty = useSetMomentRoyalty();
@@ -56,7 +61,7 @@ export function MomentCard({
   const { data: listing, refetch: refetchListing } = useMomentListing(
     moment.tokenId,
   );
-  const alreadyListed = listing?.active === true;
+  const alreadyListed = listing?.active === true || justListed;
   const listSubmitting = list.isPending || list.isConfirming;
   const listPhaseLabel: string | null =
     list.phase === "approving"
@@ -68,13 +73,15 @@ export function MomentCard({
   const onList = async (priceEth: string) => {
     try {
       await list.write({ tokenId: moment.tokenId, priceEth });
+      setJustListed(true);
       setListOpen(false);
       push({
         kind: "success",
         text: `Moment #${moment.tokenId} listed at ${priceEth} OG.`,
       });
       // Refetch listing so the button row switches to the "Listed"
-      // badge without requiring a page reload.
+      // badge without requiring a page reload. The optimistic
+      // `justListed` flag handles the gap before the read catches up.
       void refetchListing();
     } catch (e) {
       push({
@@ -179,28 +186,19 @@ export function MomentCard({
               {listSubmitting ? listPhaseLabel ?? "Working" : "List"}
             </Button>
           )}
-          {alreadyListed && listing && (
-            <div
-              className="mono"
-              style={{
-                flex: 1,
-                minWidth: 0,
-                fontSize: 10,
-                color: "var(--accent)",
-                letterSpacing: 1.2,
-                textTransform: "uppercase",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "0 6px",
-                border: "1px solid var(--accent-border)",
-                borderRadius: 4,
-              }}
-              title={`Listed by ${listing.seller}`}
+          {alreadyListed && (
+            <Button
+              size="sm"
+              disabled
+              style={{ flex: 1, minWidth: 0 }}
+              title={
+                listing?.seller
+                  ? `Listed by ${listing.seller}`
+                  : "Listed"
+              }
             >
-              Listed · <span className="num" style={{ marginLeft: 4 }}>{listing.price}</span>
-              <span style={{ marginLeft: 4 }}>OG</span>
-            </div>
+              {listing ? `Listed · ${listing.price} OG` : "Listed"}
+            </Button>
           )}
           {isMinter && (
             <Button
