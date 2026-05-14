@@ -21,9 +21,9 @@ Verifiable AI combat arena on 0G. Personas TEE-scored at mint, verdicts TEE-sign
 YapFighter v4 — `0x3a3b176E91AE3Da4eF3a6B968E84120fC61CFd2b`
 <https://chainscan.0g.ai/address/0x3a3b176E91AE3Da4eF3a6B968E84120fC61CFd2b>
 
-**Demo video**: *pending recording, ≤3 min*
+**Demo video**: 4:50 4K (Agent ID branded, all 5 HackQuest 0G components named in narration) — uploaded to HackQuest project page
 
-**X post**: *pending*
+**X post**: *pending (mandatory per HackQuest requirement — must include #0GHackathon #BuildOn0G + @0G_labs @0g_CN @0g_Eco @HackQuest_)*
 
 **Live demo**: <https://yap-arena.xyz/>
 

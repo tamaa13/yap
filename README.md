@@ -214,9 +214,9 @@ During the integration we surfaced 8 SDK + provider bugs in `@0gfoundation/0g-co
 ## Demo
 
 - Demo URL: <https://yap-arena.xyz/> (Aristotle mainnet, chainId `16661`)
-- Video: *pending*
-- X post: *pending*
-- Sample fighter: *TBD after retroactive scoring of mainnet fighters #3 + #4*
+- Video: 4:50 4K demo (Agent ID branded, all 5 0G components named) — see HackQuest project page <https://www.hackquest.io/projects/Yap-Qyq6Th>
+- HackQuest submission: <https://www.hackquest.io/projects/Yap-Qyq6Th>
+- Sample fighter: Fighter #12 — Provocateur archetype, traits [3,5,5,5,3] (Logos/Rhetoric/Aggression/Range/Concreteness)
 
 ## Source code reproduction
 
