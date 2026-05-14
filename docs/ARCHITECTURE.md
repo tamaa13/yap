@@ -56,18 +56,18 @@ flowchart TB
     class fighter,escrow,registry,market,rental,moment,marketMoment,ability,subname,inbox contract
 ```
 
-**The five 0G primitives Yap uses end-to-end (matching the
-HackQuest submission components):** **0G Storage** (encrypted
-persona payloads + transcripts), **0G Compute** (TEE-attested
-inference + judging + routing-proof verdict signing + persona
-scoring), **0G Chain** (the 10-contract cascade on Aristotle
-mainnet, chainId 16661), **0G Agent ID** via ERC-7857 (encrypted
-INFT standard with sealed-key handoff on transfer — used by both
-YapFighter and MomentINFT), and **Privacy / Secure Execution**
-(TEE attestation with on-chain ECDSA proof recovery and
-`RUNNER_ROLE`-gated persona-access auditing). Beyond these five,
-Yap also anchors verdicts to **0G DA** via DASigners epoch
-staticcall on `BattleEscrow.settle`.
+### 0G Stack Coverage — 5/5 HackQuest components + DA bonus
+
+| # | 0G primitive | Yap usage | Code citation |
+|---|---|---|---|
+| 1 | **0G Storage** | Encrypted persona payloads + battle transcripts | `YapFighter.sealedKeys`, `apps/web/lib/0g/storage.ts` |
+| 2 | **0G Compute** | TEE-attested median-of-5 LLM scoring + per-round verdict signing | `@0gfoundation/0g-compute-ts-sdk@0.8.1` |
+| 3 | **0G Chain** | 10-contract cascade on Aristotle mainnet (chainId 16661) | All addresses verified on `chainscan.0g.ai` |
+| 4 | **0G Agent ID** | ERC-7857 INFT with sealed-key handoff on transfer (YapFighter + MomentINFT) | `contracts/src/YapFighter.sol:9-15,27,361,384` |
+| 5 | **Privacy / Secure Execution** | TEE attestation, on-chain ECDSA proof recovery, `RUNNER_ROLE`-gated audit log | `TEEAttestationLib.sol`, `YapFighter.sol:22-23` |
+| **+** | **0G DA** *(bonus integration depth)* | Per-battle DA epoch anchoring via DASigners precompile staticcall | `contracts/src/BattleEscrow.sol:28-33,177,507-515` |
+
+**The five HackQuest-required components are all present and code-verified.** The diagram above shows DA as a sixth subgraph because Yap goes beyond the minimum: each verdict is anchored to the active 0G DA committee epoch via a `staticcall` to the `DASigners` precompile at `0x...1000`, giving downstream verifiers cryptographic context to replay verdict authenticity against the DA-committee state in effect at signing time.
 
 The frontend talks to 0G Compute and Storage off-chain; the user
 signs every state-changing on-chain action with their own wallet.
