@@ -1,10 +1,8 @@
 # Deployed contracts
 
-Yap runs on **0G mainnet — Aristotle** (chainId `16661`). The previous
-testnet ecosystem (Galileo, chainId `16602`) has been migrated; testnet
-addresses are preserved below as historical reference.
+Yap runs on **0G mainnet — Aristotle** (chainId `16661`).
 
-## Mainnet (Aristotle, 16661) — canonical
+## Mainnet (Aristotle, 16661)
 
 | Contract | Role | Address |
 |---|---|---|
@@ -17,19 +15,8 @@ addresses are preserved below as historical reference.
 | `MomentMarketplace` | Buy / sell escrow for Battle Moments | `0x0514c5F6a9b7a57d329f41125C9E84C805F3Be7c` |
 | `YapSubnameRegistrar` | `<label>.yap.0g` ENS-style subname registry | `0x4aC6E562b1b3CF9B2c0B6A3789200E889eD7576d` |
 | `AbilityEscrow` | Per-battle archetype-ability use tracking + trait-gate enforcement | `0x07E47975Aac222B0D82DB8b5f5A6a24Fd87C7148` |
-> v4 cascade deployed **2026-05-13**. YapFighter now charges a
-> `mintFee` (0.1 OG default) on `mint()` — fee accrues to treasury,
-> the broker EOA that funds 0G Compute scoring. Every contract has a
-> new address vs the v3 cascade because of the fee field + cascade
-> dependency redeploys.
->
-> **Note**: `YapInbox` (stateless A2A encrypted messaging) is deployed
-> on Galileo testnet at `0xe92dB21A770c32a19795556C46D5c6a274955DBD`
-> only — never promoted to Aristotle mainnet. CREATE2 deterministic
-> deployment reserves the same address slot on mainnet but the contract
-> is not yet deployed there (`eth_getCode` returns `0x`).
-> Previous v3 mainnet addresses are preserved at the bottom of this
-> file for transaction-history lookups.
+
+9 contracts deployed and verified on `chainscan.0g.ai` (v4 cascade, 2026-05-13).
 
 ### TEE provider (mainnet)
 
@@ -42,8 +29,7 @@ addresses are preserved below as historical reference.
 | Architecture | Separated-centralized (TeeTLS routing-proof) |
 | Provider endpoint | `compute-network-18.integratenetwork.work` |
 
-Same TEE signer attests both battle verdicts AND mint-time persona
-scores — one trust assumption, two callsites.
+Same TEE signer attests both battle verdicts AND mint-time persona scores — one trust assumption, two callsites.
 
 ### Runner role (server-side `logAccess` calls)
 
@@ -65,62 +51,12 @@ scores — one trust assumption, two callsites.
 - `battle.totalClaimed` = 0.010175 OG (bettor share ✓)
 - `registry.fighterStats(1).earnings` = 0.00055 OG ✓
 - `fighter.getAccessCount(1)` = 1 ✓ (RUNNER_ROLE logAccess fires)
-- Note: `battleDAEpoch[1]` = 0 — DASigners precompile not active on
-  Aristotle yet; contract's low-level-staticcall fallback recorded
-  zero gracefully without blocking settlement.
-
-## Mainnet v3 (Aristotle, 16661) — historical pre-v4
-
-Superseded by the v4 cascade on 2026-05-13. Preserved for tx-history
-lookups; do NOT point new clients at these.
-
-| Contract | v3 Address |
-|---|---|
-| `YapFighter` | `0x066259CCB37C0AF962c112a70C6338e52e1D16ee` |
-| `BattleEscrow` | `0x242d1cd3100706b26a3067dd64cecb415a20f398` |
-| `BattleRegistry` | `0x4ec3eb96161fbef86849d40a5d331d3c1209d5de` |
-| `YapMarketplace` | `0x9569cE03CD9934Fd206A40b3721f7Ae3DC2a1f36` |
-| `RentalEscrow` | `0xE986a6C47dA1fD3c0b01EC6695Ccf020EC16bC96` |
-| `MomentINFT` | `0x059adf223c3281302d25ac36a4f861ef4b5df169` |
-| `MomentMarketplace` | `0x35125df161d64a8ac59936c0dbfcfe30c9f4220d` |
-| `YapSubnameRegistrar` | `0xF5F99bd86b00ad32D16E1Ae97Dd4aaa7AdeD5c8C` |
-| `AbilityEscrow` | `0x2cc877baa12be163973a43cac998b8d82b3a58a4` |
-| `YapInbox` | `0xe92dB21A770c32a19795556C46D5c6a274955DBD` (carried into v4) |
-
-## Testnet (Galileo, 16602) — historical
-
-Mainnet supersedes testnet as of 2026-05-13. Testnet contracts are
-preserved (not actively maintained):
-
-| Contract | Testnet Address |
-|---|---|
-| `YapFighter` | `0x066259CCB37C0AF962c112a70C6338e52e1D16ee` |
-| `BattleEscrow` | `0x06c61C3112B98Afc16002bD523D26eF836e7e659` |
-| `BattleRegistry` | `0x104a65bf0cB4fAE0F4bb606cE1694115Ce87F2A1` |
-| `YapMarketplace` | `0x9569cE03CD9934Fd206A40b3721f7Ae3DC2a1f36` |
-| `RentalEscrow` | `0xE986a6C47dA1fD3c0b01EC6695Ccf020EC16bC96` |
-| `MomentINFT` | `0x86cdEe1aF79dd9F56AA5358Eb0Ae39F96dbD4DbB` |
-| `MomentMarketplace` | `0x13f52f5787fcE95364Bf0CDeE96D5dB3ab4B12bD` |
-| `YapSubnameRegistrar` | `0xF5F99bd86b00ad32D16E1Ae97Dd4aaa7AdeD5c8C` |
-| `AbilityEscrow` | `0x18563e7E015c9e5742485E47698E067FAff279e6` |
-| `YapInbox` | `0xe92dB21A770c32a19795556C46D5c6a274955DBD` |
-
-Testnet TEE signer: `0x83df4B8EbA7c0B3B740019b8c9a77ffF77D508cF` for
-provider `0xa48f01287233509FD694a22Bf840225062E67836`.
+- Note: `battleDAEpoch[1]` = 0 — DASigners precompile not active on Aristotle yet; contract's low-level-staticcall fallback recorded zero gracefully without blocking settlement.
 
 ## Source
 
-Solidity sources, deployment scripts, and full test suite live under
-[`contracts/`](https://github.com/tamaa13/yap/tree/main/contracts) in
-the repo. Built with Foundry, `--evm-version cancun`. Full forge
-unit + fork-E2E test suite passing on the v4 cascade, slither 0
-high findings.
+Solidity sources, deployment scripts, and full test suite live under [`contracts/`](https://github.com/tamaa13/yap/tree/main/contracts). Built with Foundry, `--evm-version cancun`. Full forge unit + fork-E2E test suite passing on the v4 cascade, slither 0 high findings.
 
 ### Verification
 
-Both networks verified via `scripts/verify-all.py --network <mainnet|testnet>`.
-Mainnet **9/9 contracts** verified on `chainscan.0g.ai`. YapInbox is
-testnet-only (Galileo 16602) — same CREATE2 address slot exists on
-mainnet but the contract is not deployed there
-(`cast code 0xe92dB21A770c32a19795556C46D5c6a274955DBD --rpc-url https://evmrpc.0g.ai`
-returns `0x`).
+Verified via `scripts/verify-all.py --network mainnet`. All 9 mainnet contracts source-verified on `chainscan.0g.ai`.
