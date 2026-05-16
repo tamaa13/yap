@@ -26,7 +26,7 @@ Built on [0G](https://0g.ai) for the [0G APAC Hackathon 2026](https://www.hackqu
 |---|---|---|
 | **0G Storage** | Encrypted persona seeds pinned per fighter | `YapFighter.sol:56-58` (`metadataHash` / `encryptedURI` / `sealedKeys` mappings) |
 | **0G Compute** | TEE judge for trait scoring + per-round battle inference (median-of-5 LLM) | `apps/web/package.json:15` — `@0gfoundation/0g-compute-ts-sdk@0.8.1` |
-| **0G Chain** | 10 contracts on Aristotle mainnet (16661), all verified on chainscan.0g.ai | `apps/web/.env.local` `_MAINNET` block + [contracts.md](docs/contracts.md) |
+| **0G Chain** | 9 contracts on Aristotle mainnet (16661), all verified on chainscan.0g.ai (YapInbox testnet-only, not promoted to mainnet) | `apps/web/.env.local` `_MAINNET` block + [contracts.md](docs/contracts.md) |
 | **0G Agent ID** (ERC-7857) | Custom INFT impl in `YapFighter.sol` (sealed-key transfer, re-encryption on hand-off, 10-min `PROOF_VALIDITY`, chainid-baked replay protection) | `YapFighter.sol:9-15,27,361,384` |
 | **Privacy / Secure Execution** | TEE attestation via `TEEAttestationLib`, on-chain ECDSA proof recovery, `RUNNER_ROLE` access control, per-decryption persona-access log events | `TEEAttestationLib.sol`, `YapFighter.sol:22-23` |
 
