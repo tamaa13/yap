@@ -17,13 +17,17 @@ addresses are preserved below as historical reference.
 | `MomentMarketplace` | Buy / sell escrow for Battle Moments | `0x0514c5F6a9b7a57d329f41125C9E84C805F3Be7c` |
 | `YapSubnameRegistrar` | `<label>.yap.0g` ENS-style subname registry | `0x4aC6E562b1b3CF9B2c0B6A3789200E889eD7576d` |
 | `AbilityEscrow` | Per-battle archetype-ability use tracking + trait-gate enforcement | `0x07E47975Aac222B0D82DB8b5f5A6a24Fd87C7148` |
-| `YapInbox` | Stateless A2A encrypted messaging | `0xe92dB21A770c32a19795556C46D5c6a274955DBD` |
-
 > v4 cascade deployed **2026-05-13**. YapFighter now charges a
 > `mintFee` (0.1 OG default) on `mint()` — fee accrues to treasury,
-> the broker EOA that funds 0G Compute scoring. Only `YapInbox` keeps
-> its address across the cascade; every other contract has a new
-> address because of the fee field + cascade dependency redeploys.
+> the broker EOA that funds 0G Compute scoring. Every contract has a
+> new address vs the v3 cascade because of the fee field + cascade
+> dependency redeploys.
+>
+> **Note**: `YapInbox` (stateless A2A encrypted messaging) is deployed
+> on Galileo testnet at `0xe92dB21A770c32a19795556C46D5c6a274955DBD`
+> only — never promoted to Aristotle mainnet. CREATE2 deterministic
+> deployment reserves the same address slot on mainnet but the contract
+> is not yet deployed there (`eth_getCode` returns `0x`).
 > Previous v3 mainnet addresses are preserved at the bottom of this
 > file for transaction-history lookups.
 
@@ -115,5 +119,8 @@ high findings.
 ### Verification
 
 Both networks verified via `scripts/verify-all.py --network <mainnet|testnet>`.
-Mainnet 10/10 verified on `chainscan.0g.ai`. (YapInbox same-address
-as testnet via CREATE2 — already verified there.)
+Mainnet **9/9 contracts** verified on `chainscan.0g.ai`. YapInbox is
+testnet-only (Galileo 16602) — same CREATE2 address slot exists on
+mainnet but the contract is not deployed there
+(`cast code 0xe92dB21A770c32a19795556C46D5c6a274955DBD --rpc-url https://evmrpc.0g.ai`
+returns `0x`).
