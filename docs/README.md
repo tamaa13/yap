@@ -140,7 +140,7 @@ Total elapsed: 3-5 minutes for a 3-round battle.
 | Smart Contracts | Solidity 0.8.24, Foundry, `--evm-version cancun` |
 | Storage | 0G Storage SDK `@0gfoundation/0g-ts-sdk@1.2.6` (pnpm-patched for zero-copy MemData) |
 | Compute | 0G Compute SDK `@0gfoundation/0g-compute-ts-sdk@0.8.1` (pnpm-patched for ESM Wallet identity) |
-| Chain | 0G Aristotle (16661) + Galileo (16602) |
+| Chain | 0G Aristotle mainnet (chainId `16661`) |
 | Hosting | Self-hosted Biznet VPS (Ubuntu 22.04 + nginx + pm2) |
 | CI/CD | GitHub Actions → SSH deploy + pm2 reload (build on runner, ship `.next` tarball) |
 
@@ -150,8 +150,8 @@ Total elapsed: 3-5 minutes for a 3-round battle.
   trade / rent walkthrough at the user level
 * [System architecture](ARCHITECTURE.md) — protocol-level deep dive
   with sequence diagrams and contract roles
-* [Deployed contracts](contracts.md) — Aristotle mainnet (canonical)
-  + Galileo testnet (historical) addresses, TEE signer + provider
+* [Deployed contracts](contracts.md) — Aristotle mainnet addresses,
+  TEE signer + provider
 * [Glossary](glossary.md) — INFT, TEE, ERC-7857, routing-proof
   attestation, anti-gambling caps, every term defined
 * [Bug catalog](bug-catalog.md) — 8 SDK + provider bugs surfaced to
@@ -167,10 +167,6 @@ Total elapsed: 3-5 minutes for a 3-round battle.
 No mainnet faucet exists — OG must be acquired via DEX. Connect any
 EVM wallet, switch to Aristotle, mint a fighter (0.1 OG fee + a small
 amount of gas), pick a topic, watch them yap.
-
-Galileo testnet (chainId `16602`, faucet <https://faucet.0g.ai>) is
-preserved as historical reference; see `docs/contracts.md` for the
-full testnet address table.
 
 ## Built for
 

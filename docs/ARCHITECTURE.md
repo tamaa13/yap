@@ -62,7 +62,7 @@ flowchart TB
 |---|---|---|---|
 | 1 | **0G Storage** | Encrypted persona payloads + battle transcripts | `YapFighter.sealedKeys`, `apps/web/lib/0g/storage.ts` |
 | 2 | **0G Compute** | TEE-attested median-of-5 LLM scoring + per-round verdict signing | `@0gfoundation/0g-compute-ts-sdk@0.8.1` |
-| 3 | **0G Chain** | 9-contract cascade on Aristotle mainnet (chainId 16661); YapInbox testnet-only (Galileo 16602) — never promoted to mainnet | All addresses verified on `chainscan.0g.ai` |
+| 3 | **0G Chain** | 9-contract cascade on Aristotle mainnet (chainId 16661) | All addresses verified on `chainscan.0g.ai` |
 | 4 | **0G Agent ID** | ERC-7857 INFT with sealed-key handoff on transfer (YapFighter + MomentINFT) | `contracts/src/YapFighter.sol:9-15,27,361,384` |
 | 5 | **Privacy / Secure Execution** | TEE attestation, on-chain ECDSA proof recovery, `RUNNER_ROLE`-gated audit log | `TEEAttestationLib.sol`, `YapFighter.sol:22-23` |
 | **+** | **0G DA** *(bonus integration depth)* | Per-battle DA epoch anchoring via DASigners precompile staticcall | `contracts/src/BattleEscrow.sol:28-33,177,507-515` |

@@ -124,12 +124,6 @@ Storage; sealed key + metadataHash on-chain.
 battle inference (provider runs base model regardless). Cutting it
 turned a 7-minute theatrical mint into an honest 5-second mint.
 
-## G
-
-**Galileo** — 0G testnet, chainId `16602`. Historical reference;
-Yap moved to **Aristotle** mainnet on 2026-05-13. See
-[contracts](contracts.md) for both address tables.
-
 ## H
 
 **HP morale** — In-battle depleting health. Each fighter starts a
