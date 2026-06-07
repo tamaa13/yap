@@ -26,7 +26,7 @@ export const runtime = "nodejs";
 // Vercel Pro/Fluid Compute caps at 800–900s; multi-round battle of 5
 // rounds × ~60s/round + judging fits inside that envelope. Hobby tier
 // (60s) is too low — deploy to Pro or use Fluid Compute.
-export const maxDuration = 800;
+export const maxDuration = 300;
 
 interface Body {
   restart?: boolean;

@@ -97,9 +97,20 @@ export async function runInference(call: InferenceCall): Promise<InferenceResult
     id?: string;
   };
   const text = data.choices?.[0]?.message?.content ?? "";
-  const signatureValid =
-    (await broker.inference.processResponse(call.providerAddress, data.id, text)) ??
-    false;
+  // TEE signature verification can fail provider-side (e.g. a separated-centralized
+  // provider whose signer service is down). Don't drop the already-generated text —
+  // return it with signatureValid=false. Auto-recovers to true once the signer is healthy.
+  let signatureValid = false;
+  try {
+    signatureValid =
+      (await broker.inference.processResponse(call.providerAddress, data.id, text)) ??
+      false;
+  } catch (e) {
+    console.warn(
+      "[compute] signature verification failed (returning text unverified):",
+      e instanceof Error ? e.message : e,
+    );
+  }
 
   return {
     text,

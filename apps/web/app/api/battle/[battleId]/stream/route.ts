@@ -14,7 +14,7 @@ import type { BattleEvent } from "@/lib/battle-state/types";
 
 export const runtime = "nodejs";
 // SSE connections are long-lived; bypass Vercel's default body timeout.
-export const maxDuration = 3600;
+export const maxDuration = 300;
 
 const KEEPALIVE_MS = 15_000;
 

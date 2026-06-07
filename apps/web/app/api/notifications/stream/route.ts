@@ -29,7 +29,7 @@ import {
 
 export const runtime = "nodejs";
 // SSE connections are long-lived; bypass the default function timeout.
-export const maxDuration = 3600;
+export const maxDuration = 300;
 
 const POLL_MS = 4_000;
 const KEEPALIVE_MS = 15_000;
