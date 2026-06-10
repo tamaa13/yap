@@ -43,7 +43,7 @@ export async function runMintPipeline(
 
   try {
     // 1. Upload raw seed (auditable fingerprint of the persona inputs).
-    if (jobId) setMintJobStatus(jobId, "uploading-seed");
+    if (jobId) await setMintJobStatus(jobId, "uploading-seed");
     log("upload seed start");
     const seedBytes = new TextEncoder().encode(seed);
     const seedUpload = await uploadBuffer(seedBytes);
@@ -52,13 +52,13 @@ export async function runMintPipeline(
     // 2. Encrypt the seed bytes with a fresh AES-GCM key. The persona
     //    *is* the encrypted payload — there are no separate weights to
     //    seal anymore.
-    if (jobId) setMintJobStatus(jobId, "encrypting");
+    if (jobId) await setMintJobStatus(jobId, "encrypting");
     log("encrypt start");
     const { ciphertext, key, iv } = await encryptWithRandomKey(seedBytes);
     log(`encrypt done — ${ciphertext.byteLength}B`);
 
     // 3. Upload encrypted payload.
-    if (jobId) setMintJobStatus(jobId, "uploading-encrypted");
+    if (jobId) await setMintJobStatus(jobId, "uploading-encrypted");
     log("upload encrypted start");
     const weightsUpload = await uploadBuffer(ciphertext);
     log(`upload encrypted done — root=${weightsUpload.rootHash.slice(0, 12)}`);
@@ -101,12 +101,12 @@ export async function runMintPipeline(
         weightsRoot: weightsUpload.rootHash,
       },
     };
-    if (jobId) setMintJobResult(jobId, result);
+    if (jobId) await setMintJobResult(jobId, result);
     return result;
   } catch (e) {
     const message = e instanceof Error ? e.message : "mint failed";
     log(`ERROR ${message}`);
-    if (jobId) setMintJobError(jobId, message);
+    if (jobId) await setMintJobError(jobId, message);
     throw e;
   }
 }

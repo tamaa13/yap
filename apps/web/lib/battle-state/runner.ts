@@ -44,6 +44,7 @@ import {
 import { activeChain } from "@/lib/chains";
 import { getFighterMeta } from "@/lib/fighter-meta";
 import { getBattleStance } from "@/lib/battle-stance";
+import { markPendingSettle } from "./settle";
 import {
   runChat,
   streamChat,
@@ -583,6 +584,14 @@ async function runLoop(battleId: number): Promise<void> {
 
     // Submit on-chain via server relayer.
     const txHash = await submitVerdictOnChain(battleId, verdict);
+
+    // Record for settlement. settle() can't run here — it's only valid after
+    // the dispute window (300s), past this function's budget. The state/start
+    // routes fire settleIfReady() once the window elapses; a cron sweeps the
+    // pending set as a backstop. See lib/battle-state/settle.ts.
+    await markPendingSettle(battleId).catch((e) =>
+      console.warn(`[runner] markPendingSettle(${battleId}) failed:`, e),
+    );
 
     // Strip non-serializable bytes from the snapshot we publish to clients —
     // they're only needed to reproduce the on-chain verification, and the

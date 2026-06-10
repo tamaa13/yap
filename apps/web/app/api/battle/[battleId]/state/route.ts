@@ -2,8 +2,9 @@
 // Returns the current BattleState snapshot, or null if no run has started.
 // Also reports the current spectator count (live SSE subscribers).
 
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getBattleStore } from "@/lib/battle-state/store";
+import { settleIfReady } from "@/lib/battle-state/settle";
 
 export const runtime = "nodejs";
 
@@ -21,5 +22,12 @@ export async function GET(
     store.get(battleId),
     Promise.resolve(store.subscriberCount(battleId)),
   ]);
+  // Lazy on-chain settlement: once the verdict is in (off-chain phase
+  // "settled") and the dispute window has elapsed, finalize the pari-mutuel
+  // pool on-chain. settleIfReady() no-ops cheaply until the window passes and
+  // is idempotent after. Runs in after() so it never delays this response.
+  if (state?.phase === "settled") {
+    after(() => settleIfReady(battleId));
+  }
   return NextResponse.json({ state, spectators });
 }

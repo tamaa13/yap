@@ -18,7 +18,7 @@ interface RouteParams {
  */
 export async function GET(_req: Request, { params }: RouteParams) {
   const { id } = await params;
-  const job = getMintJob(id);
+  const job = await getMintJob(id);
   if (!job) {
     return NextResponse.json({ error: "job not found" }, { status: 404 });
   }

@@ -1,13 +1,19 @@
-// In-memory job tracker for the async mint flow.
+// Job tracker for the async mint flow.
 //
 // Phase 2 pivot: fine-tune dropped from the pipeline. The pipeline now
 // runs in ~5 s (upload seed → encrypt seed → upload encrypted), but the
 // async pattern is preserved so the existing UI keeps polling without
-// a special-case sync path. After Vercel migration the work runs in
-// `after()`; this in-memory map is fine for single-process dev. Jobs
-// are GC'd after 1 hour.
+// a special-case sync path.
+//
+// Storage: on Vercel the /mint/start and /mint/status requests land in
+// DIFFERENT serverless instances, so a module-level Map loses the job
+// between create and poll → "job not found". When KV/Upstash Redis is
+// configured (KV_REST_API_URL / UPSTASH_REDIS_REST_URL) jobs persist
+// there with a 1h TTL, shared across instances. Falls back to an
+// in-process Map for local `next dev` (no Redis required).
 
 import "server-only";
+import { Redis } from "@upstash/redis";
 
 export type MintJobStatus =
   | "queued"
@@ -54,7 +60,39 @@ export interface MintJob {
   error?: string;
 }
 
-const jobs = new Map<string, MintJob>();
+// --- Storage layer: shared Redis (prod) or in-process Map (local dev) ---
+
+const JOB_TTL_SECONDS = 60 * 60; // 1h — matches the old in-memory GC window
+const jobKey = (id: string) => `mintjob:${id}`;
+
+function makeRedis(): Redis | null {
+  const url =
+    process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL ?? "";
+  const token =
+    process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN ?? "";
+  if (!url || !token) return null;
+  return new Redis({ url, token });
+}
+
+const redis = makeRedis();
+const mem = new Map<string, MintJob>();
+
+async function readJob(id: string): Promise<MintJob | null> {
+  if (redis) return (await redis.get<MintJob>(jobKey(id))) ?? null;
+  return mem.get(id) ?? null;
+}
+
+async function writeJob(job: MintJob): Promise<void> {
+  if (redis) {
+    await redis.set(jobKey(job.id), job, { ex: JOB_TTL_SECONDS });
+    return;
+  }
+  mem.set(job.id, job);
+  const now = Date.now();
+  for (const [k, v] of mem) {
+    if (now - v.startedAt > JOB_TTL_SECONDS * 1000) mem.delete(k);
+  }
+}
 
 const PHASE_PROGRESS: Record<MintJobStatus, number> = {
   queued: 0.05,
@@ -79,7 +117,7 @@ function rid(): string {
   return Math.random().toString(36).slice(2, 12);
 }
 
-export function createMintJob(): MintJob {
+export async function createMintJob(): Promise<MintJob> {
   const id = rid();
   const now = Date.now();
   const job: MintJob = {
@@ -91,44 +129,53 @@ export function createMintJob(): MintJob {
     startedAt: now,
     updatedAt: now,
   };
-  jobs.set(id, job);
-  for (const [k, v] of jobs) {
-    if (now - v.startedAt > 60 * 60_000) jobs.delete(k);
-  }
+  await writeJob(job);
   return job;
 }
 
-export function getMintJob(id: string): MintJob | null {
-  const job = jobs.get(id);
+export async function getMintJob(id: string): Promise<MintJob | null> {
+  const job = await readJob(id);
   if (!job) return null;
   return { ...job, elapsedMs: Date.now() - job.startedAt };
 }
 
-export function setMintJobStatus(id: string, status: MintJobStatus): void {
-  const job = jobs.get(id);
+export async function setMintJobStatus(
+  id: string,
+  status: MintJobStatus,
+): Promise<void> {
+  const job = await readJob(id);
   if (!job) return;
   job.status = status;
   job.step = STEP_LABEL[status];
   job.progress = PHASE_PROGRESS[status];
   job.updatedAt = Date.now();
+  await writeJob(job);
 }
 
-export function setMintJobResult(id: string, result: MintJobResult): void {
-  const job = jobs.get(id);
+export async function setMintJobResult(
+  id: string,
+  result: MintJobResult,
+): Promise<void> {
+  const job = await readJob(id);
   if (!job) return;
   job.status = "ready";
   job.step = STEP_LABEL.ready;
   job.progress = 1;
   job.result = result;
   job.updatedAt = Date.now();
+  await writeJob(job);
 }
 
-export function setMintJobError(id: string, error: string): void {
-  const job = jobs.get(id);
+export async function setMintJobError(
+  id: string,
+  error: string,
+): Promise<void> {
+  const job = await readJob(id);
   if (!job) return;
   job.status = "failed";
   job.step = STEP_LABEL.failed;
   job.progress = 1;
   job.error = error;
   job.updatedAt = Date.now();
+  await writeJob(job);
 }

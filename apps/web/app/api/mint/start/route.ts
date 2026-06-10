@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { createMintJob } from "@/lib/mint-jobs";
 import { runMintPipeline } from "@/lib/mint-pipeline";
 import { FIGHTER_INFT_ADDRESS } from "@/lib/contracts";
@@ -44,16 +44,24 @@ export async function POST(req: Request) {
     );
   }
 
-  const job = createMintJob();
+  const job = await createMintJob();
 
-  // Fire-and-forget. Errors are captured into the job state by
-  // runMintPipeline itself, so a logged warning is the most we want
-  // here — the client will see status: "failed" via /status polling.
-  runMintPipeline(
-    { owner, name, archetype, avatar, seed },
-    job.id,
-  ).catch((e) => {
-    console.warn(`[api/mint/start] job ${job.id} failed (already in state):`, e);
+  // Schedule the pipeline via Next.js `after()` so it keeps running after
+  // the response ships. On Vercel a plain fire-and-forget promise can be
+  // frozen the moment the lambda returns, leaving the job stuck at
+  // "queued"; `after()` keeps the function alive (up to maxDuration) until
+  // the pipeline completes. Errors are captured into the job state by
+  // runMintPipeline itself, so a logged warning is all we want here — the
+  // client sees status "failed" via /status polling.
+  after(async () => {
+    try {
+      await runMintPipeline({ owner, name, archetype, avatar, seed }, job.id);
+    } catch (e) {
+      console.warn(
+        `[api/mint/start] job ${job.id} failed (already in state):`,
+        e,
+      );
+    }
   });
 
   return NextResponse.json({ jobId: job.id });
