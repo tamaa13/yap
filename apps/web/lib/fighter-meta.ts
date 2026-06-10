@@ -1,9 +1,17 @@
 // Server-side metadata store for minted fighters.
-// Contract only persists metadataHash on-chain; plaintext name/archetype/avatar
-// live here. File-backed JSON for simplicity — for production, swap to Redis or
-// a real DB.
+// The contract only persists metadataHash on-chain; plaintext name / archetype
+// / avatar / signature quotes live here.
+//
+// Backed by Upstash KV (a Redis hash) so writes persist and are shared across
+// Vercel serverless instances. The previous file-backed store (.data/
+// fighters.json) is READ-ONLY at runtime on serverless: /api/fighters/commit
+// writes silently vanished and the list served the stale bundled snapshot
+// (instance-local at best). Falls back to the local .data file for `next dev`
+// (writable FS, single process). On first KV use the hash is seeded once from
+// the bundled file so existing entries aren't lost on cutover.
 
 import "server-only";
+import { Redis } from "@upstash/redis";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -17,68 +25,107 @@ export interface FighterMeta {
   weightsRoot?: string;
   txHash?: string;
   mintedAt: number;
-  // Off-chain listing state. No marketplace contract deployed yet — these
-  // flags drive UI + counts on the Marketplace tab so users can see their
-  // listings appear. A real escrow contract lands in Phase B; the server
-  // store will then mirror on-chain state.
+  // Off-chain listing flags (legacy UI counts; chain wins via getListing).
   forSale?: boolean;
   price?: number;
   forRent?: boolean;
   rentPrice?: number;
   listedAt?: number;
-  /** 3-5 representative lines extracted from the style seed at mint time.
-   * Surfaces on the fighter detail "Overview" as signature quotes without
-   * re-decrypting the on-chain weights blob. */
+  /** 3-5 representative lines extracted from the style seed at mint time. */
   signatureStyle?: string[];
+}
+
+const HKEY = "fighter:meta";
+const STORE_DIR = path.join(process.cwd(), ".data");
+const STORE_PATH = path.join(STORE_DIR, "fighters.json");
+
+function getRedis(): Redis | null {
+  const url =
+    process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL ?? "";
+  const token =
+    process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN ?? "";
+  if (!url || !token) return null;
+  return new Redis({ url, token });
+}
+
+// One-time seed of the KV hash from the bundled file, so the cutover doesn't
+// drop the existing roster. Idempotent (skips when the hash already has data);
+// the per-instance flag keeps it to a single HLEN check after the first call.
+let seedChecked = false;
+async function seedFromFileIfEmpty(r: Redis): Promise<void> {
+  if (seedChecked) return;
+  seedChecked = true;
+  try {
+    if ((await r.hlen(HKEY)) > 0) return;
+    const map = JSON.parse(await fs.readFile(STORE_PATH, "utf8")) as Record<
+      string,
+      FighterMeta
+    >;
+    if (Object.keys(map).length > 0) await r.hset(HKEY, map);
+  } catch {
+    /* no bundled file / unreadable — start empty */
+  }
+}
+
+// --- local-dev file fallback (no KV configured) ---
+async function fileLoad(): Promise<Record<string, FighterMeta>> {
+  try {
+    return JSON.parse(await fs.readFile(STORE_PATH, "utf8")) as Record<
+      string,
+      FighterMeta
+    >;
+  } catch {
+    return {};
+  }
+}
+async function fileSave(map: Record<string, FighterMeta>): Promise<void> {
+  await fs.mkdir(STORE_DIR, { recursive: true }).catch(() => {});
+  await fs.writeFile(STORE_PATH, JSON.stringify(map, null, 2), "utf8");
+}
+
+export async function saveFighterMeta(meta: FighterMeta): Promise<void> {
+  const r = getRedis();
+  if (r) {
+    await seedFromFileIfEmpty(r);
+    await r.hset(HKEY, { [String(meta.tokenId)]: meta });
+    return;
+  }
+  const all = await fileLoad();
+  all[String(meta.tokenId)] = meta;
+  await fileSave(all);
+}
+
+export async function getFighterMeta(
+  tokenId: number,
+): Promise<FighterMeta | null> {
+  const r = getRedis();
+  if (r) {
+    await seedFromFileIfEmpty(r);
+    return ((await r.hget(HKEY, String(tokenId))) as FighterMeta | null) ?? null;
+  }
+  return (await fileLoad())[String(tokenId)] ?? null;
 }
 
 export async function updateFighterMeta(
   tokenId: number,
   patch: Partial<FighterMeta>,
 ): Promise<FighterMeta | null> {
-  const all = await loadAll();
-  const current = all[String(tokenId)];
+  const current = await getFighterMeta(tokenId);
   if (!current) return null;
   const next = { ...current, ...patch, tokenId };
-  all[String(tokenId)] = next;
-  await saveAll(all);
+  await saveFighterMeta(next);
   return next;
 }
 
-const STORE_DIR = path.join(process.cwd(), ".data");
-const STORE_PATH = path.join(STORE_DIR, "fighters.json");
-
-async function ensureDir(): Promise<void> {
-  await fs.mkdir(STORE_DIR, { recursive: true }).catch(() => {});
-}
-
-async function loadAll(): Promise<Record<string, FighterMeta>> {
-  try {
-    const text = await fs.readFile(STORE_PATH, "utf8");
-    return JSON.parse(text) as Record<string, FighterMeta>;
-  } catch {
-    return {};
-  }
-}
-
-async function saveAll(map: Record<string, FighterMeta>): Promise<void> {
-  await ensureDir();
-  await fs.writeFile(STORE_PATH, JSON.stringify(map, null, 2), "utf8");
-}
-
-export async function saveFighterMeta(meta: FighterMeta): Promise<void> {
-  const all = await loadAll();
-  all[String(meta.tokenId)] = meta;
-  await saveAll(all);
-}
-
-export async function getFighterMeta(tokenId: number): Promise<FighterMeta | null> {
-  const all = await loadAll();
-  return all[String(tokenId)] ?? null;
-}
-
 export async function listFighterMetas(owner?: string): Promise<FighterMeta[]> {
-  const all = await loadAll();
+  const r = getRedis();
+  let all: Record<string, FighterMeta>;
+  if (r) {
+    await seedFromFileIfEmpty(r);
+    all = ((await r.hgetall(HKEY)) as Record<string, FighterMeta> | null) ?? {};
+  } else {
+    all = await fileLoad();
+  }
   const arr = Object.values(all);
   if (owner) {
     const lc = owner.toLowerCase();
